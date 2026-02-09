@@ -131,6 +131,27 @@
     box-shadow: 0 0 6px rgba(0,255,255,0.5);
   }
   #dash-bar-fill.on-cooldown { background: #555; box-shadow: none; }
+
+  #boss-bar {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 340px; z-index: 15; text-align: center; display: none;
+  }
+  #boss-bar.show { display: block; }
+  #boss-bar .boss-name { color: #ff4444; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 4px; text-shadow: 0 0 10px rgba(255,0,0,0.5); }
+  #boss-bar-bg { width: 100%; height: 14px; background: rgba(0,0,0,0.7); border-radius: 7px; border: 1px solid rgba(255,68,68,0.5); overflow: hidden; }
+  #boss-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff2222, #ff6600); border-radius: 7px; transition: width 0.1s; }
+
+  #endless-timer {
+    position: fixed; top: 12px; right: 20px; z-index: 15;
+    color: #ff4444; font-size: 28px; font-weight: bold; display: none;
+    text-shadow: 0 0 15px rgba(255,0,0,0.5); font-family: monospace;
+  }
+  #endless-timer.show { display: block; }
+
+  #score-display {
+    position: fixed; bottom: 60px; right: 20px; z-index: 10;
+    color: #aaa; font-size: 12px; text-align: right; pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -142,8 +163,9 @@
     <span>WASD</span> Move &nbsp;|&nbsp; <span>Mouse</span> Aim &nbsp;|&nbsp; <span>Click</span> Shoot (Semi-Auto)<br>
     <span>SPACE</span> Dash &nbsp;|&nbsp; <span>1</span> Wall (15E) &nbsp;|&nbsp; <span>2</span> Generator (40E)<br>
     <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E)<br>
-    <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>ESC</span> Cancel Build<br>
-    Survive <span style="color:#ff4444">10 Waves</span> to win &bull; Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses
+    <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>ESC</span> Pause / Cancel Build<br>
+    Survive <span style="color:#ff4444">10 Waves + Bosses</span> then face the <span style="color:#ff4444">Endless Siege</span><br>
+    Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
   </div>
   <button onclick="startGame()">START GAME</button>
   <div class="credit">Designed by Cash</div>
@@ -200,6 +222,14 @@
 
 <div id="wave-banner"></div>
 
+<div id="boss-bar">
+  <div class="boss-name" id="boss-name-text">BOSS</div>
+  <div id="boss-bar-bg"><div id="boss-bar-fill"></div></div>
+</div>
+
+<div id="endless-timer">00:00</div>
+<div id="score-display"></div>
+
 <div id="game-over">
   <h1 id="go-title">OVERLOADED</h1>
   <p id="go-stats">You survived 0 waves</p>
@@ -247,45 +277,67 @@ const DASH_DURATION = 8;
 const DASH_COOLDOWN = 150;
 
 const MAX_WAVES = 10;
-const BETWEEN_WAVE_SECONDS = 10; // Seconds between waves
-const BETWEEN_WAVE_FAST = 4; // Seconds if you clear early
+const BETWEEN_WAVE_SECONDS = 10;
+const BETWEEN_WAVE_FAST = 4;
+const FRENZY_TIME = 600; // frames before enemies go frenzy (10s)
+const FRENZY_SPEED_MULT = 1.4;
+const FRENZY_DMG_MULT = 1.3;
+const MINE_ARM_TIME = 120;
+const MINE_LIFETIME = 900;
+const MINE_RADIUS = 55;
+const MINE_DAMAGE = 25;
+const CHARGER_WINDUP = 60;
+const CHARGER_SPEED = 8;
+const CHARGER_STUN = 120;
+const LASER_E_RANGE = 260;
+const LASER_E_CHARGE = 90;
+const LASER_E_FIRE = 60;
+const LASER_E_DPS = 0.8;
+const LASER_E_COOLDOWN = 180;
 
 const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50 };
 const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90 };
 
-// ---- Wave Difficulty Table ----
-// Each wave is hand-tuned. Wave 10 is brutal.
+// Upgrade definitions: [name, description, maxLevel, statPerLevel]
+const UPGRADE_DEFS = [
+  { name: 'Max HP', key: 'maxHp', max: 5, per: 30, icon: '+' },
+  { name: 'Speed', key: 'speed', max: 4, per: 0.5, icon: '>' },
+  { name: 'Damage', key: 'damage', max: 5, per: 6, icon: '!' },
+  { name: 'Drone Rate', key: 'droneRate', max: 4, per: 3, icon: 'D' },
+  { name: 'Dash CD', key: 'dashCD', max: 3, per: 25, icon: '~' },
+];
+const UPGRADE_COSTS = [4, 8, 14, 22, 32];
+
+// Boss definitions
+const BOSS_DEFS = {
+  sentinel: { name: 'THE SENTINEL', hp: 300, size: 34, speed: 1.1, dmg: 18, color: '#cc4400', chargeCD: 180 },
+  warden: { name: 'THE WARDEN', hp: 600, size: 44, speed: 0.85, dmg: 22, color: '#8800cc', summonCD: 300 },
+  overlord: { name: 'THE OVERLORD', hp: 1200, size: 52, speed: 0.9, dmg: 28, color: '#0044cc', shootCD: 120, summonCD: 360 },
+  core: { name: 'THE OVERLOAD CORE', hp: 2800, size: 62, speed: 0.75, dmg: 38, color: '#880000', shootCD: 90, summonCD: 240 },
+};
+
+// Wave config — 25% harder + enemy types + boss flags
 const WAVE_CONFIG = [
-  // Wave 1: Tutorial warmup
-  { count: 6,  hpMult: 1.0, speedMult: 1.0, dmgMult: 1.0, spawnRate: 40, sizeMin: 12, sizeMax: 16,
-    name: 'Scouts' },
-  // Wave 2: A few more
-  { count: 10, hpMult: 1.2, speedMult: 1.0, dmgMult: 1.0, spawnRate: 35, sizeMin: 13, sizeMax: 17,
-    name: 'Patrol' },
-  // Wave 3: Getting real
-  { count: 14, hpMult: 1.5, speedMult: 1.1, dmgMult: 1.2, spawnRate: 30, sizeMin: 13, sizeMax: 18,
-    name: 'Assault Squad' },
-  // Wave 4: Pressure builds
-  { count: 20, hpMult: 1.8, speedMult: 1.15, dmgMult: 1.3, spawnRate: 25, sizeMin: 14, sizeMax: 19,
-    name: 'Siege Force' },
-  // Wave 5: Mid-game spike
-  { count: 26, hpMult: 2.2, speedMult: 1.2, dmgMult: 1.5, spawnRate: 20, sizeMin: 14, sizeMax: 20,
-    name: 'Heavy Armor' },
-  // Wave 6: Relentless
-  { count: 32, hpMult: 2.7, speedMult: 1.3, dmgMult: 1.7, spawnRate: 18, sizeMin: 15, sizeMax: 21,
-    name: 'Blitz Swarm' },
-  // Wave 7: You better have generators
-  { count: 40, hpMult: 3.2, speedMult: 1.35, dmgMult: 2.0, spawnRate: 15, sizeMin: 15, sizeMax: 22,
-    name: 'War Party' },
-  // Wave 8: Overwhelming
-  { count: 48, hpMult: 3.8, speedMult: 1.4, dmgMult: 2.3, spawnRate: 12, sizeMin: 16, sizeMax: 23,
-    name: 'Death March' },
-  // Wave 9: Nearly impossible
-  { count: 58, hpMult: 4.5, speedMult: 1.5, dmgMult: 2.7, spawnRate: 10, sizeMin: 16, sizeMax: 24,
-    name: 'Annihilation' },
-  // Wave 10: OVERLOAD — absolute chaos
-  { count: 75, hpMult: 6.0, speedMult: 1.65, dmgMult: 3.2, spawnRate: 6, sizeMin: 18, sizeMax: 28,
-    name: 'O V E R L O A D' },
+  { count: 8,  hpMult: 1.25, speedMult: 1.1, dmgMult: 1.25, spawnRate: 38, sizeMin: 12, sizeMax: 16,
+    name: 'Scouts', types: ['normal'], boss: 'sentinel' },
+  { count: 13, hpMult: 1.5, speedMult: 1.15, dmgMult: 1.25, spawnRate: 32, sizeMin: 13, sizeMax: 17,
+    name: 'Patrol', types: ['normal'], boss: null },
+  { count: 18, hpMult: 1.9, speedMult: 1.2, dmgMult: 1.5, spawnRate: 28, sizeMin: 13, sizeMax: 18,
+    name: 'Assault Squad', types: ['normal','laser'], boss: 'warden' },
+  { count: 25, hpMult: 2.25, speedMult: 1.3, dmgMult: 1.6, spawnRate: 23, sizeMin: 14, sizeMax: 19,
+    name: 'Siege Force', types: ['normal','laser','miner'], boss: null },
+  { count: 33, hpMult: 2.75, speedMult: 1.35, dmgMult: 1.9, spawnRate: 18, sizeMin: 14, sizeMax: 20,
+    name: 'Heavy Armor', types: ['normal','laser','miner','charger'], boss: null },
+  { count: 40, hpMult: 3.4, speedMult: 1.45, dmgMult: 2.1, spawnRate: 16, sizeMin: 15, sizeMax: 21,
+    name: 'Blitz Swarm', types: ['normal','charger','splitter'], boss: null },
+  { count: 50, hpMult: 4.0, speedMult: 1.5, dmgMult: 2.5, spawnRate: 13, sizeMin: 15, sizeMax: 22,
+    name: 'War Party', types: ['normal','laser','miner','charger','splitter'], boss: 'overlord' },
+  { count: 60, hpMult: 4.8, speedMult: 1.6, dmgMult: 2.9, spawnRate: 10, sizeMin: 16, sizeMax: 23,
+    name: 'Death March', types: ['normal','laser','charger','splitter'], boss: null },
+  { count: 73, hpMult: 5.6, speedMult: 1.7, dmgMult: 3.4, spawnRate: 8, sizeMin: 16, sizeMax: 24,
+    name: 'Annihilation', types: ['normal','laser','miner','charger','splitter'], boss: null },
+  { count: 94, hpMult: 7.5, speedMult: 1.85, dmgMult: 4.0, spawnRate: 5, sizeMin: 18, sizeMax: 28,
+    name: 'O V E R L O A D', types: ['normal','laser','miner','charger','splitter'], boss: 'core' },
 ];
 
 // ---- State ----
@@ -312,13 +364,24 @@ let waveBannerTimer = 0, selectedBuild = null, droneAngle = 0, playerFireCD = 0,
 let generatorTimer = 0, frameCount = 0;
 let dashTimer = 0, dashCooldown = 0, dashDX = 0, dashDY = 0;
 
-// Wave state machine
-let wavePhase = 'pre'; // 'pre' = before first wave, 'countdown' = between waves, 'active' = enemies spawning/alive, 'cleared' = all dead, 'victory'
-let betweenTimer = 0; // frames remaining in countdown
-let enemiesSpawned = 0;
-let totalWaveEnemies = 0; // total for current wave
-let spawnTimer = 0; // frames until next enemy spawn
-let waveKills = 0; // kills in current wave
+// Wave state machine: 'pre','countdown','active','cleared','victory','upgrades','endless'
+let wavePhase = 'pre';
+let betweenTimer = 0, enemiesSpawned = 0, totalWaveEnemies = 0, spawnTimer = 0, waveKills = 0;
+
+// New systems
+let mines = [];
+let activeBoss = null;
+let bossSpawned = false;
+let gamePaused = false;
+let totalKills = 0;
+let upgradePoints = 0;
+let showingUpgrades = false;
+let playerUpgrades = { maxHp: 0, speed: 0, damage: 0, droneRate: 0, dashCD: 0 };
+let endlessMode = false;
+let endlessTimer = 0;
+let endlessLevel = 0;
+let endlessBossTimer = 0;
+let highScore = parseInt(localStorage.getItem('energySiegeHighScore') || '0');
 
 // ---- Resize ----
 function resize() {
@@ -384,33 +447,21 @@ function initGame() {
   generateObstacles();
   player = { x: WORLD_W / 2, y: WORLD_H / 2, hp: 100, maxHp: 100, angle: 0 };
   drone = { x: player.x, y: player.y };
-  droneAngle = 0;
-  playerFireCD = 0;
-  droneFireCD = 0;
-  bullets = [];
-  enemies = [];
-  buildings = [];
-  orbs = [];
-  particles = [];
-  energy = 20;
-  wave = 0;
-  waveBannerTimer = 0;
-  selectedBuild = null;
-  generatorTimer = 0;
-  frameCount = 0;
-  gameOverShown = false;
-  victoryShown = false;
-  dashTimer = 0;
-  dashCooldown = 0;
-  dashDX = 0;
-  dashDY = 0;
+  droneAngle = 0; playerFireCD = 0; droneFireCD = 0;
+  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = [];
+  energy = 20; wave = 0; waveBannerTimer = 0; selectedBuild = null;
+  generatorTimer = 0; frameCount = 0;
+  gameOverShown = false; victoryShown = false;
+  dashTimer = 0; dashCooldown = 0; dashDX = 0; dashDY = 0;
   wavePhase = 'countdown';
-  betweenTimer = BETWEEN_WAVE_SECONDS * 60; // first wave starts after countdown
-  enemiesSpawned = 0;
-  totalWaveEnemies = 0;
-  spawnTimer = 0;
-  waveKills = 0;
-
+  betweenTimer = BETWEEN_WAVE_SECONDS * 60;
+  enemiesSpawned = 0; totalWaveEnemies = 0; spawnTimer = 0; waveKills = 0;
+  activeBoss = null; bossSpawned = false;
+  gamePaused = false; totalKills = 0; upgradePoints = 0; showingUpgrades = false;
+  playerUpgrades = { maxHp: 0, speed: 0, damage: 0, droneRate: 0, dashCD: 0 };
+  endlessMode = false; endlessTimer = 0; endlessLevel = 0; endlessBossTimer = 0;
+  document.getElementById('boss-bar').classList.remove('show');
+  document.getElementById('endless-timer').classList.remove('show');
   for (let i = 0; i < 30; i++) spawnOrb();
   updateBuildButtons();
   updateWaveHUD();
@@ -435,52 +486,114 @@ function startWave() {
   wave++;
   const cfg = WAVE_CONFIG[wave - 1];
   totalWaveEnemies = cfg.count;
-  enemiesSpawned = 0;
-  spawnTimer = 0;
-  waveKills = 0;
+  enemiesSpawned = 0; spawnTimer = 0; waveKills = 0;
+  bossSpawned = false; activeBoss = null;
   wavePhase = 'active';
+  document.getElementById('boss-bar').classList.remove('show');
 
   const banner = document.getElementById('wave-banner');
-  if (wave === MAX_WAVES) {
-    banner.innerHTML = `WAVE ${wave} / ${MAX_WAVES}<div class="wave-subtitle">FINAL WAVE: ${cfg.name}</div>`;
-  } else {
-    banner.innerHTML = `WAVE ${wave} / ${MAX_WAVES}<div class="wave-subtitle">${cfg.name}</div>`;
-  }
+  const bossText = cfg.boss ? ' [BOSS WAVE]' : '';
+  banner.innerHTML = `WAVE ${wave} / ${MAX_WAVES}<div class="wave-subtitle">${cfg.name}${bossText}</div>`;
   banner.classList.add('show');
   waveBannerTimer = 150;
-
   document.getElementById('wave-display').textContent = `${wave} / ${MAX_WAVES}`;
-
-  // Replenish orbs between waves
   const orbCount = Math.max(0, 15 - orbs.length);
   for (let i = 0; i < orbCount; i++) spawnOrb();
-
   updateWaveHUD();
 }
 
-function spawnEnemy() {
-  const cfg = WAVE_CONFIG[wave - 1];
+function getSpawnPos() {
   const side = Math.floor(Math.random() * 4);
-  let x, y;
   switch (side) {
-    case 0: x = Math.random() * WORLD_W; y = -20; break;
-    case 1: x = WORLD_W + 20; y = Math.random() * WORLD_H; break;
-    case 2: x = Math.random() * WORLD_W; y = WORLD_H + 20; break;
-    case 3: x = -20; y = Math.random() * WORLD_H; break;
+    case 0: return { x: Math.random() * WORLD_W, y: -20 };
+    case 1: return { x: WORLD_W + 20, y: Math.random() * WORLD_H };
+    case 2: return { x: Math.random() * WORLD_W, y: WORLD_H + 20 };
+    default: return { x: -20, y: Math.random() * WORLD_H };
   }
+}
 
+function spawnEnemy(forceType) {
+  const cfg = endlessMode ? getEndlessConfig() : WAVE_CONFIG[wave - 1];
+  const pos = getSpawnPos();
+  const types = cfg.types || ['normal'];
+  const type = forceType || types[Math.floor(Math.random() * types.length)];
   const baseHp = 30 + Math.random() * 20;
   const size = cfg.sizeMin + Math.floor(Math.random() * (cfg.sizeMax - cfg.sizeMin + 1));
-
+  // Scale enemy stats based on player upgrade level (compensate for player power)
+  const upgradePower = Object.values(playerUpgrades).reduce((a,b) => a+b, 0);
+  const upgradeScale = 1 + upgradePower * 0.04;
+  const hp = Math.floor(baseHp * cfg.hpMult * upgradeScale);
   enemies.push({
-    x, y, size,
-    hp: Math.floor(baseHp * cfg.hpMult),
-    maxHp: Math.floor(baseHp * cfg.hpMult),
+    x: pos.x, y: pos.y, size, hp, maxHp: hp,
     speed: ENEMY_BASE_SPEED * cfg.speedMult * (0.85 + Math.random() * 0.3),
-    attackCD: 0,
-    damage: Math.floor((5 + wave) * cfg.dmgMult)
+    attackCD: 0, damage: Math.floor((5 + wave) * cfg.dmgMult * upgradeScale),
+    type, isBoss: false, spawnFrame: frameCount, isRaged: false,
+    // Laser enemy
+    laserCharging: false, laserChargeTimer: 0, laserFiring: false, laserFireTimer: 0, laserCooldown: 0, laserAngle: 0,
+    // Miner
+    mineCD: 200 + Math.floor(Math.random() * 100),
+    // Charger
+    chargeWindup: 0, isCharging: false, chargeDX: 0, chargeDY: 0, chargeCooldown: 0, stunTimer: 0,
+    // Splitter
+    canSplit: type === 'splitter',
   });
-  enemiesSpawned++;
+  if (!endlessMode) enemiesSpawned++;
+}
+
+function spawnBoss(bossKey) {
+  const def = BOSS_DEFS[bossKey];
+  const pos = getSpawnPos();
+  const upgradePower = Object.values(playerUpgrades).reduce((a,b) => a+b, 0);
+  const upgradeScale = 1 + upgradePower * 0.05;
+  const hp = Math.floor(def.hp * upgradeScale);
+  const boss = {
+    x: pos.x, y: pos.y, size: def.size, hp, maxHp: hp,
+    speed: def.speed, attackCD: 0, damage: def.dmg,
+    type: 'boss', isBoss: true, bossKey, spawnFrame: frameCount, isRaged: false,
+    abilityCD1: 0, abilityCD2: 0, phase: 1,
+    laserCharging: false, laserChargeTimer: 0, laserFiring: false, laserFireTimer: 0, laserCooldown: 0, laserAngle: 0,
+    mineCD: 0, chargeWindup: 0, isCharging: false, chargeDX: 0, chargeDY: 0, chargeCooldown: 0, stunTimer: 0, canSplit: false,
+  };
+  enemies.push(boss);
+  activeBoss = boss;
+  document.getElementById('boss-name-text').textContent = def.name;
+  document.getElementById('boss-bar').classList.add('show');
+  const banner = document.getElementById('wave-banner');
+  banner.innerHTML = `<div style="color:#ff2222;font-size:32px">${def.name}</div><div class="wave-subtitle">Boss incoming!</div>`;
+  banner.classList.add('show');
+  waveBannerTimer = 120;
+}
+
+function spawnMine(x, y, damage) {
+  mines.push({ x, y, armTimer: MINE_ARM_TIME, lifetime: MINE_LIFETIME, damage: damage || MINE_DAMAGE, armed: false });
+}
+
+function getEndlessConfig() {
+  const lv = endlessLevel;
+  return {
+    hpMult: 3.0 + lv * 0.8, speedMult: 1.3 + lv * 0.08, dmgMult: 2.0 + lv * 0.5,
+    spawnRate: Math.max(3, 15 - lv), sizeMin: 14 + Math.min(lv, 6), sizeMax: 22 + Math.min(lv, 10),
+    types: ['normal','laser','miner','charger','splitter'], boss: null,
+  };
+}
+
+function startEndless() {
+  endlessMode = true; endlessTimer = 0; endlessLevel = 0; endlessBossTimer = 0;
+  wavePhase = 'endless'; spawnTimer = 0;
+  document.getElementById('endless-timer').classList.add('show');
+  const banner = document.getElementById('wave-banner');
+  banner.innerHTML = '<div style="color:#ff0000;font-size:36px">ENDLESS SIEGE</div><div class="wave-subtitle">Survive as long as you can!</div>';
+  banner.classList.add('show'); waveBannerTimer = 180;
+  document.getElementById('wave-display').textContent = 'ENDLESS';
+}
+
+function getUpgradeCost(level) {
+  return level < UPGRADE_COSTS.length ? UPGRADE_COSTS[level] : 999;
+}
+
+function applyUpgrades() {
+  player.maxHp = 100 + playerUpgrades.maxHp * 30;
+  player.hp = Math.min(player.hp, player.maxHp);
 }
 
 function updateWaveHUD() {
@@ -515,9 +628,19 @@ function updateWaveHUD() {
       timerEl.classList.add('show');
     }
     progressFill.style.width = '100%';
+  } else if (wavePhase === 'upgrades') {
+    statusEl.innerHTML = '<span style="color:#44ff44">CHOOSE UPGRADES</span>';
+    progressFill.style.width = '100%';
+    timerEl.classList.remove('show');
   } else if (wavePhase === 'victory') {
     statusEl.innerHTML = '<span style="color:#44ff44">VICTORY!</span>';
     progressFill.style.width = '100%';
+    timerEl.classList.remove('show');
+  } else if (wavePhase === 'endless') {
+    const alive = enemies.length;
+    statusEl.innerHTML = `ENDLESS SIEGE — Level <span>${endlessLevel + 1}</span> — Enemies: <span>${alive}</span>`;
+    progressFill.style.width = '100%';
+    progressFill.style.background = 'linear-gradient(90deg, #ff0000, #ff6600)';
     timerEl.classList.remove('show');
   } else {
     statusEl.innerHTML = '';
@@ -590,79 +713,67 @@ function moveWithCollision(entity, dx, dy, radius) {
 
 // ---- Update ----
 function update() {
-  if (!gameRunning) return;
+  if (!gameRunning || gamePaused) return;
   frameCount++;
 
   worldMouseX = mouse.x + camera.x;
   worldMouseY = mouse.y + camera.y;
 
+  // Skip gameplay during upgrade screen
+  if (showingUpgrades) return;
+
   // -- Player movement --
+  const effectiveSpeed = PLAYER_SPEED + playerUpgrades.speed * 0.5;
+  const effectiveDashCD = DASH_COOLDOWN - playerUpgrades.dashCD * 25;
   let pdx = 0, pdy = 0;
-  if (dashTimer > 0) {
-    pdx = dashDX;
-    pdy = dashDY;
-    dashTimer--;
-  } else {
+  if (dashTimer > 0) { pdx = dashDX; pdy = dashDY; dashTimer--; }
+  else {
     if (keys['w'] || keys['arrowup']) pdy -= 1;
     if (keys['s'] || keys['arrowdown']) pdy += 1;
     if (keys['a'] || keys['arrowleft']) pdx -= 1;
     if (keys['d'] || keys['arrowright']) pdx += 1;
     if (pdx !== 0 || pdy !== 0) {
       const len = Math.hypot(pdx, pdy);
-      pdx = (pdx / len) * PLAYER_SPEED;
-      pdy = (pdy / len) * PLAYER_SPEED;
+      pdx = (pdx / len) * effectiveSpeed;
+      pdy = (pdy / len) * effectiveSpeed;
     }
   }
   if (dashCooldown > 0) dashCooldown--;
-
   const dashFill = document.getElementById('dash-bar-fill');
   if (dashCooldown > 0) {
-    dashFill.style.width = ((1 - dashCooldown / DASH_COOLDOWN) * 100) + '%';
+    dashFill.style.width = ((1 - dashCooldown / effectiveDashCD) * 100) + '%';
     dashFill.classList.add('on-cooldown');
-  } else {
-    dashFill.style.width = '100%';
-    dashFill.classList.remove('on-cooldown');
-  }
-
+  } else { dashFill.style.width = '100%'; dashFill.classList.remove('on-cooldown'); }
   moveWithCollision(player, pdx, pdy, PLAYER_R);
   player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
 
-  // -- Player shooting (SEMI-AUTO: one shot per click) --
+  // -- Player shooting (SEMI-AUTO) --
+  const effectiveDmg = PLAYER_BULLET_DMG + playerUpgrades.damage * 6;
   if (playerFireCD > 0) playerFireCD--;
   if (mouse.clicked && playerFireCD <= 0 && !selectedBuild) {
-    mouse.clicked = false; // consume the click
+    mouse.clicked = false;
     playerFireCD = PLAYER_FIRE_COOLDOWN;
     const bx = player.x + Math.cos(player.angle) * (PLAYER_R + 6);
     const by = player.y + Math.sin(player.angle) * (PLAYER_R + 6);
-    bullets.push({
-      x: bx, y: by,
-      vx: Math.cos(player.angle) * BULLET_SPEED,
-      vy: Math.sin(player.angle) * BULLET_SPEED,
-      life: BULLET_LIFE, owner: 'player', damage: PLAYER_BULLET_DMG
-    });
+    bullets.push({ x: bx, y: by, vx: Math.cos(player.angle) * BULLET_SPEED, vy: Math.sin(player.angle) * BULLET_SPEED,
+      life: BULLET_LIFE, owner: 'player', damage: effectiveDmg });
     spawnParticles(bx, by, '#66ccff', 4, 3);
   }
 
-  // -- Drone --
+  // -- Drone (fire rate improves with upgrades) --
+  const effectiveDroneRate = DRONE_FIRE_RATE - playerUpgrades.droneRate * 3;
   droneAngle += 0.03;
   drone.x = player.x + Math.cos(droneAngle) * DRONE_ORBIT;
   drone.y = player.y + Math.sin(droneAngle) * DRONE_ORBIT;
   if (droneFireCD > 0) droneFireCD--;
   if (droneFireCD <= 0 && enemies.length > 0) {
     let closest = null, closestD = Infinity;
-    for (const e of enemies) {
-      const d = dist(drone, e);
-      if (d < closestD && d < DRONE_RANGE) { closest = e; closestD = d; }
-    }
+    for (const e of enemies) { const d = dist(drone, e); if (d < closestD && d < DRONE_RANGE) { closest = e; closestD = d; } }
     if (closest) {
-      droneFireCD = DRONE_FIRE_RATE;
+      droneFireCD = effectiveDroneRate;
       const a = Math.atan2(closest.y - drone.y, closest.x - drone.x);
-      bullets.push({
-        x: drone.x, y: drone.y,
-        vx: Math.cos(a) * BULLET_SPEED * 0.8,
-        vy: Math.sin(a) * BULLET_SPEED * 0.8,
-        life: 60, owner: 'drone', damage: 8
-      });
+      bullets.push({ x: drone.x, y: drone.y, vx: Math.cos(a) * BULLET_SPEED * 0.8, vy: Math.sin(a) * BULLET_SPEED * 0.8,
+        life: 60, owner: 'drone', damage: 8 + playerUpgrades.damage * 2 });
     }
   }
 
@@ -672,20 +783,11 @@ function update() {
     if (b.fireCD > 0) { b.fireCD--; continue; }
     const bcx = b.x + BUILD_SIZE / 2, bcy = b.y + BUILD_SIZE / 2;
     let closest = null, closestD = Infinity;
-    for (const e of enemies) {
-      const d = Math.hypot(e.x - bcx, e.y - bcy);
-      if (d < closestD && d < TURRET_RANGE) { closest = e; closestD = d; }
-    }
+    for (const e of enemies) { const d = Math.hypot(e.x - bcx, e.y - bcy); if (d < closestD && d < TURRET_RANGE) { closest = e; closestD = d; } }
     if (closest) {
-      b.fireCD = TURRET_FIRE_RATE;
-      const a = Math.atan2(closest.y - bcy, closest.x - bcx);
-      b.angle = a;
-      bullets.push({
-        x: bcx + Math.cos(a) * 18, y: bcy + Math.sin(a) * 18,
-        vx: Math.cos(a) * TURRET_BULLET_SPEED,
-        vy: Math.sin(a) * TURRET_BULLET_SPEED,
-        life: 60, owner: 'turret', damage: 18
-      });
+      b.fireCD = TURRET_FIRE_RATE; const a = Math.atan2(closest.y - bcy, closest.x - bcx); b.angle = a;
+      bullets.push({ x: bcx + Math.cos(a) * 18, y: bcy + Math.sin(a) * 18, vx: Math.cos(a) * TURRET_BULLET_SPEED, vy: Math.sin(a) * TURRET_BULLET_SPEED,
+        life: 60, owner: 'turret', damage: 18 });
       spawnParticles(bcx + Math.cos(a) * 18, bcy + Math.sin(a) * 18, '#ff8800', 2, 2);
     }
   }
@@ -695,40 +797,42 @@ function update() {
     if (b.type !== 'laser' || b.hp <= 0) continue;
     const bcx = b.x + BUILD_SIZE / 2, bcy = b.y + BUILD_SIZE / 2;
     let closest = null, closestD = Infinity;
-    for (const e of enemies) {
-      const d = Math.hypot(e.x - bcx, e.y - bcy);
-      if (d < closestD && d < LASER_RANGE) { closest = e; closestD = d; }
-    }
+    for (const e of enemies) { const d = Math.hypot(e.x - bcx, e.y - bcy); if (d < closestD && d < LASER_RANGE) { closest = e; closestD = d; } }
     b.laserTarget = closest;
-    if (closest) {
-      b.angle = Math.atan2(closest.y - bcy, closest.x - bcx);
-      closest.hp -= LASER_DPS;
-      if (frameCount % 6 === 0) {
-        spawnParticles(closest.x, closest.y, '#ff44ff', 2, 2);
-      }
-    }
+    if (closest) { b.angle = Math.atan2(closest.y - bcy, closest.x - bcx); closest.hp -= LASER_DPS;
+      if (frameCount % 6 === 0) spawnParticles(closest.x, closest.y, '#ff44ff', 2, 2); }
   }
 
-  // -- Bullets --
+  // -- Bullets (friendly + enemy) --
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life--;
+    b.x += b.vx; b.y += b.vy; b.life--;
     if (b.x < 0 || b.x > WORLD_W || b.y < 0 || b.y > WORLD_H) { bullets.splice(i, 1); continue; }
     if (isObstacle(b.x, b.y)) { spawnParticles(b.x, b.y, '#888', 3, 2); bullets.splice(i, 1); continue; }
     if (b.life <= 0) { bullets.splice(i, 1); continue; }
     let hit = false;
-    for (let j = enemies.length - 1; j >= 0; j--) {
-      const e = enemies[j];
-      if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + BULLET_R) {
-        e.hp -= b.damage;
-        spawnParticles(b.x, b.y, '#ff4444', 4, 3);
-        if (e.hp <= 0) {
-          killEnemy(e, j);
-        }
+    if (b.owner === 'enemy') {
+      // Enemy bullets hit player and buildings
+      if (Math.hypot(b.x - player.x, b.y - player.y) < PLAYER_R + BULLET_R) {
+        player.hp -= b.damage; spawnParticles(player.x, player.y, '#ff0000', 4, 3);
+        document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
         hit = true;
-        break;
+      }
+      if (!hit) for (const bld of buildings) {
+        if (bld.hp <= 0) continue;
+        if (circleRect(b.x, b.y, BULLET_R, bld.x, bld.y, BUILD_SIZE, BUILD_SIZE)) {
+          bld.hp -= b.damage; spawnParticles(b.x, b.y, '#ffaa00', 3, 2); hit = true; break;
+        }
+      }
+    } else {
+      // Friendly bullets hit enemies
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + BULLET_R) {
+          e.hp -= b.damage; spawnParticles(b.x, b.y, '#ff4444', 4, 3);
+          if (e.hp <= 0) killEnemy(e, j);
+          hit = true; break;
+        }
       }
     }
     if (hit) { bullets.splice(i, 1); continue; }
@@ -736,93 +840,264 @@ function update() {
 
   // -- Check for laser kills --
   for (let j = enemies.length - 1; j >= 0; j--) {
-    if (enemies[j].hp <= 0) {
-      killEnemy(enemies[j], j);
+    if (enemies[j].hp <= 0) killEnemy(enemies[j], j);
+  }
+
+  // -- Mines update --
+  for (let i = mines.length - 1; i >= 0; i--) {
+    const m = mines[i];
+    m.lifetime--;
+    if (m.armTimer > 0) { m.armTimer--; if (m.armTimer <= 0) m.armed = true; }
+    if (m.lifetime <= 0) { mines.splice(i, 1); continue; }
+    if (m.armed) {
+      const dp = Math.hypot(m.x - player.x, m.y - player.y);
+      const dd = Math.hypot(m.x - drone.x, m.y - drone.y);
+      if (dp < MINE_RADIUS || dd < MINE_RADIUS) {
+        // Explode
+        if (dp < MINE_RADIUS) { player.hp -= m.damage; document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp)); }
+        spawnParticles(m.x, m.y, '#ff4400', 15, 6);
+        spawnParticles(m.x, m.y, '#ffaa00', 10, 4);
+        // Damage buildings nearby
+        for (const b of buildings) {
+          if (Math.hypot(m.x - (b.x + BUILD_SIZE/2), m.y - (b.y + BUILD_SIZE/2)) < MINE_RADIUS) b.hp -= m.damage * 0.5;
+        }
+        mines.splice(i, 1);
+      }
     }
   }
 
-  // -- Enemies AI --
+  // -- Enemies AI (type-specific) --
   for (const e of enemies) {
+    // Frenzy check
+    if (!e.isRaged && (frameCount - e.spawnFrame) > FRENZY_TIME) {
+      e.isRaged = true; e.speed *= FRENZY_SPEED_MULT; e.damage = Math.floor(e.damage * FRENZY_DMG_MULT);
+    }
+    if (e.stunTimer > 0) { e.stunTimer--; e.attackCD = Math.max(e.attackCD - 1, 0); continue; }
+
     let target = { x: player.x, y: player.y };
     let targetD = dist(e, player);
     let targetBuilding = null;
     for (const b of buildings) {
       if (b.hp <= 0) continue;
       const d = dist(e, { x: b.x + BUILD_SIZE / 2, y: b.y + BUILD_SIZE / 2 });
-      if (d < targetD) {
-        targetD = d;
-        target = { x: b.x + BUILD_SIZE / 2, y: b.y + BUILD_SIZE / 2 };
-        targetBuilding = b;
-      }
+      if (d < targetD) { targetD = d; target = { x: b.x + BUILD_SIZE / 2, y: b.y + BUILD_SIZE / 2 }; targetBuilding = b; }
     }
     const a = Math.atan2(target.y - e.y, target.x - e.x);
-    let edx = Math.cos(a) * e.speed;
-    let edy = Math.sin(a) * e.speed;
+
+    // === BOSS AI ===
+    if (e.isBoss) {
+      const bdef = BOSS_DEFS[e.bossKey];
+      // Boss always moves toward player (not buildings)
+      const ba = Math.atan2(player.y - e.y, player.x - e.x);
+      let bSpeed = e.speed;
+      // Core phase 2: rage at <30% hp
+      if (e.bossKey === 'core' && e.hp < e.maxHp * 0.3) { e.phase = 2; bSpeed = e.speed * 1.6; }
+      let bdx = Math.cos(ba) * bSpeed, bdy = Math.sin(ba) * bSpeed;
+
+      // Sentinel: charge attack
+      if (e.bossKey === 'sentinel') {
+        e.abilityCD1--; if (e.abilityCD1 <= 0) {
+          e.abilityCD1 = bdef.chargeCD;
+          e.isCharging = true; e.chargeWindup = 40;
+          e.chargeDX = Math.cos(ba) * CHARGER_SPEED * 0.8;
+          e.chargeDY = Math.sin(ba) * CHARGER_SPEED * 0.8;
+        }
+        if (e.chargeWindup > 0) { e.chargeWindup--; bdx = 0; bdy = 0; }
+        else if (e.isCharging) {
+          bdx = e.chargeDX; bdy = e.chargeDY; e.chargeCooldown = (e.chargeCooldown || 15) - 1;
+          if (e.chargeCooldown <= 0) e.isCharging = false;
+        }
+      }
+      // Warden: summon minions
+      if (e.bossKey === 'warden') {
+        e.abilityCD1--; if (e.abilityCD1 <= 0) {
+          e.abilityCD1 = bdef.summonCD;
+          for (let s = 0; s < 3; s++) { const sp = getSpawnPos(); enemies.push({
+            x: e.x + (Math.random()-0.5)*60, y: e.y + (Math.random()-0.5)*60, size: 10, hp: 30, maxHp: 30,
+            speed: 1.5, attackCD: 0, damage: 8, type: 'normal', isBoss: false, spawnFrame: frameCount, isRaged: false,
+            laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
+            mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0,canSplit:false }); }
+          spawnParticles(e.x, e.y, '#8800cc', 12, 5);
+        }
+      }
+      // Overlord: shoot spread + summon
+      if (e.bossKey === 'overlord') {
+        e.abilityCD1--; if (e.abilityCD1 <= 0) {
+          e.abilityCD1 = bdef.shootCD;
+          for (let s = -1; s <= 1; s++) {
+            const sa = ba + s * 0.25;
+            bullets.push({ x: e.x, y: e.y, vx: Math.cos(sa)*6, vy: Math.sin(sa)*6, life: 80, owner: 'enemy', damage: 12 });
+          }
+          spawnParticles(e.x, e.y, '#4488ff', 6, 3);
+        }
+        e.abilityCD2--; if (e.abilityCD2 <= 0) {
+          e.abilityCD2 = bdef.summonCD;
+          for (let s = 0; s < 2; s++) { enemies.push({
+            x: e.x + (Math.random()-0.5)*60, y: e.y + (Math.random()-0.5)*60, size: 11, hp: 40, maxHp: 40,
+            speed: 1.4, attackCD: 0, damage: 10, type: 'normal', isBoss: false, spawnFrame: frameCount, isRaged: false,
+            laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
+            mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0,canSplit:false }); }
+        }
+      }
+      // Core: spread shots + summon + phase 2 rage
+      if (e.bossKey === 'core') {
+        const spread = e.phase === 2 ? 4 : 2;
+        const shootCD = e.phase === 2 ? 60 : bdef.shootCD;
+        e.abilityCD1--; if (e.abilityCD1 <= 0) {
+          e.abilityCD1 = shootCD;
+          for (let s = -spread; s <= spread; s++) {
+            const sa = ba + s * 0.2;
+            bullets.push({ x: e.x, y: e.y, vx: Math.cos(sa)*7, vy: Math.sin(sa)*7, life: 90, owner: 'enemy', damage: 15 });
+          }
+          spawnParticles(e.x, e.y, '#ff2200', 10, 5);
+        }
+        const sumCD = e.phase === 2 ? 150 : bdef.summonCD;
+        e.abilityCD2--; if (e.abilityCD2 <= 0) {
+          e.abilityCD2 = sumCD;
+          const sumCount = e.phase === 2 ? 4 : 2;
+          for (let s = 0; s < sumCount; s++) { enemies.push({
+            x: e.x + (Math.random()-0.5)*80, y: e.y + (Math.random()-0.5)*80, size: 12, hp: 50, maxHp: 50,
+            speed: 1.6, attackCD: 0, damage: 12, type: 'charger', isBoss: false, spawnFrame: frameCount, isRaged: false,
+            laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
+            mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:200,stunTimer:0,canSplit:false }); }
+        }
+      }
+      moveWithCollision(e, bdx, bdy, e.size);
+      // Boss melee
+      if (dist(e, player) < e.size + PLAYER_R + 6 && e.attackCD <= 0) {
+        player.hp -= e.damage; e.attackCD = 40;
+        spawnParticles(player.x, player.y, '#ff0000', 8, 4);
+        document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+      }
+      if (e.attackCD > 0) e.attackCD--;
+      // Update boss HP bar
+      if (activeBoss === e) {
+        const pct = Math.max(0, e.hp / e.maxHp * 100);
+        document.getElementById('boss-bar-fill').style.width = pct + '%';
+      }
+      continue; // skip normal AI
+    }
+
+    // === LASER ENEMY AI ===
+    if (e.type === 'laser') {
+      if (e.laserCooldown > 0) { e.laserCooldown--; }
+      if (targetD < LASER_E_RANGE && !e.laserCharging && !e.laserFiring && e.laserCooldown <= 0) {
+        e.laserCharging = true; e.laserChargeTimer = LASER_E_CHARGE; e.laserAngle = a;
+      }
+      if (e.laserCharging) {
+        e.laserChargeTimer--; e.laserAngle = a;
+        if (e.laserChargeTimer <= 0) { e.laserCharging = false; e.laserFiring = true; e.laserFireTimer = LASER_E_FIRE; }
+      } else if (e.laserFiring) {
+        e.laserFireTimer--;
+        // Deal damage along beam
+        const la = e.laserAngle;
+        if (Math.abs(Math.atan2(player.y - e.y, player.x - e.x) - la) < 0.3 && targetD < LASER_E_RANGE) {
+          player.hp -= LASER_E_DPS; document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+        }
+        for (const b of buildings) {
+          if (b.hp <= 0) continue;
+          const bc = { x: b.x + BUILD_SIZE/2, y: b.y + BUILD_SIZE/2 };
+          const bd = dist(e, bc);
+          if (bd < LASER_E_RANGE && Math.abs(Math.atan2(bc.y - e.y, bc.x - e.x) - la) < 0.3) b.hp -= LASER_E_DPS * 0.5;
+        }
+        if (e.laserFireTimer <= 0) { e.laserFiring = false; e.laserCooldown = LASER_E_COOLDOWN; }
+      }
+      // Laser enemies stop moving when firing/charging, move slowly toward target otherwise
+      if (!e.laserCharging && !e.laserFiring) {
+        if (targetD > LASER_E_RANGE * 0.6) {
+          let edx = Math.cos(a) * e.speed * 0.7, edy = Math.sin(a) * e.speed * 0.7;
+          moveWithCollision(e, edx, edy, e.size);
+        }
+      }
+      if (e.attackCD > 0) e.attackCD--;
+      continue;
+    }
+
+    // === CHARGER ENEMY AI ===
+    if (e.type === 'charger') {
+      if (e.chargeCooldown > 0) e.chargeCooldown--;
+      if (e.isCharging) {
+        moveWithCollision(e, e.chargeDX, e.chargeDY, e.size);
+        e.chargeWindup--;
+        if (e.chargeWindup <= 0) { e.isCharging = false; e.stunTimer = CHARGER_STUN; e.chargeCooldown = 200; }
+        // Check wall collision for stun
+        if (isObstacle(e.x + e.chargeDX * 2, e.y + e.chargeDY * 2)) {
+          e.isCharging = false; e.stunTimer = CHARGER_STUN;
+          spawnParticles(e.x, e.y, '#ffffff', 8, 4);
+        }
+        // Charger collision with player
+        if (dist(e, player) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
+          player.hp -= e.damage * 2; e.attackCD = 60;
+          spawnParticles(player.x, player.y, '#ff0000', 10, 5);
+          document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+          e.isCharging = false; e.stunTimer = CHARGER_STUN;
+        }
+        if (e.attackCD > 0) e.attackCD--;
+        continue;
+      }
+      if (e.chargeWindup > 0 && !e.isCharging) {
+        e.chargeWindup--;
+        if (e.chargeWindup <= 0) {
+          e.isCharging = true; e.chargeWindup = 12;
+          const ca = Math.atan2(player.y - e.y, player.x - e.x);
+          e.chargeDX = Math.cos(ca) * CHARGER_SPEED; e.chargeDY = Math.sin(ca) * CHARGER_SPEED;
+        }
+        if (e.attackCD > 0) e.attackCD--;
+        continue;
+      }
+      if (targetD < 200 && e.chargeCooldown <= 0 && !e.isCharging) {
+        e.chargeWindup = CHARGER_WINDUP; e.chargeCooldown = 300;
+      }
+      // Normal movement otherwise - fall through to default movement below
+    }
+
+    // === MINER ENEMY AI (drops mines) ===
+    if (e.type === 'miner') {
+      e.mineCD--; if (e.mineCD <= 0) { e.mineCD = 180 + Math.floor(Math.random() * 120); spawnMine(e.x, e.y, e.damage); }
+    }
+
+    // === DEFAULT MOVEMENT (normal, miner, splitter, charger when not charging) ===
+    let edx = Math.cos(a) * e.speed, edy = Math.sin(a) * e.speed;
     const ahead = { x: e.x + edx * 10, y: e.y + edy * 10 };
     if (isObstacle(ahead.x, ahead.y)) {
-      const perp1x = Math.cos(a + Math.PI / 2) * e.speed;
-      const perp1y = Math.sin(a + Math.PI / 2) * e.speed;
-      const perp2x = Math.cos(a - Math.PI / 2) * e.speed;
-      const perp2y = Math.sin(a - Math.PI / 2) * e.speed;
-      if (!isObstacle(e.x + perp1x * 10, e.y + perp1y * 10)) {
-        edx = perp1x; edy = perp1y;
-      } else if (!isObstacle(e.x + perp2x * 10, e.y + perp2y * 10)) {
-        edx = perp2x; edy = perp2y;
-      } else {
-        edx = 0; edy = 0;
-      }
+      const p1x = Math.cos(a + Math.PI/2) * e.speed, p1y = Math.sin(a + Math.PI/2) * e.speed;
+      const p2x = Math.cos(a - Math.PI/2) * e.speed, p2y = Math.sin(a - Math.PI/2) * e.speed;
+      if (!isObstacle(e.x + p1x*10, e.y + p1y*10)) { edx = p1x; edy = p1y; }
+      else if (!isObstacle(e.x + p2x*10, e.y + p2y*10)) { edx = p2x; edy = p2y; }
+      else { edx = 0; edy = 0; }
     }
     let blocked = false;
     for (const b of buildings) {
-      if (b.type === 'wall' && b.hp > 0) {
-        if (circleRect(e.x + edx, e.y + edy, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) {
-          blocked = true;
-          if (e.attackCD <= 0) {
-            b.hp -= e.damage;
-            e.attackCD = 30;
-            spawnParticles(b.x + BUILD_SIZE / 2, b.y + BUILD_SIZE / 2, '#ffaa00', 4, 2);
-          }
-          break;
-        }
+      if (b.type === 'wall' && b.hp > 0 && circleRect(e.x + edx, e.y + edy, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) {
+        blocked = true;
+        if (e.attackCD <= 0) { b.hp -= e.damage; e.attackCD = 30; spawnParticles(b.x + BUILD_SIZE/2, b.y + BUILD_SIZE/2, '#ffaa00', 4, 2); }
+        break;
       }
     }
     if (!blocked) moveWithCollision(e, edx, edy, e.size);
     if (e.attackCD > 0) e.attackCD--;
-    if (targetBuilding && targetD < e.size + BUILD_SIZE * 0.7) {
-      if (e.attackCD <= 0) {
-        targetBuilding.hp -= e.damage;
-        e.attackCD = 30;
-        spawnParticles(targetBuilding.x + BUILD_SIZE / 2, targetBuilding.y + BUILD_SIZE / 2, '#ffaa00', 4, 2);
-      }
+    if (targetBuilding && targetD < e.size + BUILD_SIZE * 0.7 && e.attackCD <= 0) {
+      targetBuilding.hp -= e.damage; e.attackCD = 30;
+      spawnParticles(targetBuilding.x + BUILD_SIZE/2, targetBuilding.y + BUILD_SIZE/2, '#ffaa00', 4, 2);
     }
-    if (dist(e, player) < e.size + PLAYER_R + 4) {
-      if (e.attackCD <= 0) {
-        player.hp -= e.damage;
-        e.attackCD = 30;
-        spawnParticles(player.x, player.y, '#ff0000', 6, 3);
-        document.getElementById('hp-display').textContent = Math.max(0, player.hp);
-      }
+    if (dist(e, player) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
+      player.hp -= e.damage; e.attackCD = 30;
+      spawnParticles(player.x, player.y, '#ff0000', 6, 3);
+      document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
     }
   }
 
   // Remove dead buildings
   for (let i = buildings.length - 1; i >= 0; i--) {
-    if (buildings[i].hp <= 0) {
-      spawnParticles(buildings[i].x + BUILD_SIZE / 2, buildings[i].y + BUILD_SIZE / 2, '#ff8800', 10, 4);
-      buildings.splice(i, 1);
-    }
+    if (buildings[i].hp <= 0) { spawnParticles(buildings[i].x + BUILD_SIZE/2, buildings[i].y + BUILD_SIZE/2, '#ff8800', 10, 4); buildings.splice(i, 1); }
   }
 
   // -- Collect orbs --
   for (let i = orbs.length - 1; i >= 0; i--) {
-    const o = orbs[i];
-    o.pulse += 0.05;
+    const o = orbs[i]; o.pulse += 0.05;
     if (dist(player, o) < PLAYER_R + ENERGY_ORB_R + 4) {
-      energy += 5;
-      spawnParticles(o.x, o.y, '#ffdd00', 6, 3);
-      orbs.splice(i, 1);
-      document.getElementById('energy-display').textContent = energy;
-      updateBuildButtons();
+      energy += 5; spawnParticles(o.x, o.y, '#ffdd00', 6, 3); orbs.splice(i, 1);
+      document.getElementById('energy-display').textContent = energy; updateBuildButtons();
     }
   }
 
@@ -830,22 +1105,13 @@ function update() {
   generatorTimer++;
   if (generatorTimer >= 90) {
     generatorTimer = 0;
-    for (const b of buildings) {
-      if (b.type === 'generator' && b.hp > 0) {
-        energy += 2;
-        spawnParticles(b.x + BUILD_SIZE / 2, b.y + BUILD_SIZE / 2, '#ffdd00', 3, 2);
-      }
-    }
-    document.getElementById('energy-display').textContent = energy;
-    updateBuildButtons();
+    for (const b of buildings) { if (b.type === 'generator' && b.hp > 0) { energy += 2; spawnParticles(b.x + BUILD_SIZE/2, b.y + BUILD_SIZE/2, '#ffdd00', 3, 2); } }
+    document.getElementById('energy-display').textContent = energy; updateBuildButtons();
   }
 
   // -- Particles --
   for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.vx *= 0.95; p.vy *= 0.95;
-    p.life--;
+    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.life--;
     if (p.life <= 0) particles.splice(i, 1);
   }
 
@@ -854,105 +1120,138 @@ function update() {
   // ========================================
   if (wavePhase === 'countdown') {
     betweenTimer--;
-    if (betweenTimer <= 0) {
-      startWave();
-    }
-    // Update timer display every ~15 frames
+    if (betweenTimer <= 0) startWave();
     if (frameCount % 15 === 0) updateWaveHUD();
   } else if (wavePhase === 'active') {
-    // Spawn enemies on a timer
     const cfg = WAVE_CONFIG[wave - 1];
     if (enemiesSpawned < totalWaveEnemies) {
-      spawnTimer--;
-      if (spawnTimer <= 0) {
-        spawnEnemy();
-        spawnTimer = cfg.spawnRate;
-      }
+      spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = cfg.spawnRate; }
     }
-    // Check if wave is cleared
+    // Spawn boss at 50% through the wave
+    if (cfg.boss && !bossSpawned && enemiesSpawned >= Math.floor(totalWaveEnemies / 2)) {
+      bossSpawned = true; spawnBoss(cfg.boss);
+    }
+    // Wave cleared when all enemies (including boss) are dead
     if (enemiesSpawned >= totalWaveEnemies && enemies.length === 0) {
-      wavePhase = 'cleared';
-      if (wave >= MAX_WAVES) {
-        // Short delay then victory
-        betweenTimer = 120; // 2 seconds
-      } else {
-        betweenTimer = BETWEEN_WAVE_FAST * 60; // faster countdown since you cleared it
-      }
+      wavePhase = 'upgrades'; showingUpgrades = true; activeBoss = null;
+      document.getElementById('boss-bar').classList.remove('show');
       updateWaveHUD();
     }
-    // Update progress bar
     if (frameCount % 10 === 0) updateWaveHUD();
+  } else if (wavePhase === 'upgrades') {
+    // Handled by draw + click - wait for player to dismiss
   } else if (wavePhase === 'cleared') {
     betweenTimer--;
-    if (wave >= MAX_WAVES && betweenTimer <= 0) {
-      // VICTORY
-      wavePhase = 'victory';
-      showVictory();
-    } else if (wave < MAX_WAVES && betweenTimer <= 0) {
-      wavePhase = 'countdown';
-      betweenTimer = BETWEEN_WAVE_SECONDS * 60;
-      updateWaveHUD();
-    }
+    if (wave >= MAX_WAVES && betweenTimer <= 0) { wavePhase = 'victory'; showVictory(); }
+    else if (wave < MAX_WAVES && betweenTimer <= 0) { wavePhase = 'countdown'; betweenTimer = BETWEEN_WAVE_SECONDS * 60; updateWaveHUD(); }
     if (frameCount % 15 === 0) updateWaveHUD();
+  } else if (wavePhase === 'endless') {
+    endlessTimer++;
+    // Spawn enemies continuously
+    spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = getEndlessConfig().spawnRate; }
+    // Escalate difficulty every 30 seconds
+    if (endlessTimer % 1800 === 0) endlessLevel++;
+    // Spawn boss every 2 minutes
+    endlessBossTimer++; if (endlessBossTimer >= 7200) {
+      endlessBossTimer = 0;
+      const bossKeys = ['sentinel','warden','overlord','core'];
+      spawnBoss(bossKeys[Math.min(Math.floor(endlessLevel / 2), bossKeys.length - 1)]);
+    }
+    // Update endless timer display
+    if (frameCount % 30 === 0) {
+      const secs = Math.floor(endlessTimer / 60);
+      const m = Math.floor(secs / 60), s = secs % 60;
+      document.getElementById('endless-timer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    if (frameCount % 10 === 0) updateWaveHUD();
   }
 
   // -- Wave banner --
-  if (waveBannerTimer > 0) {
-    waveBannerTimer--;
-    if (waveBannerTimer <= 0) {
-      document.getElementById('wave-banner').classList.remove('show');
-    }
-  }
+  if (waveBannerTimer > 0) { waveBannerTimer--; if (waveBannerTimer <= 0) document.getElementById('wave-banner').classList.remove('show'); }
 
   // -- Camera --
-  camera.x = player.x - W / 2;
-  camera.y = player.y - H / 2;
+  camera.x = player.x - W / 2; camera.y = player.y - H / 2;
   camera.x = Math.max(0, Math.min(WORLD_W - W, camera.x));
   camera.y = Math.max(0, Math.min(WORLD_H - H, camera.y));
 
-  // -- Game over (death) --
+  // -- Score display --
+  document.getElementById('score-display').textContent = `Kills: ${totalKills} | Points: ${upgradePoints}`;
+
+  // -- Game over --
   if (player.hp <= 0 && !gameOverShown) {
-    gameOverShown = true;
-    gameRunning = false;
+    gameOverShown = true; gameRunning = false;
     const title = document.getElementById('go-title');
-    title.textContent = 'OVERLOADED';
-    title.style.color = '#ff2222';
-    title.style.textShadow = '0 0 30px rgba(255,0,0,0.6)';
-    document.getElementById('go-stats').textContent = `You were destroyed on Wave ${wave} / ${MAX_WAVES}`;
+    if (endlessMode) {
+      const secs = Math.floor(endlessTimer / 60);
+      const m = Math.floor(secs / 60), s = secs % 60;
+      const timeStr = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      title.textContent = 'ENDLESS SIEGE OVER';
+      title.style.color = '#ff6600'; title.style.textShadow = '0 0 30px rgba(255,100,0,0.6)';
+      const isHighScore = secs > highScore;
+      if (isHighScore) { highScore = secs; localStorage.setItem('energySiegeHighScore', String(secs)); }
+      const hsM = Math.floor(highScore / 60), hsS = highScore % 60;
+      const hsStr = `${String(hsM).padStart(2,'0')}:${String(hsS).padStart(2,'0')}`;
+      document.getElementById('go-stats').textContent = `Survived: ${timeStr} | Kills: ${totalKills}${isHighScore ? ' | NEW HIGH SCORE!' : ` | Best: ${hsStr}`}`;
+    } else {
+      title.textContent = 'OVERLOADED'; title.style.color = '#ff2222'; title.style.textShadow = '0 0 30px rgba(255,0,0,0.6)';
+      document.getElementById('go-stats').textContent = `Destroyed on Wave ${wave} / ${MAX_WAVES} | Kills: ${totalKills}`;
+    }
     document.getElementById('game-over').classList.add('show');
   }
 }
 
 function killEnemy(e, index) {
-  spawnParticles(e.x, e.y, '#ff6600', 12, 5);
-  for (let k = 0; k < 2 + Math.floor(Math.random() * 2); k++) {
-    orbs.push({
-      x: e.x + (Math.random() - 0.5) * 30,
-      y: e.y + (Math.random() - 0.5) * 30,
-      pulse: Math.random() * Math.PI * 2
-    });
+  const isBoss = e.isBoss;
+  spawnParticles(e.x, e.y, isBoss ? '#ffaa00' : '#ff6600', isBoss ? 25 : 12, isBoss ? 8 : 5);
+  const orbCount = isBoss ? 15 + Math.floor(Math.random() * 10) : 2 + Math.floor(Math.random() * 2);
+  for (let k = 0; k < orbCount; k++) {
+    orbs.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40, pulse: Math.random()*Math.PI*2 });
   }
+  // Points: boss=5, special=2, normal=1
+  const pts = isBoss ? 5 : (e.type !== 'normal' ? 2 : 1);
+  upgradePoints += pts; totalKills++; waveKills++;
+  // Splitter: spawn 2 smaller copies
+  if (e.canSplit && e.type === 'splitter' && !isBoss) {
+    for (let s = 0; s < 2; s++) {
+      const angle = Math.random() * Math.PI * 2;
+      enemies.push({
+        x: e.x + Math.cos(angle)*15, y: e.y + Math.sin(angle)*15, size: Math.max(8, Math.floor(e.size * 0.6)),
+        hp: Math.floor(e.maxHp * 0.35), maxHp: Math.floor(e.maxHp * 0.35),
+        speed: e.speed * 1.3, attackCD: 0, damage: Math.floor(e.damage * 0.6),
+        type: 'splitter', isBoss: false, spawnFrame: frameCount, isRaged: false, canSplit: false,
+        laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
+        mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0 });
+    }
+  }
+  if (isBoss && activeBoss === e) { activeBoss = null; document.getElementById('boss-bar').classList.remove('show'); }
   enemies.splice(index, 1);
-  waveKills++;
 }
 
 function showVictory() {
   victoryShown = true;
-  gameRunning = false;
   const title = document.getElementById('go-title');
   title.textContent = 'VICTORY!';
   title.style.color = '#44ff44';
   title.style.textShadow = '0 0 30px rgba(0,255,0,0.6)';
-  document.getElementById('go-stats').textContent = `You survived all ${MAX_WAVES} waves! The siege is broken!`;
+  document.getElementById('go-stats').innerHTML = `All ${MAX_WAVES} waves cleared! Kills: ${totalKills}<br><span style="color:#ff4444;font-size:16px">The Endless Siege begins in 5 seconds...</span>`;
   document.getElementById('game-over').classList.add('show');
   updateWaveHUD();
+  // Transition to endless mode after 5 seconds
+  setTimeout(() => {
+    document.getElementById('game-over').classList.remove('show');
+    gameRunning = true; victoryShown = false; gameOverShown = false;
+    // Heal player partially
+    player.hp = Math.min(player.hp + 50, player.maxHp);
+    document.getElementById('hp-display').textContent = Math.floor(player.hp);
+    startEndless();
+  }, 5000);
 }
 
 // ---- Drawing ----
 function draw() {
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, W, H);
-  if (!gameRunning && !gameOverShown && !victoryShown) return;
+  if (!gameRunning && !gameOverShown && !victoryShown && !gamePaused) return;
 
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
@@ -1099,26 +1398,142 @@ function draw() {
   // Bullets
   for (const b of bullets) {
     if (b.x < camera.x - 10 || b.x > camera.x + W + 10 || b.y < camera.y - 10 || b.y > camera.y + H + 10) continue;
-    ctx.fillStyle = b.owner === 'player' ? '#66ccff' : b.owner === 'drone' ? '#00ffcc' : '#ff8800';
-    ctx.beginPath(); ctx.arc(b.x, b.y, BULLET_R, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = b.owner === 'player' ? 'rgba(102,204,255,0.3)' : b.owner === 'drone' ? 'rgba(0,255,204,0.3)' : 'rgba(255,136,0,0.3)';
+    let col, trail;
+    if (b.owner === 'enemy') { col = '#ff2222'; trail = 'rgba(255,34,34,0.3)'; }
+    else if (b.owner === 'player') { col = '#66ccff'; trail = 'rgba(102,204,255,0.3)'; }
+    else if (b.owner === 'drone') { col = '#00ffcc'; trail = 'rgba(0,255,204,0.3)'; }
+    else { col = '#ff8800'; trail = 'rgba(255,136,0,0.3)'; }
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.owner === 'enemy' ? BULLET_R + 1 : BULLET_R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = trail;
     ctx.beginPath(); ctx.arc(b.x - b.vx * 0.5, b.y - b.vy * 0.5, BULLET_R * 0.7, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Enemies
+  // Mines
+  for (const m of mines) {
+    if (m.x < camera.x - 20 || m.x > camera.x + W + 20 || m.y < camera.y - 20 || m.y > camera.y + H + 20) continue;
+    const pulse = m.armed ? Math.sin(frameCount * 0.15) * 0.3 + 0.7 : 0.4;
+    ctx.fillStyle = m.armed ? `rgba(255,60,0,${pulse})` : 'rgba(180,80,0,0.4)';
+    ctx.beginPath(); ctx.arc(m.x, m.y, 8, 0, Math.PI * 2); ctx.fill();
+    if (m.armed) { ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(m.x, m.y, 12 + Math.sin(frameCount*0.2)*3, 0, Math.PI*2); ctx.stroke(); }
+    ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Enemies (type-specific rendering)
   for (const e of enemies) {
-    if (e.x < camera.x - 40 || e.x > camera.x + W + 40 || e.y < camera.y - 40 || e.y > camera.y + H + 40) continue;
-    ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 10;
-    ctx.fillStyle = '#cc2222';
-    ctx.fillRect(e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ff4444';
-    ctx.fillRect(e.x - e.size + 3, e.y - e.size + 3, e.size * 2 - 6, e.size * 2 - 6);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(e.x - 4, e.y - 3, 3, 3);
-    ctx.fillRect(e.x + 2, e.y - 3, 3, 3);
+    if (e.x < camera.x - 80 || e.x > camera.x + W + 80 || e.y < camera.y - 80 || e.y > camera.y + H + 80) continue;
+    const rage = e.isRaged ? Math.sin(frameCount * 0.2) * 0.3 + 0.7 : 0;
+
+    if (e.isBoss) {
+      // Boss rendering
+      const def = BOSS_DEFS[e.bossKey];
+      const bPulse = Math.sin(frameCount * 0.08) * 0.2 + 0.8;
+      ctx.shadowColor = def.color; ctx.shadowBlur = 20;
+      ctx.fillStyle = def.color;
+      ctx.fillRect(e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
+      ctx.shadowBlur = 0;
+      // Inner glow
+      ctx.fillStyle = '#000';
+      ctx.fillRect(e.x - e.size + 5, e.y - e.size + 5, e.size * 2 - 10, e.size * 2 - 10);
+      ctx.globalAlpha = bPulse;
+      ctx.fillStyle = def.color;
+      ctx.fillRect(e.x - e.size + 8, e.y - e.size + 8, e.size * 2 - 16, e.size * 2 - 16);
+      ctx.globalAlpha = 1;
+      // Boss eyes (larger)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(e.x - e.size * 0.3, e.y - e.size * 0.2, e.size * 0.2, e.size * 0.15);
+      ctx.fillRect(e.x + e.size * 0.1, e.y - e.size * 0.2, e.size * 0.2, e.size * 0.15);
+      // Phase 2 indicator for core
+      if (e.bossKey === 'core' && e.phase === 2) {
+        ctx.strokeStyle = `rgba(255,0,0,${Math.sin(frameCount*0.15)*0.4+0.6})`; ctx.lineWidth = 3;
+        ctx.strokeRect(e.x - e.size - 4, e.y - e.size - 4, e.size*2+8, e.size*2+8);
+      }
+      // Charge windup indicator
+      if (e.chargeWindup > 0 && !e.isCharging) {
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.size + 10, 0, Math.PI * 2 * (1 - e.chargeWindup / 40)); ctx.stroke();
+      }
+    } else {
+      // Regular enemy rendering by type
+      let outerColor = '#cc2222', innerColor = '#ff4444';
+      if (e.type === 'laser') { outerColor = '#cc22cc'; innerColor = '#ff44ff'; }
+      else if (e.type === 'miner') { outerColor = '#cc8800'; innerColor = '#ffaa22'; }
+      else if (e.type === 'charger') { outerColor = '#22cccc'; innerColor = '#44ffff'; }
+      else if (e.type === 'splitter') { outerColor = '#22cc22'; innerColor = '#44ff44'; }
+
+      ctx.shadowColor = e.isRaged ? '#ff8800' : outerColor; ctx.shadowBlur = e.isRaged ? 15 : 10;
+
+      if (e.type === 'splitter') {
+        // Diamond shape for splitters
+        ctx.fillStyle = outerColor; ctx.beginPath();
+        ctx.moveTo(e.x, e.y - e.size); ctx.lineTo(e.x + e.size, e.y);
+        ctx.lineTo(e.x, e.y + e.size); ctx.lineTo(e.x - e.size, e.y); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = innerColor; ctx.beginPath();
+        ctx.moveTo(e.x, e.y - e.size + 3); ctx.lineTo(e.x + e.size - 3, e.y);
+        ctx.lineTo(e.x, e.y + e.size - 3); ctx.lineTo(e.x - e.size + 3, e.y); ctx.closePath(); ctx.fill();
+      } else if (e.type === 'charger') {
+        // Triangle for chargers
+        ctx.fillStyle = outerColor;
+        const ca = Math.atan2(player.y - e.y, player.x - e.x);
+        ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(ca);
+        ctx.beginPath(); ctx.moveTo(e.size, 0); ctx.lineTo(-e.size, -e.size*0.8); ctx.lineTo(-e.size, e.size*0.8); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = innerColor;
+        ctx.beginPath(); ctx.moveTo(e.size-4, 0); ctx.lineTo(-e.size+4, -e.size*0.5); ctx.lineTo(-e.size+4, e.size*0.5); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        // Windup indicator
+        if (e.chargeWindup > 0 && !e.isCharging) {
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(e.x, e.y, e.size + 8, 0, Math.PI*2*(1-e.chargeWindup/CHARGER_WINDUP)); ctx.stroke();
+        }
+      } else {
+        // Square for normal, laser, miner
+        ctx.fillStyle = outerColor;
+        ctx.fillRect(e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = innerColor;
+        ctx.fillRect(e.x - e.size + 3, e.y - e.size + 3, e.size * 2 - 6, e.size * 2 - 6);
+      }
+      ctx.shadowBlur = 0;
+
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(e.x - 4, e.y - 3, 3, 3);
+      ctx.fillRect(e.x + 2, e.y - 3, 3, 3);
+
+      // Laser enemy: charging/firing beam
+      if (e.type === 'laser' && (e.laserCharging || e.laserFiring)) {
+        const la = e.laserAngle;
+        if (e.laserCharging) {
+          const chPct = 1 - e.laserChargeTimer / LASER_E_CHARGE;
+          ctx.strokeStyle = `rgba(255,0,255,${chPct * 0.5})`; ctx.lineWidth = 2 + chPct * 3;
+          ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(la)*LASER_E_RANGE*chPct, e.y + Math.sin(la)*LASER_E_RANGE*chPct); ctx.stroke();
+        } else if (e.laserFiring) {
+          ctx.strokeStyle = `rgba(255,100,255,0.3)`; ctx.lineWidth = 10;
+          ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(la)*LASER_E_RANGE, e.y + Math.sin(la)*LASER_E_RANGE); ctx.stroke();
+          ctx.strokeStyle = '#ff44ff'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(la)*LASER_E_RANGE, e.y + Math.sin(la)*LASER_E_RANGE); ctx.stroke();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(la)*LASER_E_RANGE, e.y + Math.sin(la)*LASER_E_RANGE); ctx.stroke();
+        }
+      }
+
+      // Miner: show mine symbol
+      if (e.type === 'miner') {
+        ctx.fillStyle = '#ffaa00'; ctx.font = `${e.size}px monospace`; ctx.textAlign = 'center';
+        ctx.fillText('M', e.x, e.y + e.size * 0.3);
+      }
+
+      // Rage glow
+      if (e.isRaged) {
+        ctx.strokeStyle = `rgba(255,140,0,${rage})`; ctx.lineWidth = 2;
+        ctx.strokeRect(e.x - e.size - 2, e.y - e.size - 2, e.size*2+4, e.size*2+4);
+      }
+    }
+
+    // HP bar (all enemies including bosses)
     if (e.hp < e.maxHp) {
-      const hpPct = e.hp / e.maxHp;
+      const hpPct = Math.max(0, e.hp / e.maxHp);
       const barW = e.size * 2 + 4;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(e.x - barW / 2, e.y - e.size - 10, barW, 4);
@@ -1181,6 +1596,85 @@ function draw() {
 
   ctx.restore();
   drawMinimap();
+
+  // Pause overlay
+  if (gamePaused) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#0ff'; ctx.font = 'bold 48px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', W/2, H/2 - 100);
+    ctx.fillStyle = '#aaa'; ctx.font = '18px Segoe UI';
+    ctx.fillText(`Wave: ${endlessMode ? 'ENDLESS' : wave + '/' + MAX_WAVES} | Kills: ${totalKills} | Energy: ${energy}`, W/2, H/2 - 50);
+    ctx.fillText(`HP: ${Math.floor(player.hp)}/${player.maxHp} | Points: ${upgradePoints}`, W/2, H/2 - 20);
+    const upStrs = UPGRADE_DEFS.map(u => `${u.name}: Lv${playerUpgrades[u.key]}`).join(' | ');
+    ctx.font = '14px Segoe UI'; ctx.fillText(upStrs, W/2, H/2 + 20);
+    ctx.fillStyle = '#888'; ctx.font = '16px Segoe UI';
+    ctx.fillText('WASD: Move | Click: Shoot | SPACE: Dash | 1-4: Build', W/2, H/2 + 70);
+    ctx.fillText('Press ESC to resume', W/2, H/2 + 110);
+  }
+
+  // Upgrade menu
+  if (showingUpgrades) {
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#44ff44'; ctx.font = 'bold 36px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('WAVE CLEARED — UPGRADES', W/2, 80);
+    ctx.fillStyle = '#ffdd00'; ctx.font = '20px Segoe UI';
+    ctx.fillText(`Available Points: ${upgradePoints}`, W/2, 120);
+
+    const boxW = 220, boxH = 120, gap = 20;
+    const totalW = UPGRADE_DEFS.length * boxW + (UPGRADE_DEFS.length - 1) * gap;
+    const startX = (W - totalW) / 2;
+    const startY = H/2 - 80;
+
+    for (let i = 0; i < UPGRADE_DEFS.length; i++) {
+      const u = UPGRADE_DEFS[i];
+      const lv = playerUpgrades[u.key];
+      const cost = getUpgradeCost(lv);
+      const canBuy = lv < u.max && upgradePoints >= cost;
+      const maxed = lv >= u.max;
+      const bx = startX + i * (boxW + gap), by = startY;
+
+      // Box
+      ctx.fillStyle = canBuy ? 'rgba(0,255,100,0.1)' : 'rgba(100,100,100,0.1)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.strokeStyle = canBuy ? '#44ff44' : maxed ? '#888' : '#666'; ctx.lineWidth = 2;
+      ctx.strokeRect(bx, by, boxW, boxH);
+
+      // Name
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillText(u.name, bx + boxW/2, by + 25);
+
+      // Level pips
+      for (let p = 0; p < u.max; p++) {
+        ctx.fillStyle = p < lv ? '#44ff44' : '#333';
+        ctx.fillRect(bx + boxW/2 - u.max*10 + p*20 + 2, by + 38, 16, 8);
+      }
+
+      // Cost or MAX
+      ctx.font = '14px Segoe UI';
+      if (maxed) { ctx.fillStyle = '#888'; ctx.fillText('MAXED', bx + boxW/2, by + 72); }
+      else { ctx.fillStyle = canBuy ? '#ffdd00' : '#666'; ctx.fillText(`Cost: ${cost} pts`, bx + boxW/2, by + 72); }
+
+      // Effect description
+      ctx.fillStyle = '#aaa'; ctx.font = '12px Segoe UI';
+      const desc = u.key === 'maxHp' ? `+${u.per} HP per level` : u.key === 'speed' ? `+${u.per} speed per level` :
+        u.key === 'damage' ? `+${u.per} dmg per level` : u.key === 'droneRate' ? `-${u.per}f fire delay` : `-${u.per}f dash CD`;
+      ctx.fillText(desc, bx + boxW/2, by + 95);
+
+      // Click hint
+      if (canBuy) { ctx.fillStyle = '#44ff44'; ctx.font = '11px Segoe UI'; ctx.fillText('[CLICK TO BUY]', bx + boxW/2, by + 112); }
+    }
+
+    // Ready button
+    const rbW = 200, rbH = 50;
+    const rbX = W/2 - rbW/2, rbY = startY + boxH + 50;
+    ctx.fillStyle = 'rgba(0,255,255,0.15)'; ctx.fillRect(rbX, rbY, rbW, rbH);
+    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(rbX, rbY, rbW, rbH);
+    ctx.fillStyle = '#0ff'; ctx.font = 'bold 22px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('READY [ENTER]', W/2, rbY + 33);
+
+    // Store positions for click detection
+    window._upgradeBoxes = { startX, startY, boxW, boxH, gap, readyX: rbX, readyY: rbY, readyW: rbW, readyH: rbH };
+  }
 }
 
 function drawMinimap() {
@@ -1252,6 +1746,21 @@ function placeBuild() {
 window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   keys[k] = true;
+
+  // Escape: pause toggle or cancel build
+  if (e.key === 'Escape') {
+    if (showingUpgrades) return; // can't pause during upgrades
+    if (selectedBuild) { selectedBuild = null; updateBuildButtons(); }
+    else if (gameRunning) { gamePaused = !gamePaused; }
+    return;
+  }
+
+  if (gamePaused || showingUpgrades) {
+    // Enter to dismiss upgrade menu
+    if (e.key === 'Enter' && showingUpgrades) { dismissUpgradeMenu(); }
+    return;
+  }
+
   if (e.key === '1') selectBuild('wall');
   if (e.key === '2') selectBuild('generator');
   if (e.key === '3') selectBuild('turret');
@@ -1263,9 +1772,9 @@ window.addEventListener('keydown', e => {
     else if (selectedBuild === 'turret') selectBuild('laser');
     else selectBuild('wall');
   }
-  if (e.key === 'Escape') { selectedBuild = null; updateBuildButtons(); }
 
   // Dash
+  const effectiveDashCD = DASH_COOLDOWN - playerUpgrades.dashCD * 25;
   if (k === ' ' && gameRunning && dashCooldown <= 0 && dashTimer <= 0) {
     e.preventDefault();
     let ddx = 0, ddy = 0;
@@ -1276,10 +1785,8 @@ window.addEventListener('keydown', e => {
     if (ddx === 0 && ddy === 0) { ddx = Math.cos(player.angle); ddy = Math.sin(player.angle); }
     const len = Math.hypot(ddx, ddy);
     if (len > 0) {
-      dashDX = (ddx / len) * DASH_SPEED;
-      dashDY = (ddy / len) * DASH_SPEED;
-      dashTimer = DASH_DURATION;
-      dashCooldown = DASH_COOLDOWN;
+      dashDX = (ddx / len) * DASH_SPEED; dashDY = (ddy / len) * DASH_SPEED;
+      dashTimer = DASH_DURATION; dashCooldown = effectiveDashCD;
       spawnParticles(player.x, player.y, '#00ffff', 8, 4);
     }
   }
@@ -1290,24 +1797,53 @@ window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
 canvas.addEventListener('mousedown', e => {
-  if (e.button === 0) {
-    if (selectedBuild) {
-      placeBuild();
-    } else {
-      mouse.clicked = true; // Semi-auto: set flag, consumed by update()
+  if (gamePaused) return;
+
+  // Upgrade menu click handling
+  if (showingUpgrades && e.button === 0 && window._upgradeBoxes) {
+    const ub = window._upgradeBoxes;
+    const mx = e.clientX, my = e.clientY;
+    // Check upgrade boxes
+    for (let i = 0; i < UPGRADE_DEFS.length; i++) {
+      const bx = ub.startX + i * (ub.boxW + ub.gap);
+      if (mx >= bx && mx <= bx + ub.boxW && my >= ub.startY && my <= ub.startY + ub.boxH) {
+        const u = UPGRADE_DEFS[i]; const lv = playerUpgrades[u.key]; const cost = getUpgradeCost(lv);
+        if (lv < u.max && upgradePoints >= cost) {
+          upgradePoints -= cost; playerUpgrades[u.key]++;
+          applyUpgrades();
+          document.getElementById('hp-display').textContent = Math.floor(player.hp);
+        }
+        return;
+      }
     }
+    // Check ready button
+    if (mx >= ub.readyX && mx <= ub.readyX + ub.readyW && my >= ub.readyY && my <= ub.readyY + ub.readyH) {
+      dismissUpgradeMenu(); return;
+    }
+    return;
   }
-  if (e.button === 2 && selectedBuild) {
-    placeBuild();
+
+  if (e.button === 0) {
+    if (selectedBuild) { placeBuild(); }
+    else { mouse.clicked = true; }
   }
+  if (e.button === 2 && selectedBuild) { placeBuild(); }
 });
+
+function dismissUpgradeMenu() {
+  showingUpgrades = false;
+  wavePhase = 'cleared';
+  if (wave >= MAX_WAVES) { betweenTimer = 120; }
+  else { betweenTimer = BETWEEN_WAVE_FAST * 60; }
+  updateWaveHUD();
+}
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // ---- Game Loop ----
 function gameLoop() {
   update();
-  draw();
+  draw(); // draw runs even when paused (to show pause overlay)
   requestAnimationFrame(gameLoop);
 }
 

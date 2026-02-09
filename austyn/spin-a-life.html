@@ -6,85 +6,48 @@
 <title>Spin-a-Life: World Edition</title>
 <style>
 /* ============================================================
-   SPIN-A-LIFE: WORLD EDITION
+   SPIN-A-LIFE: WORLD EDITION — MEGA EXPANSION
    A Life Simulator RPG by Austyn
    ============================================================ */
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --sky:#e8f4fd;
-  --sky2:#cce5ff;
-  --green:#4caf50;
-  --green-light:#81c784;
-  --green-dark:#2e7d32;
-  --blue:#2196f3;
-  --blue-light:#64b5f6;
-  --blue-dark:#1565c0;
-  --orange:#ff9800;
-  --orange-light:#ffb74d;
-  --red:#f44336;
-  --pink:#e91e63;
-  --purple:#9c27b0;
-  --yellow:#ffc107;
-  --brown:#795548;
-  --text:#333;
-  --text-light:#666;
-  --card:#ffffff;
+  --sky:#e8f4fd;--sky2:#cce5ff;
+  --green:#4caf50;--green-light:#81c784;--green-dark:#2e7d32;
+  --blue:#2196f3;--blue-light:#64b5f6;--blue-dark:#1565c0;
+  --orange:#ff9800;--orange-light:#ffb74d;
+  --red:#f44336;--pink:#e91e63;--purple:#9c27b0;
+  --yellow:#ffc107;--brown:#795548;--cyan:#00bcd4;
+  --text:#333;--text-light:#666;--card:#ffffff;
   --shadow:0 4px 15px rgba(0,0,0,.1);
   --shadow-lg:0 8px 30px rgba(0,0,0,.15);
   --radius:16px;
 }
 html,body{
-  height:100%;
-  font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  height:100%;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
   background:linear-gradient(180deg,var(--sky) 0%,var(--sky2) 100%);
-  color:var(--text);
-  overflow-x:hidden;
+  color:var(--text);overflow-x:hidden;
 }
-/* Clouds background */
 body::before,body::after{
-  content:'';position:fixed;border-radius:50%;opacity:.4;z-index:0;pointer-events:none;
-  background:white;
+  content:'';position:fixed;border-radius:50%;opacity:.4;z-index:0;pointer-events:none;background:white;
 }
-body::before{
-  width:200px;height:60px;top:30px;left:10%;
-  box-shadow:40px -15px 0 10px white,80px 0 0 5px white;
-  animation:drift 40s linear infinite;
-}
-body::after{
-  width:150px;height:50px;top:80px;right:15%;
-  box-shadow:30px -10px 0 8px white,60px 5px 0 3px white;
-  animation:drift 55s linear infinite reverse;
-}
+body::before{width:200px;height:60px;top:30px;left:10%;box-shadow:40px -15px 0 10px white,80px 0 0 5px white;animation:drift 40s linear infinite;}
+body::after{width:150px;height:50px;top:80px;right:15%;box-shadow:30px -10px 0 8px white,60px 5px 0 3px white;animation:drift 55s linear infinite reverse;}
 @keyframes drift{from{transform:translateX(-120px)}to{transform:translateX(120px)}}
 
-/* ========== LAYOUT ========== */
-#app{
-  max-width:600px;margin:0 auto;min-height:100vh;
-  position:relative;z-index:1;padding:12px;
-}
+#app{max-width:600px;margin:0 auto;min-height:100vh;position:relative;z-index:1;padding:12px;}
 .screen{display:none;animation:fadeUp .4s ease;}
 .screen.active{display:block;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
 
-/* ========== CARDS ========== */
-.card{
-  background:var(--card);border-radius:var(--radius);
-  padding:20px;margin-bottom:14px;
-  box-shadow:var(--shadow);
-}
-.card-title{
-  font-size:1.1rem;font-weight:700;margin-bottom:10px;
-  display:flex;align-items:center;gap:8px;
-}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:var(--shadow);}
+.card-title{font-size:1.1rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 
-/* ========== BUTTONS ========== */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:12px 20px;font-size:.95rem;font-weight:600;
   border:none;border-radius:12px;cursor:pointer;
   transition:all .15s;font-family:inherit;
-  box-shadow:0 3px 8px rgba(0,0,0,.12);
-  color:white;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);color:white;
 }
 .btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,.2);}
 .btn:active{transform:translateY(0);box-shadow:0 2px 5px rgba(0,0,0,.15);}
@@ -96,31 +59,19 @@ body::after{
 .btn-purple{background:linear-gradient(135deg,var(--purple),#6a1b9a);}
 .btn-pink{background:linear-gradient(135deg,var(--pink),#ad1457);}
 .btn-yellow{background:linear-gradient(135deg,var(--yellow),#f57f17);color:var(--text);}
+.btn-cyan{background:linear-gradient(135deg,var(--cyan),#00838f);}
 .btn-sm{padding:8px 14px;font-size:.8rem;border-radius:10px;}
 .btn-lg{padding:14px 28px;font-size:1.1rem;border-radius:14px;}
 .btn-block{width:100%;margin-bottom:8px;}
 
-/* ========== TITLE SCREEN ========== */
 #title-screen{text-align:center;padding-top:40px;}
-.game-title{
-  font-size:clamp(2rem,7vw,3rem);
-  font-weight:900;
-  background:linear-gradient(135deg,var(--blue),var(--purple),var(--pink));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  margin-bottom:4px;
-}
+.game-title{font-size:clamp(2rem,7vw,3rem);font-weight:900;background:linear-gradient(135deg,var(--blue),var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;}
 .game-subtitle{color:var(--text-light);font-size:1rem;margin-bottom:30px;}
 .title-globe{font-size:4rem;margin-bottom:10px;animation:spin 8s linear infinite;}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-/* ========== PASSPORT SLOTS ========== */
 .passport-grid{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
-.passport-slot{
-  display:flex;align-items:center;gap:14px;
-  padding:16px;background:white;border-radius:14px;
-  border:2px dashed #ddd;cursor:pointer;
-  transition:all .2s;
-}
+.passport-slot{display:flex;align-items:center;gap:14px;padding:16px;background:white;border-radius:14px;border:2px dashed #ddd;cursor:pointer;transition:all .2s;}
 .passport-slot:hover{border-color:var(--blue);transform:scale(1.02);}
 .passport-slot.filled{border-style:solid;border-color:var(--green-light);}
 .passport-icon{font-size:2.2rem;}
@@ -129,63 +80,26 @@ body::after{
 .passport-detail{font-size:.75rem;color:var(--text-light);}
 .passport-actions{display:flex;gap:6px;}
 
-/* ========== NAME INPUT ========== */
-.name-input{
-  width:100%;padding:14px;font-size:1.1rem;
-  border:2px solid #ddd;border-radius:12px;
-  font-family:inherit;outline:none;
-  transition:border-color .2s;
-}
+.name-input{width:100%;padding:14px;font-size:1.1rem;border:2px solid #ddd;border-radius:12px;font-family:inherit;outline:none;transition:border-color .2s;}
 .name-input:focus{border-color:var(--blue);}
 
-/* ========== COUNTRY SELECT ========== */
 .country-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.country-card{
-  display:flex;flex-direction:column;align-items:center;
-  padding:16px 8px;background:white;border-radius:14px;
-  border:2px solid #eee;cursor:pointer;
-  transition:all .2s;gap:6px;
-}
+.country-card{display:flex;flex-direction:column;align-items:center;padding:16px 8px;background:white;border-radius:14px;border:2px solid #eee;cursor:pointer;transition:all .2s;gap:6px;}
 .country-card:hover{border-color:var(--blue);transform:translateY(-3px);box-shadow:var(--shadow);}
 .country-flag{font-size:2.5rem;}
 .country-name{font-size:.8rem;font-weight:600;text-align:center;}
 
-/* ========== WHEEL ========== */
 .wheel-container{text-align:center;padding:20px 0;}
-.wheel-outer{
-  position:relative;width:280px;height:280px;
-  margin:0 auto 20px;
-}
-.wheel-pointer{
-  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
-  font-size:2rem;z-index:5;
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));
-}
-.wheel-canvas{
-  width:280px;height:280px;
-  border-radius:50%;
-  box-shadow:0 0 0 8px white,0 0 0 10px #ddd,var(--shadow-lg);
-}
-.wheel-result{
-  font-size:1.4rem;font-weight:800;
-  min-height:40px;margin:10px 0;
-}
+.wheel-outer{position:relative;width:280px;height:280px;margin:0 auto 20px;}
+.wheel-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:2rem;z-index:5;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+.wheel-canvas{width:280px;height:280px;border-radius:50%;box-shadow:0 0 0 8px white,0 0 0 10px #ddd,var(--shadow-lg);}
+.wheel-result{font-size:1.4rem;font-weight:800;min-height:40px;margin:10px 0;}
 
-/* ========== TOWN MAP ========== */
 .town-header{text-align:center;margin-bottom:12px;}
 .town-name{font-size:1.3rem;font-weight:800;}
 .town-country{font-size:.85rem;color:var(--text-light);}
-.map-grid{
-  display:grid;grid-template-columns:repeat(6,1fr);gap:3px;
-  background:#c8e6c9;padding:8px;border-radius:12px;
-  border:3px solid #a5d6a7;
-}
-.map-cell{
-  aspect-ratio:1;background:#e8f5e9;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.2rem;cursor:pointer;transition:all .15s;
-  border:2px solid transparent;position:relative;
-}
+.map-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;background:#c8e6c9;padding:8px;border-radius:12px;border:3px solid #a5d6a7;}
+.map-cell{aspect-ratio:1;background:#e8f5e9;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .15s;border:2px solid transparent;position:relative;}
 .map-cell:hover{background:#c8e6c9;border-color:var(--green);}
 .map-cell.road{background:#e0e0e0;}
 .map-cell.water{background:#bbdefb;cursor:default;}
@@ -196,91 +110,48 @@ body::after{
 .map-cell.available{border:2px dashed var(--green);animation:pulse 1.5s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
-/* ========== HUB (Main Game View) ========== */
-.hub-header{
-  display:flex;align-items:center;gap:12px;
-  padding:14px;background:white;border-radius:var(--radius);
-  box-shadow:var(--shadow);margin-bottom:14px;
-}
+.hub-header{display:flex;align-items:center;gap:12px;padding:14px;background:white;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;flex-wrap:wrap;}
 .hub-avatar{font-size:2.2rem;}
-.hub-info{flex:1;}
+.hub-info{flex:1;min-width:120px;}
 .hub-name{font-weight:700;font-size:1.05rem;}
 .hub-location{font-size:.75rem;color:var(--text-light);}
-.hub-money{
-  font-size:1.1rem;font-weight:800;color:var(--green-dark);
-  background:#e8f5e9;padding:6px 12px;border-radius:10px;
-}
+.hub-money{font-size:1.1rem;font-weight:800;color:var(--green-dark);background:#e8f5e9;padding:6px 12px;border-radius:10px;}
+.hub-stage{width:100%;margin-top:6px;}
+.stage-label{font-size:.75rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;}
+.stage-bar{height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;margin-top:3px;}
+.stage-fill{height:100%;border-radius:4px;transition:width .5s ease;background:linear-gradient(90deg,var(--blue),var(--purple));}
 
-.hub-nav{
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;
-  margin-bottom:14px;
-}
-.nav-btn{
-  display:flex;flex-direction:column;align-items:center;
-  padding:16px 8px;background:white;border-radius:14px;
-  border:none;cursor:pointer;font-family:inherit;
-  box-shadow:var(--shadow);transition:all .2s;gap:4px;
-}
+.hub-nav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.nav-btn{display:flex;flex-direction:column;align-items:center;padding:14px 6px;background:white;border-radius:14px;border:none;cursor:pointer;font-family:inherit;box-shadow:var(--shadow);transition:all .2s;gap:4px;}
 .nav-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-.nav-btn .nav-icon{font-size:1.8rem;}
-.nav-btn .nav-label{font-size:.8rem;font-weight:600;color:var(--text);}
+.nav-btn .nav-icon{font-size:1.6rem;}
+.nav-btn .nav-label{font-size:.75rem;font-weight:600;color:var(--text);}
 
-/* ========== STATS ========== */
-.stat-row{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 0;border-bottom:1px solid #f0f0f0;
-}
+.stat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;}
 .stat-row:last-child{border:none;}
 .stat-icon{font-size:1.3rem;width:30px;text-align:center;}
 .stat-info{flex:1;}
 .stat-name{font-size:.8rem;font-weight:600;}
-.stat-bar{
-  height:10px;background:#f0f0f0;border-radius:5px;
-  overflow:hidden;margin-top:3px;
-}
+.stat-bar{height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden;margin-top:3px;}
 .stat-fill{height:100%;border-radius:5px;transition:width .5s ease;}
 .stat-val{font-size:.75rem;font-weight:700;color:var(--text-light);width:35px;text-align:right;}
 
-/* ========== GYM ========== */
-.gym-item{
-  display:flex;align-items:center;gap:12px;
-  padding:12px;background:#f8f8f8;border-radius:12px;
-  margin-bottom:8px;
-}
+.gym-item{display:flex;align-items:center;gap:12px;padding:12px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
 .gym-item .stat-icon{font-size:1.5rem;}
 .gym-info{flex:1;}
 .gym-name{font-weight:700;font-size:.9rem;}
 .gym-desc{font-size:.72rem;color:var(--text-light);}
 
-/* ========== MINI-GAME OVERLAY ========== */
-#minigame-overlay{
-  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,.6);z-index:1000;
-  align-items:center;justify-content:center;
-}
+#minigame-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;}
 #minigame-overlay.active{display:flex;}
-.minigame-box{
-  background:white;border-radius:20px;padding:24px;
-  max-width:350px;width:90%;text-align:center;
-  box-shadow:var(--shadow-lg);animation:fadeUp .3s ease;
-}
+.minigame-box{background:white;border-radius:20px;padding:24px;max-width:380px;width:92%;text-align:center;box-shadow:var(--shadow-lg);animation:fadeUp .3s ease;max-height:90vh;overflow-y:auto;}
 .minigame-title{font-size:1.2rem;font-weight:800;margin-bottom:6px;}
 .minigame-desc{font-size:.8rem;color:var(--text-light);margin-bottom:16px;}
-.minigame-area{
-  min-height:120px;display:flex;align-items:center;justify-content:center;
-  background:#f8f8f8;border-radius:14px;margin-bottom:16px;
-  position:relative;overflow:hidden;
-}
-.click-target{
-  font-size:3rem;cursor:pointer;transition:transform .1s;
-  user-select:none;
-}
+.minigame-area{min-height:120px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;background:#f8f8f8;border-radius:14px;margin-bottom:16px;position:relative;overflow:hidden;}
+.click-target{font-size:3rem;cursor:pointer;transition:transform .1s;user-select:none;}
 .click-target:active{transform:scale(.85);}
 .minigame-counter{font-size:2rem;font-weight:900;color:var(--blue);}
-.minigame-timer{
-  font-size:.85rem;font-weight:600;color:var(--red);margin-bottom:8px;
-}
-/* Sneakiness eye */
+.minigame-timer{font-size:.85rem;font-weight:600;color:var(--red);margin-bottom:8px;}
 .eye-container{font-size:4rem;transition:all .3s;}
 .eye-container.open{color:var(--red);}
 .eye-container.closed{color:var(--green);opacity:.4;}
@@ -288,983 +159,154 @@ body::after{
 .sneak-instruction.safe{color:var(--green);}
 .sneak-instruction.danger{color:var(--red);}
 
-/* ========== JOB BOARD ========== */
-.job-card{
-  display:flex;align-items:center;gap:12px;
-  padding:14px;background:#f8f8f8;border-radius:12px;
-  margin-bottom:8px;
-}
+.mem-btn{width:60px;height:60px;border-radius:14px;border:3px solid #ddd;cursor:pointer;margin:6px;transition:all .2s;font-size:1.6rem;display:inline-flex;align-items:center;justify-content:center;background:white;}
+.mem-btn.flash{transform:scale(1.15);border-color:#333;box-shadow:0 0 20px rgba(0,0,0,.3);}
+.mem-btn:active{transform:scale(.9);}
+
+.pattern-grid{display:grid;gap:6px;margin:0 auto;}
+.pattern-cell{aspect-ratio:1;border-radius:10px;background:#e0e0e0;cursor:pointer;transition:all .2s;border:2px solid #ccc;}
+.pattern-cell.lit{background:var(--yellow);border-color:var(--orange);}
+.pattern-cell.selected{background:var(--blue-light);border-color:var(--blue);}
+.pattern-cell.correct{background:var(--green-light);border-color:var(--green);}
+.pattern-cell.wrong{background:#ffcdd2;border-color:var(--red);}
+
+.reaction-target{position:absolute;font-size:2.5rem;cursor:pointer;transition:transform .1s;user-select:none;animation:popIn .2s ease;}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+
+.job-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
 .job-icon{font-size:1.8rem;}
 .job-info{flex:1;}
 .job-title{font-weight:700;font-size:.9rem;}
 .job-pay{font-size:.75rem;color:var(--green-dark);font-weight:600;}
 .job-req{font-size:.7rem;color:var(--text-light);}
 
-/* ========== SHOP ========== */
-.shop-item{
-  display:flex;align-items:center;gap:12px;
-  padding:14px;background:#f8f8f8;border-radius:12px;
-  margin-bottom:8px;
-}
+.shop-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:12px;-webkit-overflow-scrolling:touch;}
+.shop-tabs::-webkit-scrollbar{display:none;}
+.shop-tab{flex-shrink:0;padding:8px 14px;border-radius:20px;border:2px solid #eee;background:white;cursor:pointer;font-size:.78rem;font-weight:700;font-family:inherit;transition:all .2s;white-space:nowrap;}
+.shop-tab.active{background:var(--blue);color:white;border-color:var(--blue-dark);}
+.shop-tab.locked{opacity:.5;cursor:not-allowed;background:#f0f0f0;}
+.shop-item{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
 .shop-icon{font-size:2rem;}
 .shop-info{flex:1;}
 .shop-name{font-weight:700;font-size:.9rem;}
 .shop-desc{font-size:.72rem;color:var(--text-light);}
 .shop-price{font-weight:800;color:var(--orange);font-size:.9rem;white-space:nowrap;}
 
-/* ========== PETS DISPLAY ========== */
 .pets-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-.pet-badge{
-  display:flex;align-items:center;gap:4px;
-  padding:4px 10px;background:#fff3e0;
-  border-radius:20px;font-size:.8rem;font-weight:600;
-  border:1px solid #ffe0b2;
-}
+.pet-badge{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#fff3e0;border-radius:20px;font-size:.8rem;font-weight:600;border:1px solid #ffe0b2;}
 
-/* ========== ENERGY BAR ========== */
-.energy-bar{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 14px;background:#fff8e1;
-  border-radius:10px;margin-bottom:12px;
-}
+.energy-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff8e1;border-radius:10px;margin-bottom:12px;}
 .energy-label{font-size:.75rem;font-weight:600;color:var(--orange);}
 .energy-track{flex:1;height:12px;background:#fff3e0;border-radius:6px;overflow:hidden;border:1px solid #ffe0b2;}
 .energy-fill{height:100%;background:linear-gradient(90deg,var(--orange),var(--yellow));border-radius:6px;transition:width .4s;}
 .energy-val{font-size:.8rem;font-weight:700;color:var(--orange);}
 
-/* ========== RESPONSIVE ========== */
+.ach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ach-card{padding:12px 8px;border-radius:12px;text-align:center;transition:all .2s;}
+.ach-card.earned{background:#e8f5e9;border:2px solid var(--green-light);}
+.ach-card.locked{background:#f5f5f5;border:2px solid #eee;opacity:.5;}
+.ach-emoji{font-size:1.6rem;}
+.ach-name{font-size:.65rem;font-weight:700;margin-top:4px;}
+
+.adv-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
+.adv-icon{font-size:2rem;}
+.adv-info{flex:1;}
+.adv-name{font-weight:700;font-size:.9rem;}
+.adv-desc{font-size:.72rem;color:var(--text-light);}
+.adv-cost{font-size:.72rem;color:var(--orange);font-weight:600;}
+
+.biz-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#e3f2fd;border-radius:10px;margin-bottom:6px;font-size:.8rem;}
+.biz-income{font-weight:700;color:var(--green-dark);margin-left:auto;}
+
 @media(max-width:420px){
   .country-grid{grid-template-columns:repeat(2,1fr);}
   .map-grid{grid-template-columns:repeat(5,1fr);}
-  .hub-nav{grid-template-columns:1fr 1fr;}
   .wheel-outer{width:240px;height:240px;}
   .wheel-canvas{width:240px;height:240px;}
+  .ach-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- ===== TITLE SCREEN ===== -->
   <div id="title-screen" class="screen active">
-    <div class="title-globe">🌍</div>
+    <div class="title-globe">&#x1F30D;</div>
     <div class="game-title">Spin-a-Life</div>
-    <div class="game-subtitle">World Edition</div>
+    <div class="game-subtitle">World Edition &#x2014; Mega Expansion</div>
     <div class="card">
-      <div class="card-title">🛂 Select Your Passport</div>
+      <div class="card-title">&#x1F6C2; Select Your Passport</div>
       <div class="passport-grid" id="passport-grid"></div>
     </div>
   </div>
 
-  <!-- ===== NEW PASSPORT ===== -->
   <div id="new-passport-screen" class="screen">
     <div class="card" style="text-align:center;">
-      <div style="font-size:3rem;margin-bottom:8px;">🛂</div>
+      <div style="font-size:3rem;margin-bottom:8px;">&#x1F6C2;</div>
       <div class="card-title" style="justify-content:center;">Create New Passport</div>
       <input type="text" class="name-input" id="name-input" placeholder="Enter your name..." maxlength="20">
       <div style="margin-top:14px;display:flex;gap:8px;">
-        <button class="btn btn-blue btn-block" onclick="createPassport()">Create! ✈️</button>
+        <button class="btn btn-blue btn-block" onclick="createPassport()">Create! &#x2708;&#xFE0F;</button>
         <button class="btn btn-red btn-sm" onclick="showScreen('title-screen');renderPassports();">Back</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== COUNTRY SELECT ===== -->
   <div id="country-screen" class="screen">
     <div class="card">
-      <div class="card-title">🗺️ Choose Your Country</div>
+      <div class="card-title">&#x1F5FA;&#xFE0F; Choose Your Country</div>
       <div class="country-grid" id="country-grid"></div>
     </div>
     <button class="btn btn-red btn-sm" onclick="showScreen('title-screen');renderPassports();">Back</button>
   </div>
 
-  <!-- ===== WHEEL ===== -->
   <div id="wheel-screen" class="screen">
     <div class="card">
       <div class="wheel-container">
-        <div style="font-size:.9rem;font-weight:600;margin-bottom:10px;" id="wheel-country-label">🎯 Spinning for your town...</div>
+        <div style="font-size:.9rem;font-weight:600;margin-bottom:10px;" id="wheel-country-label">&#x1F3AF; Spinning for your town...</div>
         <div class="wheel-outer">
-          <div class="wheel-pointer">📍</div>
+          <div class="wheel-pointer">&#x1F4CD;</div>
           <canvas class="wheel-canvas" id="wheel-canvas" width="280" height="280"></canvas>
         </div>
         <div class="wheel-result" id="wheel-result"></div>
-        <button class="btn btn-orange btn-lg" id="spin-btn" onclick="spinWheel()">🎰 SPIN THE WHEEL!</button>
+        <button class="btn btn-orange btn-lg" id="spin-btn" onclick="spinWheel()">&#x1F3B0; SPIN THE WHEEL!</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== TOWN MAP ===== -->
   <div id="town-screen" class="screen">
     <div class="card">
       <div class="town-header">
         <div class="town-name" id="town-name-display"></div>
         <div class="town-country" id="town-country-display"></div>
-        <div style="font-size:.8rem;color:var(--green-dark);font-weight:600;margin-top:4px;">Click a green square to build your house! 🏠</div>
+        <div style="font-size:.8rem;color:var(--green-dark);font-weight:600;margin-top:4px;">Click a green square to build your house! &#x1F3E0;</div>
       </div>
       <div class="map-grid" id="town-map"></div>
       <div style="margin-top:12px;text-align:center;">
-        <button class="btn btn-blue" id="confirm-house-btn" style="display:none;" onclick="confirmHouse()">Confirm House Spot ✅</button>
+        <button class="btn btn-blue" id="confirm-house-btn" style="display:none;" onclick="confirmHouse()">Confirm House Spot &#x2705;</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== HUB (Main Game) ===== -->
   <div id="hub-screen" class="screen">
     <div class="hub-header">
-      <div class="hub-avatar">🧑</div>
+      <div class="hub-avatar">&#x1F9D1;</div>
       <div class="hub-info">
         <div class="hub-name" id="hub-name"></div>
         <div class="hub-location" id="hub-location"></div>
       </div>
       <div class="hub-money" id="hub-money">$100</div>
+      <div class="hub-stage" id="hub-stage"></div>
     </div>
-
     <div class="energy-bar">
-      <div class="energy-label">⚡ Energy</div>
+      <div class="energy-label">&#x26A1; Energy</div>
       <div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div>
       <div class="energy-val" id="energy-val">100</div>
     </div>
-
-    <div class="hub-nav">
-      <button class="nav-btn" onclick="showPanel('stats')"><div class="nav-icon">📊</div><div class="nav-label">Stats</div></button>
-      <button class="nav-btn" onclick="showPanel('gym')"><div class="nav-icon">🏋️</div><div class="nav-label">Gym</div></button>
-      <button class="nav-btn" onclick="showPanel('jobs')"><div class="nav-icon">💼</div><div class="nav-label">Jobs</div></button>
-      <button class="nav-btn" onclick="showPanel('shop')"><div class="nav-icon">🛒</div><div class="nav-label">Shop</div></button>
-      <button class="nav-btn" onclick="showPanel('home')"><div class="nav-icon">🏠</div><div class="nav-label">My Home</div></button>
-      <button class="nav-btn" onclick="doSleep()"><div class="nav-icon">😴</div><div class="nav-label">Sleep</div></button>
-    </div>
-
-    <!-- Dynamic panel area -->
+    <div class="hub-nav" id="hub-nav"></div>
     <div id="hub-panel"></div>
   </div>
 </div>
 
-<!-- ===== MINIGAME OVERLAY ===== -->
 <div id="minigame-overlay">
   <div class="minigame-box" id="minigame-box"></div>
 </div>
-
-<script>
-// ============================================================
-//  SPIN-A-LIFE: WORLD EDITION — The Life Engine
-//  Designed by Austyn, Engineered with Claude
-// ============================================================
-
-// ==================== GAME DATA ====================
-
-const COUNTRIES = [
-  {id:'usa',    name:'USA',       flag:'🇺🇸', color:'#3f51b5'},
-  {id:'france', name:'France',    flag:'🇫🇷', color:'#e91e63'},
-  {id:'japan',  name:'Japan',     flag:'🇯🇵', color:'#f44336'},
-  {id:'brazil', name:'Brazil',    flag:'🇧🇷', color:'#4caf50'},
-  {id:'egypt',  name:'Egypt',     flag:'🇪🇬', color:'#ff9800'},
-  {id:'australia',name:'Australia',flag:'🇦🇺',color:'#2196f3'},
-];
-
-const TOWNS = {
-  usa:['Sunnyville','Mountain Top','Star City','Eagle Creek','Liberty Falls','Maple Heights'],
-  france:['Belle Vue','Lavender Hills','Croissant Bay','Moonlight Village','Rose Valley','Starlight Cove'],
-  japan:['Sakura Town','Neon City','Bamboo Glen','Dragon Peak','Coral Bay','Zen Gardens'],
-  brazil:['Carnival Cove','Emerald Falls','Sunset Beach','Jungle Grove','Golden Bay','Samba Springs'],
-  egypt:['Pyramid Point','Oasis Town','Sand Castle','Pharaoh Falls','Starlight Dunes','Nile Haven'],
-  australia:['Reef Town','Outback Oasis','Koala Creek','Surf City','Boomerang Bay','Kangaroo Falls'],
-};
-
-const TOWN_COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F'];
-
-const JOBS = [
-  {id:'paper',  name:'Paper Delivery',emoji:'📰', pay:15, energyCost:10, req:{}, desc:'Deliver papers around town'},
-  {id:'cook',   name:'Restaurant Cook',emoji:'🍳',pay:25, energyCost:15, req:{running:10}, desc:'Cook meals for hungry customers'},
-  {id:'lifeguard',name:'Lifeguard',   emoji:'🏊', pay:30, energyCost:20, req:{running:15,jumping:10}, desc:'Keep swimmers safe at the beach'},
-  {id:'athlete',name:'Pro Athlete',   emoji:'⚽', pay:50, energyCost:30, req:{running:30,jumping:25}, desc:'Compete in professional sports'},
-  {id:'vet',    name:'Veterinarian',  emoji:'🩺', pay:45, energyCost:20, req:{climbing:15,sneakiness:10}, desc:'Take care of sick animals'},
-  {id:'spy',    name:'Secret Agent',  emoji:'🕵️', pay:75, energyCost:35, req:{sneakiness:40,running:20}, desc:'Top secret missions worldwide'},
-  {id:'astro',  name:'Astronaut',     emoji:'🚀', pay:100,energyCost:40, req:{running:35,jumping:35,climbing:30}, desc:'Explore outer space!'},
-];
-
-const SHOP_ITEMS = [
-  {id:'dog',     name:'Dog',          emoji:'🐶', price:50,  type:'pet', desc:'A loyal companion'},
-  {id:'cat',     name:'Cat',          emoji:'🐱', price:40,  type:'pet', desc:'A mysterious friend'},
-  {id:'hamster', name:'Hamster',      emoji:'🐹', price:25,  type:'pet', desc:'Tiny and adorable'},
-  {id:'dragon',  name:'Baby Dragon',  emoji:'🐉', price:500, type:'pet', desc:'EXTREMELY rare and cool'},
-  {id:'panda',   name:'Panda',        emoji:'🐼', price:300, type:'pet', desc:'Loves bamboo and hugs'},
-  {id:'parrot',  name:'Parrot',       emoji:'🦜', price:60,  type:'pet', desc:'Can learn to talk!'},
-  {id:'sofa',    name:'Comfy Sofa',   emoji:'🛋️', price:80,  type:'furniture', desc:'Relax at home'},
-  {id:'tv',      name:'Big TV',       emoji:'📺', price:120, type:'furniture', desc:'Watch shows & play games'},
-  {id:'pool',    name:'Swimming Pool',emoji:'🏊', price:250, type:'furniture', desc:'A backyard pool!'},
-  {id:'car',     name:'Sports Car',   emoji:'🚗', price:400, type:'furniture', desc:'Zoom around town'},
-  {id:'rocket',  name:'Backyard Rocket',emoji:'🚀',price:1000,type:'furniture',desc:'Your own rocket ship!'},
-];
-
-const STAT_DEFS = [
-  {id:'health',     name:'Health',     emoji:'❤️', color:'#f44336'},
-  {id:'jumping',    name:'Jumping',    emoji:'🦘', color:'#ff9800'},
-  {id:'running',    name:'Running',    emoji:'🏃', color:'#2196f3'},
-  {id:'climbing',   name:'Climbing',   emoji:'🧗', color:'#4caf50'},
-  {id:'sneakiness', name:'Sneakiness', emoji:'🥷', color:'#9c27b0'},
-];
-
-const GYM_TRAINING = [
-  {stat:'jumping',   name:'Jump Rope',     emoji:'🦘', desc:'Click fast to jump!',         minigame:'clicking'},
-  {stat:'running',   name:'Sprint Track',   emoji:'🏃', desc:'Tap rapidly to run!',          minigame:'clicking'},
-  {stat:'climbing',  name:'Rock Wall',      emoji:'🧗', desc:'Click to climb higher!',       minigame:'clicking'},
-  {stat:'sneakiness',name:'Stealth Course', emoji:'🥷', desc:'Stay still when the eye opens!',minigame:'stealth'},
-];
-
-// ==================== STATE & SAVE ====================
-
-const SAVE_KEY = 'spinalife_saves';
-
-function loadAllSaves(){
-  try{return JSON.parse(localStorage.getItem(SAVE_KEY))||[null,null,null];}
-  catch(e){return [null,null,null];}
-}
-function saveAllSaves(saves){localStorage.setItem(SAVE_KEY,JSON.stringify(saves));}
-
-function newGameState(name){
-  return {
-    name,
-    money:100,
-    energy:100,
-    maxEnergy:100,
-    country:null,
-    town:null,
-    housePos:null,
-    day:1,
-    stats:{health:50,jumping:5,running:5,climbing:5,sneakiness:5},
-    pets:[],
-    furniture:[],
-    totalEarned:0,
-    totalTrained:0,
-  };
-}
-
-let saves = loadAllSaves();
-let currentSlot = -1;
-let G = null; // current game state
-let selectedHouseCell = -1;
-
-// ==================== SCREENS ====================
-
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// ==================== PASSPORT ====================
-
-function renderPassports(){
-  saves = loadAllSaves();
-  const grid = document.getElementById('passport-grid');
-  grid.innerHTML = '';
-  for(let i=0;i<3;i++){
-    const s = saves[i];
-    const slot = document.createElement('div');
-    slot.className = `passport-slot ${s?'filled':''}`;
-    if(s){
-      slot.innerHTML = `
-        <div class="passport-icon">🛂</div>
-        <div class="passport-info">
-          <div class="passport-name">${s.name}</div>
-          <div class="passport-detail">${s.country?COUNTRIES.find(c=>c.id===s.country)?.flag+' ':''}${s.town||'No town yet'} | Day ${s.day} | $${s.money}</div>
-        </div>
-        <div class="passport-actions">
-          <button class="btn btn-green btn-sm" onclick="event.stopPropagation();loadGame(${i})">Play</button>
-          <button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteSlot(${i})">🗑️</button>
-        </div>
-      `;
-    } else {
-      slot.innerHTML = `
-        <div class="passport-icon" style="opacity:.3;">🛂</div>
-        <div class="passport-info">
-          <div class="passport-name" style="color:#aaa;">Empty Slot</div>
-          <div class="passport-detail">Click to create a new passport</div>
-        </div>
-      `;
-      slot.onclick = ()=>{ currentSlot=i; showScreen('new-passport-screen'); document.getElementById('name-input').value=''; document.getElementById('name-input').focus(); };
-    }
-    grid.appendChild(slot);
-  }
-}
-
-function createPassport(){
-  const name = document.getElementById('name-input').value.trim();
-  if(!name){document.getElementById('name-input').style.borderColor='var(--red)';return;}
-  G = newGameState(name);
-  saves[currentSlot] = G;
-  saveAllSaves(saves);
-  showScreen('country-screen');
-  renderCountries();
-}
-
-function deleteSlot(i){
-  if(confirm(`Delete ${saves[i].name}'s passport?`)){
-    saves[i] = null;
-    saveAllSaves(saves);
-    renderPassports();
-  }
-}
-
-function loadGame(i){
-  currentSlot = i;
-  G = saves[i];
-  if(!G.country){
-    showScreen('country-screen');
-    renderCountries();
-  } else if(!G.town){
-    showScreen('wheel-screen');
-    setupWheel();
-  } else if(!G.housePos && G.housePos!==0){
-    showScreen('town-screen');
-    renderTownMap();
-  } else {
-    enterHub();
-  }
-}
-
-function saveGame(){
-  if(currentSlot>=0 && G){
-    saves[currentSlot] = G;
-    saveAllSaves(saves);
-  }
-}
-
-// ==================== COUNTRY SELECT ====================
-
-function renderCountries(){
-  const grid = document.getElementById('country-grid');
-  grid.innerHTML = '';
-  COUNTRIES.forEach(c=>{
-    const card = document.createElement('div');
-    card.className = 'country-card';
-    card.innerHTML = `<div class="country-flag">${c.flag}</div><div class="country-name">${c.name}</div>`;
-    card.onclick = ()=>{
-      G.country = c.id;
-      saveGame();
-      showScreen('wheel-screen');
-      setupWheel();
-    };
-    grid.appendChild(card);
-  });
-}
-
-// ==================== WHEEL OF FORTUNE ====================
-
-let wheelAngle = 0;
-let wheelSpinning = false;
-let wheelTowns = [];
-
-function setupWheel(){
-  const country = COUNTRIES.find(c=>c.id===G.country);
-  wheelTowns = TOWNS[G.country]||TOWNS.usa;
-  document.getElementById('wheel-country-label').textContent = `${country.flag} ${country.name} — Spin for your town!`;
-  document.getElementById('wheel-result').textContent = '';
-  document.getElementById('spin-btn').disabled = false;
-  wheelAngle = 0;
-  drawWheel(0);
-}
-
-function drawWheel(rotation){
-  const canvas = document.getElementById('wheel-canvas');
-  const ctx = canvas.getContext('2d');
-  const cx = canvas.width/2, cy = canvas.height/2, r = cx-4;
-  const n = wheelTowns.length;
-  const arc = (Math.PI*2)/n;
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(rotation);
-
-  for(let i=0;i<n;i++){
-    const startAngle = i*arc;
-    const endAngle = startAngle+arc;
-    // Slice
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.arc(0,0,r,startAngle,endAngle);
-    ctx.closePath();
-    ctx.fillStyle = TOWN_COLORS[i%TOWN_COLORS.length];
-    ctx.fill();
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // Text
-    ctx.save();
-    ctx.rotate(startAngle + arc/2);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(wheelTowns[i], r-12, 4);
-    ctx.restore();
-  }
-
-  // Center circle
-  ctx.beginPath();
-  ctx.arc(0,0,18,0,Math.PI*2);
-  ctx.fillStyle='white';
-  ctx.fill();
-  ctx.strokeStyle='#ddd';
-  ctx.lineWidth=2;
-  ctx.stroke();
-  ctx.fillStyle='#333';
-  ctx.font='bold 14px sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText('🌎',0,5);
-
-  ctx.restore();
-}
-
-function spinWheel(){
-  if(wheelSpinning) return;
-  wheelSpinning = true;
-  document.getElementById('spin-btn').disabled = true;
-  document.getElementById('wheel-result').textContent = '🎰 Spinning...';
-
-  const n = wheelTowns.length;
-  const targetIndex = Math.floor(Math.random()*n);
-  // Spin 5-8 full rotations + land on target
-  const arc = (Math.PI*2)/n;
-  const fullSpins = (5+Math.random()*3)*Math.PI*2;
-  // The pointer is at the top (angle -PI/2). We want the target slice's center under the pointer.
-  const targetAngle = -(targetIndex*arc + arc/2) - Math.PI/2;
-  const totalRotation = fullSpins + targetAngle - (wheelAngle%(Math.PI*2));
-
-  const startAngle = wheelAngle;
-  const duration = 4000;
-  const startTime = Date.now();
-
-  function animate(){
-    const elapsed = Date.now()-startTime;
-    const progress = Math.min(elapsed/duration,1);
-    // Ease out cubic
-    const eased = 1 - Math.pow(1-progress, 3);
-    const currentAngle = startAngle + totalRotation*eased;
-    drawWheel(currentAngle);
-
-    if(progress<1){
-      requestAnimationFrame(animate);
-    } else {
-      wheelAngle = currentAngle;
-      wheelSpinning = false;
-      const town = wheelTowns[targetIndex];
-      G.town = town;
-      saveGame();
-      document.getElementById('wheel-result').innerHTML = `🎉 <strong>${town}</strong>!`;
-      setTimeout(()=>{
-        showScreen('town-screen');
-        renderTownMap();
-      },1500);
-    }
-  }
-  requestAnimationFrame(animate);
-}
-
-// ==================== TOWN MAP ====================
-
-function generateTownLayout(){
-  // 6x6 grid
-  const grid = [];
-  for(let i=0;i<36;i++){
-    const r = Math.random();
-    if(r<.12) grid.push('tree');
-    else if(r<.17) grid.push('water');
-    else if(r<.22) grid.push('road');
-    else if(r<.25) grid.push('shop');
-    else if(r<.27) grid.push('gym-cell');
-    else grid.push('empty');
-  }
-  // Ensure at least one shop and gym
-  if(!grid.includes('shop')) grid[rng(0,35)]='shop';
-  if(!grid.includes('gym-cell')) grid[rng(0,35)]='gym-cell';
-  return grid;
-}
-
-let townLayout = [];
-
-function renderTownMap(){
-  const country = COUNTRIES.find(c=>c.id===G.country);
-  document.getElementById('town-name-display').textContent = `${G.town}`;
-  document.getElementById('town-country-display').textContent = `${country.flag} ${country.name}`;
-
-  townLayout = generateTownLayout();
-  selectedHouseCell = -1;
-  document.getElementById('confirm-house-btn').style.display='none';
-
-  const map = document.getElementById('town-map');
-  map.innerHTML = '';
-  const icons = {tree:'🌳',water:'💧',road:'',shop:'🏪',['gym-cell']:'🏋️'};
-
-  for(let i=0;i<36;i++){
-    const cell = document.createElement('div');
-    const type = townLayout[i];
-    cell.className = `map-cell ${type}`;
-    if(type==='empty'){
-      cell.className += ' available';
-      cell.onclick = ()=>selectHouseSpot(i, cell);
-    }
-    if(icons[type]) cell.textContent = icons[type];
-    map.appendChild(cell);
-  }
-}
-
-function selectHouseSpot(index, cell){
-  // Deselect previous
-  document.querySelectorAll('.map-cell.house').forEach(c=>{
-    c.classList.remove('house');
-    c.classList.add('available');
-    c.textContent='';
-  });
-  cell.classList.remove('available');
-  cell.classList.add('house');
-  cell.textContent = '🏠';
-  selectedHouseCell = index;
-  document.getElementById('confirm-house-btn').style.display='inline-flex';
-}
-
-function confirmHouse(){
-  G.housePos = selectedHouseCell;
-  saveGame();
-  enterHub();
-}
-
-// ==================== HUB ====================
-
-function enterHub(){
-  showScreen('hub-screen');
-  renderHub();
-  showPanel('stats');
-}
-
-function renderHub(){
-  const country = COUNTRIES.find(c=>c.id===G.country);
-  document.getElementById('hub-name').textContent = G.name;
-  document.getElementById('hub-location').textContent = `${country.flag} ${G.town} | Day ${G.day}`;
-  document.getElementById('hub-money').textContent = `$${G.money}`;
-  document.getElementById('energy-fill').style.width = (G.energy/G.maxEnergy*100)+'%';
-  document.getElementById('energy-val').textContent = G.energy;
-}
-
-function showPanel(panel){
-  const el = document.getElementById('hub-panel');
-  switch(panel){
-    case 'stats': renderStatsPanel(el); break;
-    case 'gym': renderGymPanel(el); break;
-    case 'jobs': renderJobsPanel(el); break;
-    case 'shop': renderShopPanel(el); break;
-    case 'home': renderHomePanel(el); break;
-  }
-}
-
-// ==================== STATS PANEL ====================
-
-function renderStatsPanel(el){
-  let html = '<div class="card"><div class="card-title">📊 My Stats</div>';
-  STAT_DEFS.forEach(s=>{
-    const val = G.stats[s.id]||0;
-    const pct = Math.min(val, 100);
-    html += `<div class="stat-row">
-      <div class="stat-icon">${s.emoji}</div>
-      <div class="stat-info">
-        <div class="stat-name">${s.name}</div>
-        <div class="stat-bar"><div class="stat-fill" style="width:${pct}%;background:${s.color}"></div></div>
-      </div>
-      <div class="stat-val">${val}</div>
-    </div>`;
-  });
-  if(G.pets.length){
-    html += '<div style="margin-top:10px;font-weight:600;font-size:.85rem;">🐾 My Pets</div><div class="pets-row">';
-    G.pets.forEach(p=>{
-      const item = SHOP_ITEMS.find(x=>x.id===p);
-      if(item) html += `<div class="pet-badge">${item.emoji} ${item.name}</div>`;
-    });
-    html += '</div>';
-  }
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-// ==================== GYM PANEL ====================
-
-function renderGymPanel(el){
-  let html = '<div class="card"><div class="card-title">🏋️ Training Gym</div>';
-  html += '<div style="font-size:.8rem;color:var(--text-light);margin-bottom:10px;">Train your skills! Each session costs 15 energy.</div>';
-  GYM_TRAINING.forEach((t,i)=>{
-    const statVal = G.stats[t.stat]||0;
-    const disabled = G.energy < 15 ? 'disabled' : '';
-    html += `<div class="gym-item">
-      <div class="stat-icon">${t.emoji}</div>
-      <div class="gym-info">
-        <div class="gym-name">${t.name}</div>
-        <div class="gym-desc">${t.desc} (Current: ${statVal})</div>
-      </div>
-      <button class="btn btn-green btn-sm" ${disabled} onclick="startTraining(${i})">Train</button>
-    </div>`;
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-// ==================== MINIGAMES ====================
-
-let minigameData = {};
-
-function startTraining(idx){
-  if(G.energy < 15) return;
-  const training = GYM_TRAINING[idx];
-  if(training.minigame==='clicking') startClickingGame(training);
-  else if(training.minigame==='stealth') startStealthGame(training);
-}
-
-function startClickingGame(training){
-  const overlay = document.getElementById('minigame-overlay');
-  const box = document.getElementById('minigame-box');
-  overlay.classList.add('active');
-
-  minigameData = {stat:training.stat, clicks:0, target:20, timeLeft:5};
-
-  box.innerHTML = `
-    <div class="minigame-title">${training.emoji} ${training.name}</div>
-    <div class="minigame-desc">Click the target ${minigameData.target} times in ${minigameData.timeLeft} seconds!</div>
-    <div class="minigame-timer" id="mg-timer">Time: ${minigameData.timeLeft}s</div>
-    <div class="minigame-area">
-      <div class="click-target" id="mg-target" onclick="mgClick()">${training.emoji}</div>
-    </div>
-    <div class="minigame-counter" id="mg-counter">0 / ${minigameData.target}</div>
-  `;
-
-  // Start countdown
-  minigameData.interval = setInterval(()=>{
-    minigameData.timeLeft--;
-    document.getElementById('mg-timer').textContent = `Time: ${minigameData.timeLeft}s`;
-    if(minigameData.timeLeft <= 0){
-      clearInterval(minigameData.interval);
-      endClickingGame(false);
-    }
-  },1000);
-}
-
-function mgClick(){
-  minigameData.clicks++;
-  const counter = document.getElementById('mg-counter');
-  counter.textContent = `${minigameData.clicks} / ${minigameData.target}`;
-  // Bounce animation
-  const target = document.getElementById('mg-target');
-  target.style.transform = 'scale(.7)';
-  setTimeout(()=>target.style.transform='scale(1)',80);
-
-  if(minigameData.clicks >= minigameData.target){
-    clearInterval(minigameData.interval);
-    endClickingGame(true);
-  }
-}
-
-function endClickingGame(success){
-  const box = document.getElementById('minigame-box');
-  if(success){
-    const gain = rng(3,6);
-    G.stats[minigameData.stat] = (G.stats[minigameData.stat]||0) + gain;
-    G.energy -= 15;
-    G.totalTrained++;
-    saveGame();
-    box.innerHTML = `
-      <div style="font-size:3rem;">🎉</div>
-      <div class="minigame-title" style="color:var(--green);">Great Work!</div>
-      <div class="minigame-desc">${STAT_DEFS.find(s=>s.id===minigameData.stat)?.name} +${gain}!</div>
-      <button class="btn btn-blue" onclick="closeMinigame()">Awesome! 👍</button>
-    `;
-  } else {
-    const gain = rng(1,2);
-    G.stats[minigameData.stat] = (G.stats[minigameData.stat]||0) + gain;
-    G.energy -= 15;
-    G.totalTrained++;
-    saveGame();
-    box.innerHTML = `
-      <div style="font-size:3rem;">😅</div>
-      <div class="minigame-title" style="color:var(--orange);">Nice Try!</div>
-      <div class="minigame-desc">${STAT_DEFS.find(s=>s.id===minigameData.stat)?.name} +${gain} (keep practicing!)</div>
-      <button class="btn btn-blue" onclick="closeMinigame()">Okay! 💪</button>
-    `;
-  }
-}
-
-function startStealthGame(training){
-  const overlay = document.getElementById('minigame-overlay');
-  const box = document.getElementById('minigame-box');
-  overlay.classList.add('active');
-
-  minigameData = {stat:'sneakiness', score:0, rounds:0, maxRounds:6, eyeOpen:false, failed:false, mouseMoving:false};
-
-  box.innerHTML = `
-    <div class="minigame-title">🥷 Stealth Course</div>
-    <div class="minigame-desc">Don't move your mouse when the eye is OPEN!</div>
-    <div class="minigame-timer" id="mg-timer">Round 1 / ${minigameData.maxRounds}</div>
-    <div class="minigame-area" id="stealth-area">
-      <div class="eye-container closed" id="stealth-eye">👁️</div>
-    </div>
-    <div class="sneak-instruction safe" id="sneak-msg">Move freely! 🟢</div>
-  `;
-
-  const area = document.getElementById('stealth-area');
-  area.onmousemove = area.ontouchmove = ()=>{
-    if(minigameData.eyeOpen){
-      minigameData.failed = true;
-    }
-  };
-
-  runStealthRound();
-}
-
-function runStealthRound(){
-  if(minigameData.rounds >= minigameData.maxRounds){
-    endStealthGame();
-    return;
-  }
-  minigameData.rounds++;
-  const timer = document.getElementById('mg-timer');
-  if(timer) timer.textContent = `Round ${minigameData.rounds} / ${minigameData.maxRounds}`;
-
-  // Random delay before eye opens
-  const delay = 800 + Math.random()*1200;
-  setTimeout(()=>{
-    // Eye opens
-    minigameData.eyeOpen = true;
-    minigameData.failed = false;
-    const eye = document.getElementById('stealth-eye');
-    const msg = document.getElementById('sneak-msg');
-    if(!eye) return;
-    eye.classList.remove('closed');
-    eye.classList.add('open');
-    msg.textContent = 'FREEZE! 🔴';
-    msg.className = 'sneak-instruction danger';
-
-    // Eye stays open 1-2 sec
-    const openTime = 1000 + Math.random()*1000;
-    setTimeout(()=>{
-      if(minigameData.failed){
-        // Caught!
-      } else {
-        minigameData.score++;
-      }
-      minigameData.eyeOpen = false;
-      if(eye){
-        eye.classList.remove('open');
-        eye.classList.add('closed');
-      }
-      if(msg){
-        msg.textContent = 'Move freely! 🟢';
-        msg.className = 'sneak-instruction safe';
-      }
-      setTimeout(()=>runStealthRound(), 500);
-    }, openTime);
-  }, delay);
-}
-
-function endStealthGame(){
-  G.energy -= 15;
-  G.totalTrained++;
-  const gain = minigameData.score >= 5 ? rng(4,7) : minigameData.score >= 3 ? rng(2,4) : rng(1,2);
-  G.stats.sneakiness = (G.stats.sneakiness||0) + gain;
-  saveGame();
-
-  const box = document.getElementById('minigame-box');
-  const great = minigameData.score >= 5;
-  box.innerHTML = `
-    <div style="font-size:3rem;">${great?'🥷':'😅'}</div>
-    <div class="minigame-title" style="color:${great?'var(--purple)':'var(--orange)'};">${great?'Shadow Master!':'Not Bad!'}</div>
-    <div class="minigame-desc">You stayed hidden ${minigameData.score}/${minigameData.maxRounds} rounds. Sneakiness +${gain}!</div>
-    <button class="btn btn-purple" onclick="closeMinigame()">Cool! 🥷</button>
-  `;
-}
-
-function closeMinigame(){
-  document.getElementById('minigame-overlay').classList.remove('active');
-  renderHub();
-  showPanel('gym');
-}
-
-// ==================== JOBS PANEL ====================
-
-function renderJobsPanel(el){
-  let html = '<div class="card"><div class="card-title">💼 Job Board</div>';
-  html += '<div style="font-size:.8rem;color:var(--text-light);margin-bottom:10px;">Higher skills unlock better jobs!</div>';
-  JOBS.forEach(j=>{
-    const meetsReq = Object.entries(j.req).every(([stat,val])=>(G.stats[stat]||0)>=val);
-    const canWork = meetsReq && G.energy >= j.energyCost;
-    const reqText = Object.keys(j.req).length===0 ? 'No requirements' :
-      Object.entries(j.req).map(([s,v])=>{
-        const met = (G.stats[s]||0)>=v;
-        return `<span style="color:${met?'var(--green)':'var(--red)'}">${s} ${v}</span>`;
-      }).join(', ');
-    html += `<div class="job-card">
-      <div class="job-icon">${j.emoji}</div>
-      <div class="job-info">
-        <div class="job-title">${j.name}</div>
-        <div class="job-pay">$${j.pay} per shift | -${j.energyCost} energy</div>
-        <div class="job-req">Requires: ${reqText}</div>
-      </div>
-      <button class="btn ${meetsReq?'btn-green':'btn-red'} btn-sm" ${canWork?'':'disabled'} onclick="doJob('${j.id}')">${meetsReq?'Work':'🔒'}</button>
-    </div>`;
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function doJob(jobId){
-  const job = JOBS.find(j=>j.id===jobId);
-  if(!job || G.energy < job.energyCost) return;
-  G.money += job.pay;
-  G.energy -= job.energyCost;
-  G.totalEarned += job.pay;
-  saveGame();
-  renderHub();
-  showPanel('jobs');
-  showToast(`${job.emoji} Earned $${job.pay}!`);
-}
-
-// ==================== SHOP PANEL ====================
-
-function renderShopPanel(el){
-  let html = '<div class="card"><div class="card-title">🛒 Mega Shop</div>';
-  html += '<div style="font-size:.8rem;color:var(--text-light);margin-bottom:10px;">Spend your hard-earned cash!</div>';
-
-  // Pets section
-  html += '<div style="font-weight:700;font-size:.9rem;margin:10px 0 6px;">🐾 Pet Store</div>';
-  SHOP_ITEMS.filter(i=>i.type==='pet').forEach(item=>{
-    const owned = G.pets.includes(item.id);
-    const canBuy = G.money >= item.price && !owned;
-    html += `<div class="shop-item">
-      <div class="shop-icon">${item.emoji}</div>
-      <div class="shop-info">
-        <div class="shop-name">${item.name}</div>
-        <div class="shop-desc">${item.desc}</div>
-      </div>
-      <div class="shop-price">$${item.price}</div>
-      <button class="btn ${owned?'btn-green':'btn-blue'} btn-sm" ${canBuy?'':'disabled'} onclick="buyItem('${item.id}')">${owned?'Owned ✓':'Buy'}</button>
-    </div>`;
-  });
-
-  // Furniture section
-  html += '<div style="font-weight:700;font-size:.9rem;margin:14px 0 6px;">🏠 Home Upgrades</div>';
-  SHOP_ITEMS.filter(i=>i.type==='furniture').forEach(item=>{
-    const owned = G.furniture.includes(item.id);
-    const canBuy = G.money >= item.price && !owned;
-    html += `<div class="shop-item">
-      <div class="shop-icon">${item.emoji}</div>
-      <div class="shop-info">
-        <div class="shop-name">${item.name}</div>
-        <div class="shop-desc">${item.desc}</div>
-      </div>
-      <div class="shop-price">$${item.price}</div>
-      <button class="btn ${owned?'btn-green':'btn-blue'} btn-sm" ${canBuy?'':'disabled'} onclick="buyItem('${item.id}')">${owned?'Owned ✓':'Buy'}</button>
-    </div>`;
-  });
-
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function buyItem(itemId){
-  const item = SHOP_ITEMS.find(i=>i.id===itemId);
-  if(!item || G.money < item.price) return;
-  if(item.type==='pet' && G.pets.includes(itemId)) return;
-  if(item.type==='furniture' && G.furniture.includes(itemId)) return;
-  G.money -= item.price;
-  if(item.type==='pet') G.pets.push(itemId);
-  else G.furniture.push(itemId);
-  saveGame();
-  renderHub();
-  showPanel('shop');
-  showToast(`${item.emoji} Bought ${item.name}!`);
-}
-
-// ==================== HOME PANEL ====================
-
-function renderHomePanel(el){
-  const country = COUNTRIES.find(c=>c.id===G.country);
-  let html = '<div class="card"><div class="card-title">🏠 My Home</div>';
-  html += `<div style="font-size:.85rem;color:var(--text-light);margin-bottom:12px;">${country.flag} ${G.town}</div>`;
-
-  // House visual
-  html += '<div style="background:#f0f8f0;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">';
-  html += '<div style="font-size:3rem;">🏠</div>';
-  html += `<div style="font-weight:700;margin:6px 0;">${G.name}'s House</div>`;
-
-  // Show furniture
-  if(G.furniture.length){
-    html += '<div style="font-size:1.8rem;margin:8px 0;">';
-    G.furniture.forEach(f=>{
-      const item = SHOP_ITEMS.find(x=>x.id===f);
-      if(item) html += item.emoji + ' ';
-    });
-    html += '</div>';
-  }
-
-  // Show pets
-  if(G.pets.length){
-    html += '<div style="margin-top:8px;font-size:.8rem;color:var(--text-light);">Pets at home:</div>';
-    html += '<div style="font-size:1.8rem;margin:4px 0;">';
-    G.pets.forEach(p=>{
-      const item = SHOP_ITEMS.find(x=>x.id===p);
-      if(item) html += item.emoji + ' ';
-    });
-    html += '</div>';
-  }
-
-  html += '</div>';
-
-  // Summary stats
-  html += `<div style="font-size:.8rem;color:var(--text-light);line-height:1.8;">
-    Day: <strong>${G.day}</strong><br>
-    Total Earned: <strong>$${G.totalEarned}</strong><br>
-    Training Sessions: <strong>${G.totalTrained}</strong><br>
-    Pets: <strong>${G.pets.length}</strong> | Furniture: <strong>${G.furniture.length}</strong>
-  </div>`;
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-// ==================== SLEEP ====================
-
-function doSleep(){
-  G.day++;
-  G.energy = G.maxEnergy;
-  // Small passive health gain
-  G.stats.health = Math.min((G.stats.health||50)+2, 100);
-  saveGame();
-  renderHub();
-  showPanel('stats');
-  showToast(`😴 Good night! Day ${G.day} begins. Energy restored!`);
-}
-
-// ==================== TOAST NOTIFICATIONS ====================
-
-function showToast(text){
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-    background:#333;color:white;padding:12px 24px;border-radius:12px;
-    font-size:.9rem;font-weight:600;z-index:2000;
-    box-shadow:0 4px 20px rgba(0,0,0,.3);
-    animation:fadeUp .3s ease;
-    max-width:90%;text-align:center;
-  `;
-  toast.textContent = text;
-  document.body.appendChild(toast);
-  setTimeout(()=>{
-    toast.style.transition='opacity .3s';
-    toast.style.opacity='0';
-    setTimeout(()=>toast.remove(),300);
-  },2000);
-}
-
-// ==================== UTILS ====================
-
-function rng(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-
-// ==================== INIT ====================
-
-renderPassports();
-</script>
-</body>
-</html>
