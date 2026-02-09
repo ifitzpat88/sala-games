@@ -314,11 +314,11 @@ const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 1
 // Upgrade definitions: [name, description, maxLevel, statPerLevel]
 const UPGRADE_DEFS = [
   { name: 'Max HP', key: 'maxHp', max: 5, per: 30, icon: '+' },
-  { name: 'Speed', key: 'speed', max: 4, per: 0.5, icon: '>' },
+  { name: 'Speed', key: 'speed', max: 5, per: 0.5, icon: '>' },
   { name: 'Damage', key: 'damage', max: 5, per: 6, icon: '!' },
-  { name: 'Drone Rate', key: 'droneRate', max: 4, per: 3, icon: 'D' },
-  { name: 'Dash CD', key: 'dashCD', max: 3, per: 25, icon: '~' },
-  { name: 'Squad', key: 'squad', max: 4, per: 1, icon: 'S' },
+  { name: 'Drone Rate', key: 'droneRate', max: 5, per: 3, icon: 'D' },
+  { name: 'Dash CD', key: 'dashCD', max: 5, per: 20, icon: '~' },
+  { name: 'Squad', key: 'squad', max: 5, per: 1, icon: 'S' },
 ];
 const UPGRADE_COSTS = [4, 8, 14, 22, 32];
 
@@ -728,7 +728,7 @@ function moveWithCollision(entity, dx, dy, radius) {
       }
     }
     for (const b of buildings) {
-      if (b.type === 'wall') {
+      if (b.hp > 0) {
         const res = resolveCircleRect(nx, ny, radius, b.x, b.y, BUILD_SIZE, BUILD_SIZE);
         if (res) { nx = res.x; ny = res.y; }
       }
@@ -1090,18 +1090,44 @@ function update() {
     }
 
     // === DEFAULT MOVEMENT (normal, miner, splitter, charger when not charging) ===
+    // Check if path is blocked by obstacles or buildings
+    function isPathBlocked(x, y, r) {
+      if (isObstacle(x, y)) return true;
+      for (const b of buildings) {
+        if (b.hp > 0 && circleRect(x, y, r, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) return true;
+      }
+      return false;
+    }
     let edx = Math.cos(a) * e.speed, edy = Math.sin(a) * e.speed;
-    const ahead = { x: e.x + edx * 10, y: e.y + edy * 10 };
-    if (isObstacle(ahead.x, ahead.y)) {
-      const p1x = Math.cos(a + Math.PI/2) * e.speed, p1y = Math.sin(a + Math.PI/2) * e.speed;
-      const p2x = Math.cos(a - Math.PI/2) * e.speed, p2y = Math.sin(a - Math.PI/2) * e.speed;
-      if (!isObstacle(e.x + p1x*10, e.y + p1y*10)) { edx = p1x; edy = p1y; }
-      else if (!isObstacle(e.x + p2x*10, e.y + p2y*10)) { edx = p2x; edy = p2y; }
-      else { edx = 0; edy = 0; }
+    const lookDist = 8;
+    const ahead = { x: e.x + edx * lookDist, y: e.y + edy * lookDist };
+    if (isPathBlocked(ahead.x, ahead.y, e.size)) {
+      let found = false;
+      // Try multiple angles: tight first, then wider — helps slide along surfaces
+      for (const offset of [Math.PI/6, -Math.PI/6, Math.PI/3, -Math.PI/3, Math.PI/2, -Math.PI/2, Math.PI*2/3, -Math.PI*2/3]) {
+        const tx = Math.cos(a + offset) * e.speed, ty = Math.sin(a + offset) * e.speed;
+        if (!isPathBlocked(e.x + tx * lookDist, e.y + ty * lookDist, e.size)) {
+          edx = tx; edy = ty; found = true; break;
+        }
+      }
+      if (!found) { edx = 0; edy = 0; }
+    }
+    // Stuck detection: if enemy hasn't moved much, try a random direction
+    if (!e._prevX) { e._prevX = e.x; e._prevY = e.y; e._stuckFrames = 0; }
+    if (frameCount % 30 === 0) {
+      if (Math.hypot(e.x - e._prevX, e.y - e._prevY) < 2) {
+        e._stuckFrames++;
+        if (e._stuckFrames >= 3) {
+          const ra = Math.random() * Math.PI * 2;
+          edx = Math.cos(ra) * e.speed; edy = Math.sin(ra) * e.speed;
+          e._stuckFrames = 0;
+        }
+      } else { e._stuckFrames = 0; }
+      e._prevX = e.x; e._prevY = e.y;
     }
     let blocked = false;
     for (const b of buildings) {
-      if (b.type === 'wall' && b.hp > 0 && circleRect(e.x + edx, e.y + edy, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) {
+      if (b.hp > 0 && circleRect(e.x + edx, e.y + edy, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) {
         blocked = true;
         if (e.attackCD <= 0) { b.hp -= e.damage; e.attackCD = 30; spawnParticles(b.x + BUILD_SIZE/2, b.y + BUILD_SIZE/2, '#ffaa00', 4, 2); }
         break;
