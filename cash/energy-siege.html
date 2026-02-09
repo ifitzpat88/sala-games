@@ -162,7 +162,7 @@
   <div class="controls">
     <span>WASD</span> Move &nbsp;|&nbsp; <span>Mouse</span> Aim &nbsp;|&nbsp; <span>Click</span> Shoot (Semi-Auto)<br>
     <span>SPACE</span> Dash &nbsp;|&nbsp; <span>1</span> Wall (15E) &nbsp;|&nbsp; <span>2</span> Generator (40E)<br>
-    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E)<br>
+    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E) &nbsp;|&nbsp; <span>5</span> Barracks (60E)<br>
     <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>ESC</span> Pause / Cancel Build<br>
     Survive <span style="color:#ff4444">10 Waves + Bosses</span> then face the <span style="color:#ff4444">Endless Siege</span><br>
     Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
@@ -212,6 +212,11 @@
     <div>Laser</div>
     <div class="cost">50 E</div>
     <div class="key">[4]</div>
+  </div>
+  <div class="build-btn" data-type="barracks" onclick="selectBuild('barracks')">
+    <div>Barracks</div>
+    <div class="cost">60 E</div>
+    <div class="key">[5]</div>
   </div>
 </div>
 
@@ -295,8 +300,16 @@ const LASER_E_FIRE = 60;
 const LASER_E_DPS = 0.8;
 const LASER_E_COOLDOWN = 180;
 
-const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50 };
-const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90 };
+const BARRACKS_SPAWN_RATE = 300;
+const BARRACKS_MAX_MEN = 2;
+const SPACEMAN_HP = 35;
+const SPACEMAN_SPEED = 2.2;
+const SPACEMAN_DMG = 8;
+const SPACEMAN_ATTACK_CD = 35;
+const SPACEMAN_R = 7;
+
+const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60 };
+const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100 };
 
 // Upgrade definitions: [name, description, maxLevel, statPerLevel]
 const UPGRADE_DEFS = [
@@ -305,6 +318,7 @@ const UPGRADE_DEFS = [
   { name: 'Damage', key: 'damage', max: 5, per: 6, icon: '!' },
   { name: 'Drone Rate', key: 'droneRate', max: 4, per: 3, icon: 'D' },
   { name: 'Dash CD', key: 'dashCD', max: 3, per: 25, icon: '~' },
+  { name: 'Squad', key: 'squad', max: 4, per: 1, icon: 'S' },
 ];
 const UPGRADE_COSTS = [4, 8, 14, 22, 32];
 
@@ -359,6 +373,7 @@ let buildings = [];
 let orbs = [];
 let particles = [];
 let obstacles = [];
+let spacemen = [];
 let energy = 0, wave = 0;
 let waveBannerTimer = 0, selectedBuild = null, droneAngle = 0, playerFireCD = 0, droneFireCD = 0;
 let generatorTimer = 0, frameCount = 0;
@@ -376,7 +391,7 @@ let gamePaused = false;
 let totalKills = 0;
 let upgradePoints = 0;
 let showingUpgrades = false;
-let playerUpgrades = { maxHp: 0, speed: 0, damage: 0, droneRate: 0, dashCD: 0 };
+let playerUpgrades = { maxHp: 0, speed: 0, damage: 0, droneRate: 0, dashCD: 0, squad: 0 };
 let endlessMode = false;
 let endlessTimer = 0;
 let endlessLevel = 0;
@@ -442,13 +457,25 @@ function isBuildingAt(wx, wy) {
   return buildings.some(b => b.x === tx && b.y === ty);
 }
 
+function findValidPosition(x, y, radius) {
+  if (!isObstacle(x, y) && !isBuildingAt(x, y)) return { x, y };
+  for (let i = 0; i < 20; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const d = 50 + Math.random() * 80;
+    const nx = x + Math.cos(a) * d, ny = y + Math.sin(a) * d;
+    if (nx > radius && nx < WORLD_W - radius && ny > radius && ny < WORLD_H - radius &&
+        !isObstacle(nx, ny) && !isBuildingAt(nx, ny)) return { x: nx, y: ny };
+  }
+  return { x, y };
+}
+
 // ---- Init ----
 function initGame() {
   generateObstacles();
   player = { x: WORLD_W / 2, y: WORLD_H / 2, hp: 100, maxHp: 100, angle: 0 };
   drone = { x: player.x, y: player.y };
   droneAngle = 0; playerFireCD = 0; droneFireCD = 0;
-  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = [];
+  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = [];
   energy = 20; wave = 0; waveBannerTimer = 0; selectedBuild = null;
   generatorTimer = 0; frameCount = 0;
   gameOverShown = false; victoryShown = false;
@@ -824,6 +851,11 @@ function update() {
           bld.hp -= b.damage; spawnParticles(b.x, b.y, '#ffaa00', 3, 2); hit = true; break;
         }
       }
+      if (!hit) for (const sm of spacemen) {
+        if (Math.hypot(b.x - sm.x, b.y - sm.y) < sm.size + BULLET_R) {
+          sm.hp -= b.damage; spawnParticles(b.x, b.y, '#4488ff', 3, 2); hit = true; break;
+        }
+      }
     } else {
       // Friendly bullets hit enemies
       for (let j = enemies.length - 1; j >= 0; j--) {
@@ -912,8 +944,8 @@ function update() {
       if (e.bossKey === 'warden') {
         e.abilityCD1--; if (e.abilityCD1 <= 0) {
           e.abilityCD1 = bdef.summonCD;
-          for (let s = 0; s < 3; s++) { const sp = getSpawnPos(); enemies.push({
-            x: e.x + (Math.random()-0.5)*60, y: e.y + (Math.random()-0.5)*60, size: 10, hp: 30, maxHp: 30,
+          for (let s = 0; s < 3; s++) { const mPos = findValidPosition(e.x + (Math.random()-0.5)*60, e.y + (Math.random()-0.5)*60, 10); enemies.push({
+            x: mPos.x, y: mPos.y, size: 10, hp: 30, maxHp: 30,
             speed: 1.5, attackCD: 0, damage: 8, type: 'normal', isBoss: false, spawnFrame: frameCount, isRaged: false,
             laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
             mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0,canSplit:false }); }
@@ -932,8 +964,8 @@ function update() {
         }
         e.abilityCD2--; if (e.abilityCD2 <= 0) {
           e.abilityCD2 = bdef.summonCD;
-          for (let s = 0; s < 2; s++) { enemies.push({
-            x: e.x + (Math.random()-0.5)*60, y: e.y + (Math.random()-0.5)*60, size: 11, hp: 40, maxHp: 40,
+          for (let s = 0; s < 2; s++) { const mPos = findValidPosition(e.x + (Math.random()-0.5)*60, e.y + (Math.random()-0.5)*60, 11); enemies.push({
+            x: mPos.x, y: mPos.y, size: 11, hp: 40, maxHp: 40,
             speed: 1.4, attackCD: 0, damage: 10, type: 'normal', isBoss: false, spawnFrame: frameCount, isRaged: false,
             laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
             mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0,canSplit:false }); }
@@ -955,8 +987,8 @@ function update() {
         e.abilityCD2--; if (e.abilityCD2 <= 0) {
           e.abilityCD2 = sumCD;
           const sumCount = e.phase === 2 ? 4 : 2;
-          for (let s = 0; s < sumCount; s++) { enemies.push({
-            x: e.x + (Math.random()-0.5)*80, y: e.y + (Math.random()-0.5)*80, size: 12, hp: 50, maxHp: 50,
+          for (let s = 0; s < sumCount; s++) { const mPos = findValidPosition(e.x + (Math.random()-0.5)*80, e.y + (Math.random()-0.5)*80, 12); enemies.push({
+            x: mPos.x, y: mPos.y, size: 12, hp: 50, maxHp: 50,
             speed: 1.6, attackCD: 0, damage: 12, type: 'charger', isBoss: false, spawnFrame: frameCount, isRaged: false,
             laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
             mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:200,stunTimer:0,canSplit:false }); }
@@ -1109,6 +1141,55 @@ function update() {
     document.getElementById('energy-display').textContent = energy; updateBuildButtons();
   }
 
+  // -- Barracks: spawn spacemen --
+  const maxPerBarracks = BARRACKS_MAX_MEN + playerUpgrades.squad;
+  for (const b of buildings) {
+    if (b.type !== 'barracks' || b.hp <= 0) continue;
+    if (!b.spawnTimer) b.spawnTimer = 0;
+    b.spawnTimer++;
+    const myMen = spacemen.filter(s => s.barracksRef === b).length;
+    if (b.spawnTimer >= BARRACKS_SPAWN_RATE && myMen < maxPerBarracks) {
+      b.spawnTimer = 0;
+      const sx = b.x + BUILD_SIZE / 2 + (Math.random() - 0.5) * 30;
+      const sy = b.y + BUILD_SIZE + 10;
+      const sPos = findValidPosition(sx, sy, SPACEMAN_R);
+      const bonusDmg = playerUpgrades.squad * 3;
+      const bonusHp = playerUpgrades.squad * 10;
+      spacemen.push({
+        x: sPos.x, y: sPos.y, hp: SPACEMAN_HP + bonusHp, maxHp: SPACEMAN_HP + bonusHp,
+        speed: SPACEMAN_SPEED, damage: SPACEMAN_DMG + bonusDmg, attackCD: 0,
+        size: SPACEMAN_R, barracksRef: b
+      });
+      spawnParticles(sPos.x, sPos.y, '#44aaff', 5, 3);
+    }
+  }
+
+  // -- Spacemen AI --
+  for (let i = spacemen.length - 1; i >= 0; i--) {
+    const s = spacemen[i];
+    if (s.hp <= 0) { spawnParticles(s.x, s.y, '#4488ff', 8, 3); spacemen.splice(i, 1); continue; }
+    let closest = null, closestD = Infinity;
+    for (const e of enemies) { const d = dist(s, e); if (d < closestD) { closest = e; closestD = d; } }
+    if (closest) {
+      const a = Math.atan2(closest.y - s.y, closest.x - s.x);
+      if (closestD > closest.size + s.size + 4) {
+        moveWithCollision(s, Math.cos(a) * s.speed, Math.sin(a) * s.speed, s.size);
+      }
+      if (closestD < closest.size + s.size + 8 && s.attackCD <= 0) {
+        closest.hp -= s.damage; s.attackCD = SPACEMAN_ATTACK_CD;
+        spawnParticles(closest.x, closest.y, '#44aaff', 3, 2);
+        if (closest.hp <= 0) { const idx = enemies.indexOf(closest); if (idx >= 0) killEnemy(closest, idx); }
+      }
+    } else if (s.barracksRef && s.barracksRef.hp > 0) {
+      const bx = s.barracksRef.x + BUILD_SIZE / 2, by = s.barracksRef.y + BUILD_SIZE / 2;
+      if (dist(s, { x: bx, y: by }) > 80) {
+        const a = Math.atan2(by - s.y, bx - s.x);
+        moveWithCollision(s, Math.cos(a) * s.speed * 0.5, Math.sin(a) * s.speed * 0.5, s.size);
+      }
+    }
+    if (s.attackCD > 0) s.attackCD--;
+  }
+
   // -- Particles --
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.life--;
@@ -1214,8 +1295,9 @@ function killEnemy(e, index) {
   if (e.canSplit && e.type === 'splitter' && !isBoss) {
     for (let s = 0; s < 2; s++) {
       const angle = Math.random() * Math.PI * 2;
+      const spPos = findValidPosition(e.x + Math.cos(angle)*15, e.y + Math.sin(angle)*15, 8);
       enemies.push({
-        x: e.x + Math.cos(angle)*15, y: e.y + Math.sin(angle)*15, size: Math.max(8, Math.floor(e.size * 0.6)),
+        x: spPos.x, y: spPos.y, size: Math.max(8, Math.floor(e.size * 0.6)),
         hp: Math.floor(e.maxHp * 0.35), maxHp: Math.floor(e.maxHp * 0.35),
         speed: e.speed * 1.3, attackCD: 0, damage: Math.floor(e.damage * 0.6),
         type: 'splitter', isBoss: false, spawnFrame: frameCount, isRaged: false, canSplit: false,
@@ -1349,6 +1431,22 @@ function draw() {
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(lcx, lcy); ctx.lineTo(t.x, t.y); ctx.stroke();
       }
+    } else if (b.type === 'barracks') {
+      ctx.fillStyle = '#1a2a44';
+      ctx.fillRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2;
+      ctx.strokeRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.fillStyle = '#2a4a6a';
+      ctx.fillRect(bx + 14, by + 24, 12, 14);
+      const bcx2 = bx + BUILD_SIZE / 2, bcy2 = by + 12;
+      ctx.fillStyle = '#4488ff';
+      ctx.beginPath(); ctx.arc(bcx2, bcy2, 7, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#88ccff';
+      ctx.fillRect(bcx2 - 5, bcy2 - 1, 10, 4);
+      const myMen = spacemen.filter(s => s.barracksRef === b).length;
+      const maxM = BARRACKS_MAX_MEN + playerUpgrades.squad;
+      ctx.fillStyle = '#88ccff'; ctx.font = '9px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(`${myMen}/${maxM}`, bx + BUILD_SIZE / 2, by - 2);
     }
     if (b.hp < b.maxHp) {
       const hpPct = b.hp / b.maxHp;
@@ -1377,6 +1475,9 @@ function draw() {
     } else if (selectedBuild === 'laser') {
       ctx.strokeStyle = 'rgba(200,80,255,0.2)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(mx + BUILD_SIZE / 2, my + BUILD_SIZE / 2, LASER_RANGE, 0, Math.PI * 2); ctx.stroke();
+    } else if (selectedBuild === 'barracks') {
+      ctx.strokeStyle = 'rgba(68,136,255,0.15)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(mx + BUILD_SIZE / 2, my + BUILD_SIZE / 2, 80, 0, Math.PI * 2); ctx.stroke();
     }
   }
 
@@ -1586,6 +1687,28 @@ function draw() {
   ctx.strokeStyle = 'rgba(0,255,200,0.15)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(drone.x, drone.y); ctx.stroke();
 
+  // Spacemen
+  for (const s of spacemen) {
+    if (s.x < camera.x - 20 || s.x > camera.x + W + 20 || s.y < camera.y - 20 || s.y > camera.y + H + 20) continue;
+    ctx.fillStyle = '#e8e8e8';
+    ctx.beginPath(); ctx.arc(s.x, s.y + 2, s.size - 1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2266cc';
+    ctx.beginPath(); ctx.arc(s.x, s.y - 3, s.size - 2, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#66bbff';
+    ctx.fillRect(s.x - 3, s.y - 5, 6, 3);
+    ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 6;
+    ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    if (s.hp < s.maxHp) {
+      const hpPct = Math.max(0, s.hp / s.maxHp);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(s.x - 8, s.y - s.size - 6, 16, 3);
+      ctx.fillStyle = hpPct > 0.5 ? '#44ff44' : '#ff4444';
+      ctx.fillRect(s.x - 8, s.y - s.size - 6, 16 * hpPct, 3);
+    }
+  }
+
   // Particles
   for (const p of particles) {
     ctx.globalAlpha = p.life / p.maxLife;
@@ -1620,7 +1743,7 @@ function draw() {
     ctx.fillStyle = '#ffdd00'; ctx.font = '20px Segoe UI';
     ctx.fillText(`Available Points: ${upgradePoints}`, W/2, 120);
 
-    const boxW = 220, boxH = 120, gap = 20;
+    const boxW = 170, boxH = 120, gap = 12;
     const totalW = UPGRADE_DEFS.length * boxW + (UPGRADE_DEFS.length - 1) * gap;
     const startX = (W - totalW) / 2;
     const startY = H/2 - 80;
@@ -1657,7 +1780,8 @@ function draw() {
       // Effect description
       ctx.fillStyle = '#aaa'; ctx.font = '12px Segoe UI';
       const desc = u.key === 'maxHp' ? `+${u.per} HP per level` : u.key === 'speed' ? `+${u.per} speed per level` :
-        u.key === 'damage' ? `+${u.per} dmg per level` : u.key === 'droneRate' ? `-${u.per}f fire delay` : `-${u.per}f dash CD`;
+        u.key === 'damage' ? `+${u.per} dmg per level` : u.key === 'droneRate' ? `-${u.per}f fire delay` :
+        u.key === 'dashCD' ? `-${u.per}f dash CD` : u.key === 'squad' ? `+${u.per} men & +3 dmg` : '';
       ctx.fillText(desc, bx + boxW/2, by + 95);
 
       // Click hint
@@ -1696,9 +1820,11 @@ function drawMinimap() {
     if (o.type === 'lake') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
   for (const b of buildings) {
-    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'laser' ? '#bb44ff' : '#ff6600';
+    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'laser' ? '#bb44ff' : b.type === 'barracks' ? '#4488ff' : '#ff6600';
     ctx.fillRect(mmX + b.x * scaleX, mmY + b.y * scaleY, 3, 3);
   }
+  ctx.fillStyle = '#88ccff';
+  for (const s of spacemen) ctx.fillRect(mmX + s.x * scaleX - 1, mmY + s.y * scaleY - 1, 2, 2);
   ctx.fillStyle = '#ff4444';
   for (const e of enemies) ctx.fillRect(mmX + e.x * scaleX - 1, mmY + e.y * scaleY - 1, 2, 2);
   ctx.fillStyle = '#4499ff';
@@ -1765,11 +1891,13 @@ window.addEventListener('keydown', e => {
   if (e.key === '2') selectBuild('generator');
   if (e.key === '3') selectBuild('turret');
   if (e.key === '4') selectBuild('laser');
+  if (e.key === '5') selectBuild('barracks');
   if (e.key === 'b' || e.key === 'B') {
     if (!selectedBuild) selectBuild('wall');
     else if (selectedBuild === 'wall') selectBuild('generator');
     else if (selectedBuild === 'generator') selectBuild('turret');
     else if (selectedBuild === 'turret') selectBuild('laser');
+    else if (selectedBuild === 'laser') selectBuild('barracks');
     else selectBuild('wall');
   }
 
