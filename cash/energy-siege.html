@@ -1023,7 +1023,8 @@ function update() {
         e.laserFireTimer--;
         // Deal damage along beam
         const la = e.laserAngle;
-        if (Math.abs(Math.atan2(player.y - e.y, player.x - e.x) - la) < 0.3 && targetD < LASER_E_RANGE) {
+        const playerDist = dist(e, player);
+        if (Math.abs(Math.atan2(player.y - e.y, player.x - e.x) - la) < 0.3 && playerDist < LASER_E_RANGE) {
           player.hp -= LASER_E_DPS; document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
         }
         for (const b of buildings) {
@@ -1522,7 +1523,8 @@ function draw() {
 
   // Enemies (type-specific rendering)
   for (const e of enemies) {
-    if (e.x < camera.x - 80 || e.x > camera.x + W + 80 || e.y < camera.y - 80 || e.y > camera.y + H + 80) continue;
+    const cullR = (e.type === 'laser' && (e.laserCharging || e.laserFiring)) ? LASER_E_RANGE + 20 : 80;
+    if (e.x < camera.x - cullR || e.x > camera.x + W + cullR || e.y < camera.y - cullR || e.y > camera.y + H + cullR) continue;
     const rage = e.isRaged ? Math.sin(frameCount * 0.2) * 0.3 + 0.7 : 0;
 
     if (e.isBoss) {
