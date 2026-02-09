@@ -1,0 +1,2901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Country Barrel: Heather's Shift</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka+One&family=Nunito:wght@400;700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --wood:#5c3a1e;--wood-light:#8b6914;--wood-dark:#3a2210;
+  --cream:#fff8e7;--cream-dark:#f5e6c8;
+  --red:#cc2200;--red-light:#ff4433;
+  --check-red:#cc3333;--check-white:#fff5ee;
+  --gold:#d4a020;--gold-light:#f0d060;
+  --green:#2d8a2d;--green-light:#5abf5a;
+  --blue:#2266aa;--teal:#008888;
+  --text:#2a1a0a;--text-light:#5c4a3a;
+  --shadow:0 4px 16px rgba(42,26,10,0.25);
+  --shadow-lg:0 8px 32px rgba(42,26,10,0.35);
+}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:'Nunito',sans-serif;
+  background:#2a1a0a;
+  color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+}
+canvas{display:block}
+#game-canvas{position:fixed;top:0;left:0;z-index:1}
+
+/* === SCREENS === */
+.screen{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;
+  flex-direction:column;align-items:center;justify-content:center;overflow-y:auto}
+.screen.active{display:flex}
+
+/* === TITLE === */
+#title-screen{
+  background:linear-gradient(180deg,#3a2210 0%,#5c3a1e 40%,#8b6914 100%);
+  text-align:center;padding:20px;
+}
+#title-screen::before{
+  content:'';position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.08;
+  background:repeating-linear-gradient(90deg,#000 0px,transparent 2px,transparent 40px),
+  repeating-linear-gradient(0deg,#000 0px,transparent 2px,transparent 40px);
+  pointer-events:none;z-index:0;
+}
+#title-screen>*{position:relative;z-index:1}
+.game-title{
+  font-family:'Bangers',cursive;font-size:clamp(48px,10vw,100px);
+  color:#f0d060;letter-spacing:4px;
+  text-shadow:3px 3px 0 #5c3a1e,6px 6px 0 rgba(0,0,0,0.3),0 0 40px rgba(240,208,96,0.3);
+  animation:titleBounce 3s ease-in-out infinite;
+}
+.game-subtitle{
+  font-family:'Patrick Hand',cursive;font-size:clamp(18px,3vw,28px);
+  color:#ffccaa;margin-top:8px;opacity:0.9;
+  text-shadow:1px 1px 0 rgba(0,0,0,0.4);
+}
+.title-tagline{
+  font-family:'Nunito',sans-serif;font-size:clamp(11px,1.8vw,16px);
+  color:#cc9966;margin-top:20px;font-style:italic;
+}
+.start-prompt{
+  font-family:'Fredoka One',cursive;font-size:clamp(14px,2.5vw,22px);
+  color:#fff;margin-top:50px;animation:blink 1.2s infinite;
+  text-shadow:0 0 10px rgba(255,255,255,0.5);
+}
+.title-heather{
+  width:120px;height:160px;margin:20px auto 0;
+}
+@keyframes titleBounce{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(1deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* === HUD === */
+#hud{
+  position:fixed;top:0;left:0;right:0;z-index:20;
+  display:none;
+  background:linear-gradient(180deg,rgba(58,34,16,0.95),rgba(58,34,16,0.8));
+  border-bottom:3px solid var(--gold);
+  padding:8px 16px;
+  font-family:'Fredoka One',cursive;
+  color:var(--cream);
+  gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;
+}
+#hud.active{display:flex}
+.hud-item{display:flex;align-items:center;gap:6px;font-size:14px}
+.hud-item .icon{font-size:18px}
+.hud-item .val{color:var(--gold-light);font-size:16px;min-width:24px}
+.hud-item .label{font-size:11px;color:#cc9966;text-transform:uppercase;letter-spacing:1px}
+
+/* === ACTION PANEL === */
+#action-panel{
+  position:fixed;bottom:0;left:0;right:0;z-index:20;
+  display:none;
+  background:linear-gradient(0deg,rgba(58,34,16,0.95),rgba(58,34,16,0.8));
+  border-top:3px solid var(--gold);
+  padding:10px 16px;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+}
+#action-panel.active{display:flex}
+.action-btn{
+  font-family:'Fredoka One',cursive;font-size:clamp(11px,1.5vw,14px);
+  padding:8px 18px;border:2px solid var(--gold);border-radius:8px;
+  background:rgba(212,160,32,0.15);color:var(--cream);cursor:pointer;
+  transition:all 0.2s;white-space:nowrap;
+}
+.action-btn:hover{background:rgba(212,160,32,0.35);transform:scale(1.05);box-shadow:0 0 12px rgba(212,160,32,0.3)}
+.action-btn:active{transform:scale(0.95)}
+.action-btn.disabled{opacity:0.4;pointer-events:none}
+.action-btn .key{
+  display:inline-block;background:rgba(255,255,255,0.15);border-radius:3px;
+  padding:1px 5px;font-size:10px;margin-right:4px;
+}
+
+/* === DIALOGUE SCREEN === */
+#dialogue-screen{
+  background:rgba(42,26,10,0.92);z-index:30;padding:20px;
+}
+.dialogue-box{
+  max-width:700px;width:95%;background:var(--cream);border-radius:16px;
+  border:4px solid var(--wood);box-shadow:var(--shadow-lg);
+  overflow:hidden;animation:slideUp 0.3s ease;
+}
+.dialogue-header{
+  background:linear-gradient(135deg,var(--red),#aa1100);
+  padding:16px 20px;color:white;display:flex;align-items:center;gap:16px;
+}
+.dialogue-portrait{width:80px;height:80px;border-radius:50%;border:3px solid white;
+  background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:40px}
+.dialogue-info h2{font-family:'Bangers',cursive;font-size:24px;letter-spacing:1px}
+.dialogue-info .tier{font-size:12px;opacity:0.8;font-family:'Nunito',sans-serif}
+.rage-bar-container{margin-top:8px;background:rgba(0,0,0,0.3);border-radius:10px;height:16px;overflow:hidden;width:200px}
+.rage-bar-fill{height:100%;border-radius:10px;transition:width 0.4s;
+  background:linear-gradient(90deg,#ff6600,#ff2200)}
+.dialogue-body{padding:20px}
+.dialogue-text{font-family:'Patrick Hand',cursive;font-size:20px;color:var(--text);
+  margin-bottom:20px;line-height:1.4;text-align:center;min-height:50px}
+.dialogue-choices{display:flex;flex-direction:column;gap:10px}
+.choice-btn{
+  font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;
+  padding:14px 20px;border:2px solid var(--wood-light);border-radius:10px;
+  background:var(--cream-dark);color:var(--text);cursor:pointer;
+  transition:all 0.2s;text-align:left;line-height:1.3;
+}
+.choice-btn:hover{background:var(--gold-light);border-color:var(--gold);transform:translateX(6px)}
+.choice-btn .effect{font-size:11px;color:var(--text-light);display:block;margin-top:2px}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* === FOOD FU HUD === */
+#foodfu-hud{
+  position:fixed;bottom:0;left:0;right:0;z-index:25;display:none;
+  padding:10px 16px;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+  background:linear-gradient(0deg,rgba(42,26,10,0.95),rgba(42,26,10,0.7));
+  border-top:3px solid var(--red);
+}
+#foodfu-hud.active{display:flex}
+.food-slot{
+  width:56px;height:56px;border-radius:10px;border:2px solid var(--gold);
+  background:rgba(255,255,255,0.1);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;
+  color:var(--cream);font-size:10px;position:relative;
+}
+.food-slot:hover{background:rgba(255,255,255,0.25);transform:scale(1.1)}
+.food-slot.selected{border-color:var(--red-light);background:rgba(255,68,51,0.25);
+  box-shadow:0 0 15px rgba(255,68,51,0.4)}
+.food-slot .emoji{font-size:24px}
+.food-slot .count{position:absolute;top:-4px;right:-4px;background:var(--red);
+  color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif}
+.food-slot .key-hint{font-size:9px;color:#aa8866;margin-top:1px;font-family:'Nunito',sans-serif}
+
+/* === SUMMARY SCREEN === */
+#summary-screen{
+  background:rgba(42,26,10,0.93);padding:20px;
+}
+.summary-card{
+  max-width:500px;width:95%;background:var(--cream);border-radius:16px;
+  border:4px solid var(--gold);box-shadow:var(--shadow-lg);
+  padding:30px;text-align:center;animation:slideUp 0.4s ease;
+}
+.summary-card h2{font-family:'Bangers',cursive;font-size:36px;color:var(--wood);margin-bottom:5px}
+.summary-card .day-label{font-size:14px;color:var(--text-light);margin-bottom:20px}
+.summary-stats{display:flex;flex-direction:column;gap:10px;margin:20px 0}
+.stat-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;background:var(--cream-dark);border-radius:8px}
+.stat-row .label{font-weight:700;color:var(--text-light);font-size:14px}
+.stat-row .value{font-family:'Fredoka One',cursive;font-size:18px;color:var(--green)}
+.summary-review{
+  font-family:'Patrick Hand',cursive;font-size:16px;color:var(--text-light);
+  font-style:italic;margin:20px 0;padding:15px;
+  background:var(--cream-dark);border-radius:10px;border-left:4px solid var(--gold);
+}
+.summary-btn{
+  font-family:'Fredoka One',cursive;font-size:18px;
+  padding:14px 40px;border:3px solid var(--gold);border-radius:12px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-light));
+  color:var(--wood-dark);cursor:pointer;transition:all 0.2s;margin-top:10px;
+}
+.summary-btn:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(212,160,32,0.4)}
+
+/* === SHOP SCREEN === */
+#shop-screen{
+  background:rgba(42,26,10,0.95);padding:20px;overflow-y:auto;
+}
+.shop-container{
+  max-width:800px;width:95%;animation:slideUp 0.4s ease;
+}
+.shop-header{text-align:center;margin-bottom:20px}
+.shop-header h2{font-family:'Bangers',cursive;font-size:clamp(32px,6vw,48px);color:var(--gold-light);
+  text-shadow:2px 2px 0 var(--wood-dark)}
+.shop-header .tips-display{font-family:'Fredoka One',cursive;font-size:20px;color:var(--cream);margin-top:8px}
+.shop-header .tips-display span{color:var(--gold-light)}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.shop-card{
+  background:var(--cream);border-radius:12px;border:3px solid var(--wood-light);
+  padding:16px;transition:all 0.2s;cursor:pointer;
+}
+.shop-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.shop-card.maxed{opacity:0.6;cursor:default}
+.shop-card.maxed:hover{transform:none;box-shadow:none}
+.shop-card .card-icon{font-size:32px;text-align:center;margin-bottom:8px}
+.shop-card h3{font-family:'Fredoka One',cursive;font-size:15px;color:var(--wood);text-align:center;margin-bottom:4px}
+.shop-card .card-desc{font-size:12px;color:var(--text-light);text-align:center;margin-bottom:10px;line-height:1.3}
+.shop-card .card-level{font-size:11px;color:var(--teal);text-align:center;font-weight:700;margin-bottom:6px}
+.shop-card .card-cost{
+  font-family:'Fredoka One',cursive;font-size:14px;text-align:center;
+  padding:6px;border-radius:6px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--wood-dark);
+}
+.shop-card.maxed .card-cost{background:#ccc;color:#888}
+.shop-done{
+  display:block;margin:10px auto;font-family:'Fredoka One',cursive;font-size:18px;
+  padding:14px 50px;border:3px solid var(--gold);border-radius:12px;
+  background:linear-gradient(135deg,var(--green),var(--green-light));
+  color:white;cursor:pointer;transition:all 0.2s;
+}
+.shop-done:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(45,138,45,0.4)}
+
+/* === BRIEFING === */
+#briefing-screen{background:rgba(42,26,10,0.93);padding:20px}
+.briefing-card{
+  max-width:500px;width:95%;background:var(--cream);border-radius:16px;
+  border:4px solid var(--wood);box-shadow:var(--shadow-lg);
+  padding:30px;text-align:center;animation:slideUp 0.4s ease;
+}
+.briefing-card h2{font-family:'Bangers',cursive;font-size:32px;color:var(--wood)}
+.briefing-card .day-num{font-family:'Fredoka One',cursive;font-size:48px;color:var(--gold);margin:10px 0}
+.briefing-card p{font-size:14px;color:var(--text-light);margin:8px 0;line-height:1.4}
+.briefing-card .warning{color:var(--red);font-weight:700;font-size:13px;margin-top:12px}
+.briefing-btn{
+  font-family:'Fredoka One',cursive;font-size:18px;
+  padding:14px 40px;border:3px solid var(--wood);border-radius:12px;
+  background:linear-gradient(135deg,var(--wood),var(--wood-light));
+  color:var(--cream);cursor:pointer;transition:all 0.2s;margin-top:20px;
+}
+.briefing-btn:hover{transform:scale(1.05);box-shadow:var(--shadow)}
+
+/* === GAME OVER === */
+#gameover-screen{background:rgba(42,26,10,0.95);padding:20px}
+.gameover-card{
+  max-width:500px;width:95%;background:var(--cream);border-radius:16px;
+  border:4px solid var(--red);box-shadow:var(--shadow-lg);
+  padding:30px;text-align:center;animation:slideUp 0.4s ease;
+}
+.gameover-card h2{font-family:'Bangers',cursive;font-size:40px;color:var(--red)}
+.gameover-card p{font-size:14px;color:var(--text-light);margin:10px 0}
+.gameover-card .final-tips{font-family:'Fredoka One',cursive;font-size:28px;color:var(--gold);margin:15px 0}
+
+/* === TITLE MODE BUTTONS === */
+.mode-select{display:flex;gap:16px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+.mode-btn{
+  font-family:'Bangers',cursive;font-size:clamp(20px,3.5vw,32px);
+  padding:18px 36px;border:3px solid;border-radius:16px;
+  cursor:pointer;transition:all 0.25s;letter-spacing:2px;
+  text-shadow:1px 1px 0 rgba(0,0,0,0.3);position:relative;overflow:hidden;
+}
+.mode-btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle,rgba(255,255,255,0.15),transparent 60%);
+  opacity:0;transition:opacity 0.3s}
+.mode-btn:hover::after{opacity:1}
+.mode-btn:hover{transform:translateY(-4px) scale(1.05)}
+.mode-btn:active{transform:scale(0.97)}
+.mode-btn.diner{
+  background:linear-gradient(135deg,#cc3333,#aa1100);border-color:#ff6644;color:#fff;
+  box-shadow:0 4px 20px rgba(204,51,51,0.4);
+}
+.mode-btn.fly{
+  background:linear-gradient(135deg,#4488dd,#2255aa);border-color:#66aaff;color:#fff;
+  box-shadow:0 4px 20px rgba(68,136,221,0.4);
+}
+.mode-btn .mode-icon{display:block;font-size:clamp(32px,5vw,48px);margin-bottom:4px}
+.mode-btn .mode-desc{display:block;font-family:'Nunito',sans-serif;font-size:11px;
+  opacity:0.8;font-weight:400;letter-spacing:0}
+
+/* === FLY MODE HUD === */
+#fly-hud{
+  position:fixed;top:0;left:0;right:0;z-index:20;display:none;
+  padding:10px 20px;
+  background:linear-gradient(180deg,rgba(0,0,0,0.5),transparent);
+  font-family:'Fredoka One',cursive;color:white;
+  justify-content:space-between;align-items:flex-start;
+}
+#fly-hud.active{display:flex}
+.fly-score{font-size:clamp(24px,4vw,40px);text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.fly-score .mult{font-size:clamp(14px,2vw,20px);color:#ffdd44;margin-left:8px}
+.fly-stats{text-align:right;font-size:14px;line-height:1.8}
+.fly-stats .hi{color:#ffdd44}
+
+/* === FLY GAME OVER === */
+#fly-gameover{
+  position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,20,0.85);
+}
+#fly-gameover.active{display:flex}
+.fly-go-card{
+  max-width:450px;width:90%;text-align:center;padding:40px 30px;
+  background:linear-gradient(135deg,#1a1a3a,#0a0a2a);border-radius:20px;
+  border:3px solid #4488dd;box-shadow:0 0 40px rgba(68,136,221,0.3);
+  animation:slideUp 0.4s ease;
+}
+.fly-go-card h2{font-family:'Bangers',cursive;font-size:36px;color:#66aaff;margin-bottom:4px}
+.fly-go-card .fly-final-score{font-family:'Fredoka One',cursive;font-size:48px;
+  color:#ffdd44;margin:16px 0;text-shadow:0 0 20px rgba(255,221,68,0.4)}
+.fly-go-card .fly-final-best{font-size:16px;color:#88aacc;margin-bottom:8px}
+.fly-go-card .fly-final-dist{font-size:14px;color:#88aacc;margin-bottom:20px}
+.fly-go-card .fly-quote{font-family:'Patrick Hand',cursive;font-size:16px;color:#aaccee;
+  font-style:italic;margin-bottom:20px;padding:10px;
+  background:rgba(255,255,255,0.05);border-radius:8px}
+.fly-go-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.fly-go-btn{
+  font-family:'Fredoka One',cursive;font-size:16px;padding:12px 30px;border-radius:10px;
+  cursor:pointer;transition:all 0.2s;border:2px solid;
+}
+.fly-go-btn:hover{transform:scale(1.05)}
+.fly-go-btn.retry{background:linear-gradient(135deg,#4488dd,#2255aa);border-color:#66aaff;color:#fff}
+.fly-go-btn.menu{background:rgba(255,255,255,0.1);border-color:#667788;color:#aabbcc}
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen" class="screen active">
+  <div class="game-title">COUNTRY BARREL</div>
+  <div class="game-subtitle">Heather's Shift</div>
+  <div class="title-tagline">"Serve food. Take orders. Survive the meltdowns. ...Or just fly."</div>
+  <canvas id="title-heather" class="title-heather" width="120" height="160"></canvas>
+  <div class="mode-select">
+    <button class="mode-btn diner" onclick="startDinerMode()">
+      <span class="mode-icon">&#x1F37D;</span>DINER MODE
+      <span class="mode-desc">Serve, de-escalate, and Food Fu!</span>
+    </button>
+    <button class="mode-btn fly" onclick="startFlyMode()">
+      <span class="mode-icon">&#x2601;</span>FLY MODE
+      <span class="mode-desc">Soar the skies &amp; chase high scores!</span>
+    </button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-item"><span class="icon">&#x1F4B5;</span><span class="val" id="hud-tips">$0</span><span class="label">Tips</span></div>
+  <div class="hud-item"><span class="icon">&#x23F1;</span><span class="val" id="hud-time">5:00</span><span class="label">Shift</span></div>
+  <div class="hud-item"><span class="icon">&#x1F37D;</span><span class="val" id="hud-served">0</span><span class="label">Served</span></div>
+  <div class="hud-item"><span class="icon">&#x2B50;</span><span class="val" id="hud-day">Day 1</span><span class="label">Shift</span></div>
+</div>
+
+<!-- ACTION PANEL -->
+<div id="action-panel">
+  <div class="action-btn" id="btn-seat" onclick="doAction('seat')"><span class="key">1</span> Seat Guest</div>
+  <div class="action-btn" id="btn-order" onclick="doAction('order')"><span class="key">2</span> Take Order</div>
+  <div class="action-btn" id="btn-pickup" onclick="doAction('pickup')"><span class="key">3</span> Pick Up Food</div>
+  <div class="action-btn" id="btn-deliver" onclick="doAction('deliver')"><span class="key">4</span> Deliver Food</div>
+  <div class="action-btn" id="btn-refill" onclick="doAction('refill')"><span class="key">5</span> Refill Tea</div>
+  <div class="action-btn" id="btn-check" onclick="doAction('check')"><span class="key">6</span> Give Check</div>
+</div>
+
+<!-- DIALOGUE SCREEN -->
+<div id="dialogue-screen" class="screen"></div>
+
+<!-- FOOD FU HUD -->
+<div id="foodfu-hud"></div>
+
+<!-- BRIEFING -->
+<div id="briefing-screen" class="screen"></div>
+
+<!-- SUMMARY -->
+<div id="summary-screen" class="screen"></div>
+
+<!-- SHOP -->
+<div id="shop-screen" class="screen"></div>
+
+<!-- GAME OVER -->
+<div id="gameover-screen" class="screen"></div>
+
+<!-- FLY MODE HUD -->
+<div id="fly-hud">
+  <div class="fly-score"><span id="fly-score-val">0</span><span class="mult" id="fly-mult">x1</span></div>
+  <div class="fly-stats">
+    <div>&#x1F4CF; <span id="fly-dist">0</span>m</div>
+    <div class="hi">&#x1F3C6; Best: <span id="fly-best">0</span></div>
+  </div>
+</div>
+
+<!-- FLY GAME OVER -->
+<div id="fly-gameover"></div>
+
+<script>
+// ====================================================================
+//  COUNTRY BARREL: HEATHER'S SHIFT
+//  A 2D shift-based diner sim with dialogue duels & Food Fu combat
+// ====================================================================
+
+const C = document.getElementById('game-canvas');
+const ctx = C.getContext('2d');
+let W, H;
+
+function resize() {
+  W = C.width = window.innerWidth;
+  H = C.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// === GAME CONFIGURATION ===
+const FOOD_ITEMS = [
+  { name:'Biscuit', emoji:'\uD83E\uDD50', effect:'stun', desc:'Stuns for 1.5s', damage:12, speed:8 },
+  { name:'Gravy', emoji:'\uD83E\uDD63', effect:'slow', desc:'Slows 50% for 3s', damage:8, speed:6 },
+  { name:'Sweet Tea', emoji:'\uD83E\uDDCB', effect:'freeze', desc:'Freezes for 2s', damage:6, speed:7 },
+  { name:'Fried Okra', emoji:'\uD83C\uDF7F', effect:'scatter', desc:'3-way spread shot', damage:5, speed:9 },
+  { name:'Cornbread', emoji:'\uD83C\uDF5E', effect:'shield', desc:'Blocks 1 hit', damage:0, speed:0 },
+  { name:'Hot Coffee', emoji:'\u2615', effect:'boost', desc:'+Speed for 4s', damage:0, speed:0 },
+];
+
+const BOSS_TIERS = [
+  { tier:1, name:'The Picky One', emoji:'\uD83D\uDE12', color:'#cc8800',
+    hp:60, speed:1, attacks:['cold'], dialogues:[
+      {text:'"Excuse me, I ordered this WITHOUT seasoning."', choices:[
+        {text:'"I\'m so sorry, let me fix that right away!"', effect:'calm', rage:-35, tipMod:0},
+        {text:'"I can comp a side of biscuits for the trouble."', effect:'calm', rage:-25, tipMod:-1},
+        {text:'"Ma\'am, that\'s literally just pepper."', effect:'risky', rage:15, tipMod:2},
+      ]},
+      {text:'"This plate is the wrong shade of white."', choices:[
+        {text:'"You\'re absolutely right, I\'ll get a new one."', effect:'calm', rage:-30, tipMod:-1},
+        {text:'"Let me get my manager for you."', effect:'manager', rage:-50, tipMod:0},
+        {text:'"...Ma\'am, they\'re all the same plate."', effect:'risky', rage:20, tipMod:3},
+      ]},
+    ]},
+  { tier:2, name:'The Coupon Sorcerer', emoji:'\uD83E\uDDD9', color:'#8844cc',
+    hp:90, speed:1.5, attacks:['cold','receipt'], dialogues:[
+      {text:'"I have a coupon from 2019. It says BOGO."', choices:[
+        {text:'"Let me see what I can do for you."', effect:'calm', rage:-25, tipMod:0},
+        {text:'"I can offer 10% off today\'s order instead."', effect:'calm', rage:-20, tipMod:-2},
+        {text:'"Ma\'am, that coupon is from a different restaurant."', effect:'risky', rage:15, tipMod:3},
+      ]},
+      {text:'*pulls out a binder of expired coupons*', choices:[
+        {text:'"That\'s... an impressive collection."', effect:'calm', rage:-20, tipMod:1},
+        {text:'"Let me get my manager to sort this out."', effect:'manager', rage:-50, tipMod:0},
+        {text:'"Is that... organized by DATE? Respect."', effect:'risky', rage:10, tipMod:4},
+      ]},
+    ]},
+  { tier:3, name:'The Review Wizard', emoji:'\uD83D\uDCF1', color:'#2266cc',
+    hp:130, speed:2, attacks:['cold','star','tiktok'], dialogues:[
+      {text:'"I have 47,000 followers. One bad review and you\'re DONE."', choices:[
+        {text:'"I completely understand. How can I make this right?"', effect:'calm', rage:-20, tipMod:0},
+        {text:'"Oh no, please! I can comp dessert!"', effect:'calm', rage:-25, tipMod:-3},
+        {text:'"Wow, 47,000? That\'s almost as many as our biscuit recipe."', effect:'risky', rage:15, tipMod:5},
+      ]},
+      {text:'"I\'m filming this for my TikTok RIGHT NOW."', choices:[
+        {text:'"Please, let me fix whatever\'s wrong first."', effect:'calm', rage:-20, tipMod:-1},
+        {text:'"Let me get my manager, they love being on camera."', effect:'manager', rage:-50, tipMod:0},
+        {text:'"Make sure you get my good side."', effect:'risky', rage:10, tipMod:4},
+      ]},
+    ]},
+  { tier:4, name:'The Beehive Queen', emoji:'\uD83D\uDC78', color:'#cc2255',
+    hp:200, speed:2.5, attacks:['cold','star','manager','tiktok'], dialogues:[
+      {text:'"I have been coming here since BEFORE you were born."', choices:[
+        {text:'"And we are so grateful for your loyalty!"', effect:'calm', rage:-15, tipMod:0},
+        {text:'"Let me comp your entire meal. On the house."', effect:'calm', rage:-20, tipMod:-5},
+        {text:'"Ma\'am, this restaurant opened in 2024."', effect:'risky', rage:20, tipMod:6},
+      ]},
+      {text:'"I demand to see the owner, the manager, AND the chef."', choices:[
+        {text:'"I am truly sorry. What can I do to help?"', effect:'calm', rage:-10, tipMod:0},
+        {text:'"Let me get my manager for you right now."', effect:'manager', rage:-40, tipMod:0},
+        {text:'"Bold of you to assume they\'re not the same person."', effect:'risky', rage:25, tipMod:7},
+      ]},
+    ]},
+];
+
+const ENEMY_ATTACKS = {
+  cold: { text:'THIS IS COLD!', speed:3, damage:10, color:'#4488ff', pattern:'straight' },
+  receipt: { text:'MY COUPON!!', speed:2.5, damage:8, color:'#aa66dd', pattern:'wave' },
+  star: { text:'\u2B50 1 STAR \u2B50', speed:4, damage:15, color:'#ffaa00', pattern:'straight' },
+  manager: { text:'I NEED A MANAGER!', speed:2, damage:20, color:'#ff4444', pattern:'big' },
+  tiktok: { text:'GOING VIRAL!', speed:3.5, damage:12, color:'#ff00aa', pattern:'zigzag' },
+};
+
+const MENU_ITEMS = [
+  {name:'Chicken Fried Steak', emoji:'\uD83E\uDD69', cookTime:4000},
+  {name:'Country Biscuits', emoji:'\uD83E\uDD50', cookTime:2500},
+  {name:'Grits & Gravy', emoji:'\uD83C\uDF5C', cookTime:3000},
+  {name:'Sweet Tea Sampler', emoji:'\uD83E\uDDCB', cookTime:1500},
+  {name:'Fried Catfish', emoji:'\uD83D\uDC1F', cookTime:3500},
+  {name:'Pecan Pie', emoji:'\uD83E\uDD67', cookTime:2000},
+];
+
+const CUSTOMER_NAMES = [
+  'Earl','Betty','Hank','Dolly','Cletus','Loretta','Bubba','Tammy',
+  'Buck','Daisy','Wayne','Jolene','Travis','Patsy','Dale','Wynonna',
+  'Merle','Reba','Otis','Emmylou','Bobby','June','Willie','Kitty'
+];
+
+const REVIEWS_GOOD = [
+  '"Best biscuits this side of the Mississippi!"',
+  '"Heather is an angel sent from cornbread heaven."',
+  '"11/10, would get sweet tea refilled again."',
+  '"I came for the food. I stayed because my tea was never empty."',
+  '"That girl can HUSTLE. And the gravy was divine."',
+];
+const REVIEWS_FIGHT = [
+  '"I still want to speak to the manager... but that biscuit was fire."',
+  '"She threw a biscuit at me and honestly? I deserved it. 4 stars."',
+  '"Got hit with gravy. It was delicious. Conflicted. 3 stars."',
+  '"I was SO mad but then the sweet tea hit different. We\'re cool."',
+  '"Came in angry, left full. The cornbread changed my perspective."',
+  '"She food-fu\'d me into submission. Best service I\'ve ever had."',
+];
+
+// === UPGRADES CONFIG ===
+const UPGRADES = {
+  speed: { name:'Comfy Shoes', icon:'\uD83D\uDC5F', desc:'Move faster between tables',
+    levels:['Sneakers','Running Shoes','Rocket Boots'], costs:[30,75,150], values:[1,1.3,1.6,2] },
+  tray: { name:'Bigger Tray', icon:'\uD83C\uDF7D', desc:'Carry more food items in Food Fu',
+    levels:['Tin Tray','Silver Platter','Golden Mega-Tray'], costs:[40,90,180], values:[4,5,7,9] },
+  deesc: { name:'Sweet Talk', icon:'\uD83D\uDCAC', desc:'Dialogue choices are more effective',
+    levels:['Nice Voice','Honey Tongue','Jedi Mind Trick'], costs:[35,80,160], values:[1,1.3,1.6,2] },
+  foodfu: { name:'Arm Strength', icon:'\uD83D\uDCAA', desc:'Food projectiles deal more damage',
+    levels:['Firm Grip','Strong Arm','Cannon Arm'], costs:[45,100,200], values:[1,1.25,1.5,2] },
+  manager: { name:'Manager Card', icon:'\uD83D\uDCCB', desc:'Insta-calm cooldown (uses per shift)',
+    levels:['Trainee Badge','Manager Card','Owner\'s Key'], costs:[50,120,220], values:[0,1,2,3] },
+};
+
+// === GAME STATE ===
+const state = {
+  screen: 'title',
+  day: 1,
+  tips: 0,
+  totalTips: 0,
+  shiftTime: 0,
+  shiftDuration: 90000,
+  served: 0,
+  meltdowns: 0,
+  meltdownsWon: 0,
+
+  // Heather
+  heather: { x:0, y:0, targetX:0, targetY:0, speed:2.5, carrying:null, facing:1, frame:0, busy:false },
+
+  // Tables
+  tables: [],
+  selectedTable: -1,
+  kitchen: { orders:[], ready:[] },
+  nextCustomerTimer: 0,
+  customersWaiting: 0,
+
+  // Upgrades
+  upgrades: { speed:0, tray:0, deesc:0, foodfu:0, manager:0 },
+  managerUsesLeft: 0,
+
+  // Dialogue
+  dialogue: { active:false, boss:null, dialogueIndex:0, rageBar:100, tipBonus:0 },
+
+  // Food Fu
+  foodfu: {
+    active:false,
+    heather: { x:100, y:0, vy:0, speed:4 },
+    boss: { x:0, y:0, hp:0, maxHp:0, speed:0, stunTimer:0, slowTimer:0, freezeTimer:0, attackTimer:0, phase:1 },
+    projectiles: [],
+    enemyProjectiles: [],
+    ammo: [],
+    selectedFood: 0,
+    shieldActive: false,
+    speedBoostTimer: 0,
+    bossData: null,
+    confusionTimer: 0,
+  },
+
+  // Particles
+  particles: [],
+  floatingTexts: [],
+
+  // Fly Mode
+  fly: {
+    active: false,
+    y: 0, vy: 0, // heather pos
+    score: 0, bestScore: 0,
+    distance: 0,
+    speed: 3, baseSpeed: 3,
+    multiplier: 1, multTimer: 0,
+    obstacles: [], clouds: [], bgClouds: [], stars: [],
+    collectibles: [],
+    trailParticles: [],
+    skyTime: 0, // drives sky color cycle
+    dead: false,
+    shieldTimer: 0,
+    invincibleTimer: 0,
+    frame: 0,
+    keys: {},
+    groundY: 0,
+    mountains: [],
+    windParticles: [],
+  },
+};
+
+// === LAYOUT ===
+const LAYOUT = {
+  tables: [
+    { x:0.22, y:0.38, seats:2 },
+    { x:0.50, y:0.32, seats:4 },
+    { x:0.78, y:0.38, seats:2 },
+    { x:0.22, y:0.62, seats:2 },
+    { x:0.50, y:0.58, seats:4 },
+    { x:0.78, y:0.62, seats:2 },
+  ],
+  kitchen: { x:0.5, y:0.08 },
+  door: { x:0.5, y:0.92 },
+  teaStation: { x:0.10, y:0.50 },
+};
+
+// === HELPERS ===
+function rand(a,b){ return Math.random()*(b-a)+a }
+function randInt(a,b){ return Math.floor(rand(a,b+1)) }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y) }
+function lerp(a,b,t){ return a+(b-a)*t }
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)) }
+
+// === DRAWING PRIMITIVES ===
+function drawHeatherSprite(cx, x, y, scale, facing, carrying, frame) {
+  cx.save();
+  cx.translate(x, y);
+  const s = scale || 1;
+
+  // Shadow
+  cx.fillStyle = 'rgba(0,0,0,0.15)';
+  cx.beginPath();
+  cx.ellipse(0, 28*s, 14*s, 5*s, 0, 0, Math.PI*2);
+  cx.fill();
+
+  // Body (apron)
+  cx.fillStyle = '#ffffff';
+  cx.fillRect(-10*s, 2*s, 20*s, 22*s);
+  cx.fillStyle = '#cc3333';
+  cx.fillRect(-12*s, -2*s, 24*s, 8*s); // shirt
+
+  // Apron strings
+  cx.strokeStyle = '#dddddd';
+  cx.lineWidth = 1.5*s;
+  cx.beginPath(); cx.moveTo(-8*s, 8*s); cx.lineTo(-12*s, 14*s); cx.stroke();
+  cx.beginPath(); cx.moveTo(8*s, 8*s); cx.lineTo(12*s, 14*s); cx.stroke();
+
+  // Arms
+  const armWave = Math.sin(frame * 0.08) * 3 * s;
+  cx.fillStyle = '#f5c9a0';
+  cx.beginPath();
+  cx.ellipse(-14*s, 6*s + armWave, 5*s, 4*s, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.ellipse(14*s, 6*s - armWave, 5*s, 4*s, 0, 0, Math.PI*2);
+  cx.fill();
+
+  // Legs
+  const legBob = Math.abs(Math.sin(frame * 0.1)) * 2 * s;
+  cx.fillStyle = '#2a5599';
+  cx.fillRect(-8*s, 22*s, 6*s, 8*s + legBob);
+  cx.fillRect(2*s, 22*s, 6*s, 8*s + (2*s - legBob));
+
+  // Shoes
+  cx.fillStyle = '#5c3a1e';
+  cx.fillRect(-9*s, 29*s + legBob, 8*s, 3*s);
+  cx.fillRect(1*s, 29*s + (2*s - legBob), 8*s, 3*s);
+
+  // Head
+  cx.fillStyle = '#f5c9a0';
+  cx.beginPath();
+  cx.arc(0, -10*s, 12*s, 0, Math.PI*2);
+  cx.fill();
+
+  // Hair (ponytail)
+  cx.fillStyle = '#8B4513';
+  cx.beginPath();
+  cx.arc(0, -14*s, 12*s, Math.PI, Math.PI*2);
+  cx.fill();
+  // Ponytail
+  cx.beginPath();
+  cx.moveTo(8*s * facing, -16*s);
+  cx.quadraticCurveTo(20*s * facing, -20*s, 18*s * facing, -8*s);
+  cx.quadraticCurveTo(16*s * facing, -2*s, 10*s * facing, -6*s);
+  cx.fill();
+
+  // Face
+  cx.fillStyle = '#2a1a0a';
+  // Eyes
+  cx.beginPath();
+  cx.arc(-4*s, -11*s, 2*s, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.arc(4*s, -11*s, 2*s, 0, Math.PI*2);
+  cx.fill();
+  // Eye highlights
+  cx.fillStyle = 'white';
+  cx.beginPath();
+  cx.arc(-3.5*s, -12*s, 0.8*s, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.arc(4.5*s, -12*s, 0.8*s, 0, Math.PI*2);
+  cx.fill();
+  // Smile
+  cx.strokeStyle = '#cc5544';
+  cx.lineWidth = 1.5*s;
+  cx.beginPath();
+  cx.arc(0, -7*s, 4*s, 0.1*Math.PI, 0.9*Math.PI);
+  cx.stroke();
+
+  // Carrying indicator
+  if (carrying) {
+    cx.font = `${18*s}px sans-serif`;
+    cx.textAlign = 'center';
+    cx.fillText(carrying.emoji || '\uD83C\uDF7D', 0, -28*s);
+  }
+
+  cx.restore();
+}
+
+function drawCustomerSprite(cx, x, y, scale, type, mood, tier) {
+  cx.save();
+  cx.translate(x, y);
+  const s = scale || 1;
+
+  // Shadow
+  cx.fillStyle = 'rgba(0,0,0,0.12)';
+  cx.beginPath();
+  cx.ellipse(0, 24*s, 12*s, 4*s, 0, 0, Math.PI*2);
+  cx.fill();
+
+  // Body
+  const colors = ['#4477aa','#aa5533','#55aa55','#aa44aa','#aa8833','#3399aa','#cc6644','#6644cc'];
+  cx.fillStyle = colors[type % colors.length];
+  cx.fillRect(-9*s, 0*s, 18*s, 18*s);
+
+  // Head
+  const skinTones = ['#f5c9a0','#d4a574','#c68e5b','#e8b88a','#f0d0a0'];
+  cx.fillStyle = skinTones[type % skinTones.length];
+  cx.beginPath();
+  cx.arc(0, -8*s, 10*s, 0, Math.PI*2);
+  cx.fill();
+
+  // Hair
+  const hairColors = ['#2a1a0a','#8B4513','#D2691E','#c0c0c0','#333','#daa520','#800000'];
+  cx.fillStyle = hairColors[type % hairColors.length];
+  cx.beginPath();
+  cx.arc(0, -12*s, 10*s, Math.PI, Math.PI*2);
+  cx.fill();
+
+  // Beehive Queen special hair
+  if (tier === 4) {
+    const hairH = 20 * s + (state.foodfu.active ? (1 - state.foodfu.boss.hp / state.foodfu.boss.maxHp) * 15 * s : 0);
+    cx.fillStyle = '#daa520';
+    cx.beginPath();
+    cx.moveTo(-8*s, -16*s);
+    cx.quadraticCurveTo(-10*s, -16*s - hairH, 0, -18*s - hairH);
+    cx.quadraticCurveTo(10*s, -16*s - hairH, 8*s, -16*s);
+    cx.fill();
+    cx.fillStyle = '#c89620';
+    cx.beginPath();
+    cx.ellipse(0, -18*s - hairH + 5*s, 6*s, hairH*0.4, 0, 0, Math.PI*2);
+    cx.fill();
+  }
+
+  // Face based on mood
+  cx.fillStyle = '#2a1a0a';
+  if (mood === 'angry' || mood === 'meltdown') {
+    // Angry eyebrows
+    cx.lineWidth = 2*s;
+    cx.strokeStyle = '#2a1a0a';
+    cx.beginPath(); cx.moveTo(-7*s,-11*s); cx.lineTo(-2*s,-13*s); cx.stroke();
+    cx.beginPath(); cx.moveTo(7*s,-11*s); cx.lineTo(2*s,-13*s); cx.stroke();
+    // Angry eyes
+    cx.beginPath(); cx.arc(-4*s,-9*s,1.5*s,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(4*s,-9*s,1.5*s,0,Math.PI*2); cx.fill();
+    // Frown
+    cx.strokeStyle = '#cc2200';
+    cx.lineWidth = 1.5*s;
+    cx.beginPath(); cx.arc(0,-3*s,4*s,1.1*Math.PI,1.9*Math.PI); cx.stroke();
+  } else {
+    // Normal eyes
+    cx.beginPath(); cx.arc(-4*s,-9*s,1.5*s,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(4*s,-9*s,1.5*s,0,Math.PI*2); cx.fill();
+    // Smile
+    cx.strokeStyle = '#884433';
+    cx.lineWidth = 1.5*s;
+    cx.beginPath(); cx.arc(0,-5*s,3*s,0.1*Math.PI,0.9*Math.PI); cx.stroke();
+  }
+
+  cx.restore();
+}
+
+function drawTable(cx, x, y, w, h, hasCloth) {
+  // Table shadow
+  cx.fillStyle = 'rgba(0,0,0,0.1)';
+  cx.fillRect(x+3, y+3, w, h);
+  // Table top
+  if (hasCloth) {
+    // Checkered pattern
+    const sq = 8;
+    cx.save();
+    cx.beginPath();
+    cx.roundRect(x, y, w, h, 4);
+    cx.clip();
+    for (let tx = x; tx < x+w; tx += sq) {
+      for (let ty = y; ty < y+h; ty += sq) {
+        cx.fillStyle = ((Math.floor((tx-x)/sq) + Math.floor((ty-y)/sq)) % 2 === 0) ? '#cc3333' : '#fff5ee';
+        cx.fillRect(tx, ty, sq, sq);
+      }
+    }
+    cx.restore();
+  } else {
+    cx.fillStyle = '#8b6914';
+    cx.beginPath();
+    cx.roundRect(x, y, w, h, 4);
+    cx.fill();
+  }
+  cx.strokeStyle = '#5c3a1e';
+  cx.lineWidth = 2;
+  cx.beginPath();
+  cx.roundRect(x, y, w, h, 4);
+  cx.stroke();
+}
+
+function drawFussMeter(cx, x, y, value, maxVal) {
+  const pct = clamp(value / maxVal, 0, 1);
+  const w = 40, h = 6;
+  cx.fillStyle = 'rgba(0,0,0,0.4)';
+  cx.fillRect(x - w/2, y, w, h);
+  const color = pct < 0.5 ? '#44cc44' : pct < 0.8 ? '#ccaa22' : '#cc2222';
+  cx.fillStyle = color;
+  cx.fillRect(x - w/2, y, w * pct, h);
+  cx.strokeStyle = 'rgba(255,255,255,0.3)';
+  cx.lineWidth = 1;
+  cx.strokeRect(x - w/2, y, w, h);
+}
+
+function drawBubble(cx, x, y, text, bgColor) {
+  cx.font = '13px Nunito, sans-serif';
+  const m = cx.measureText(text);
+  const pw = m.width + 16;
+  const ph = 24;
+  cx.fillStyle = bgColor || 'white';
+  cx.beginPath();
+  cx.roundRect(x - pw/2, y - ph, pw, ph, 8);
+  cx.fill();
+  // Tail
+  cx.beginPath();
+  cx.moveTo(x - 5, y);
+  cx.lineTo(x, y + 8);
+  cx.lineTo(x + 5, y);
+  cx.fill();
+
+  cx.fillStyle = '#2a1a0a';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  cx.fillText(text, x, y - ph/2);
+}
+
+// === PARTICLE SYSTEM ===
+function spawnParticle(x, y, color, count) {
+  for (let i = 0; i < (count||5); i++) {
+    state.particles.push({
+      x, y, vx: rand(-3,3), vy: rand(-4,-1),
+      life: 1, decay: rand(0.015,0.035), color, size: rand(2,5)
+    });
+  }
+}
+
+function spawnFloatingText(x, y, text, color) {
+  state.floatingTexts.push({ x, y, text, color: color||'#ffdd00', life:1, vy:-1.5 });
+}
+
+function updateParticles(dt) {
+  for (let i = state.particles.length-1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= p.decay;
+    if (p.life <= 0) state.particles.splice(i, 1);
+  }
+  for (let i = state.floatingTexts.length-1; i >= 0; i--) {
+    const ft = state.floatingTexts[i];
+    ft.y += ft.vy; ft.life -= 0.015;
+    if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+  }
+}
+
+function drawParticles(cx) {
+  state.particles.forEach(p => {
+    cx.globalAlpha = p.life;
+    cx.fillStyle = p.color;
+    cx.beginPath();
+    cx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    cx.fill();
+  });
+  cx.globalAlpha = 1;
+  state.floatingTexts.forEach(ft => {
+    cx.globalAlpha = ft.life;
+    cx.font = 'bold 16px Fredoka One, sans-serif';
+    cx.textAlign = 'center';
+    cx.fillStyle = ft.color;
+    cx.fillText(ft.text, ft.x, ft.y);
+  });
+  cx.globalAlpha = 1;
+}
+
+// === TABLE / CUSTOMER SYSTEM ===
+const TABLE_W = 60, TABLE_H = 40;
+
+function initTables() {
+  const maxTables = Math.min(2 + state.day, 6);
+  state.tables = [];
+  for (let i = 0; i < maxTables; i++) {
+    const l = LAYOUT.tables[i];
+    state.tables.push({
+      x: l.x * W, y: l.y * (H - 90) + 45,
+      seats: l.seats,
+      customer: null,
+    });
+  }
+}
+
+function createCustomer(tableIndex) {
+  const fussMult = 1 + (state.day - 1) * 0.12;
+  const baseFuss = 50 + state.day * 5;
+  return {
+    name: pick(CUSTOMER_NAMES),
+    type: randInt(0, 7),
+    state: 'waiting_to_order', // waiting_to_order, ordered, food_ready, eating, wants_refill, wants_check, paying, meltdown, leaving
+    order: pick(MENU_ITEMS),
+    fuss: 0,
+    fussMax: baseFuss,
+    fussRate: (0.8 + state.day * 0.15) * fussMult,
+    mood: 'happy',
+    timer: 0,
+    cookTimer: 0,
+    eatTimer: 0,
+    refillNeeded: false,
+    tipBase: 5 + randInt(0, 3 + state.day),
+    meltdownBoss: null,
+    tableIndex,
+    bubble: null,
+    bubbleTimer: 0,
+  };
+}
+
+// === SCREEN MANAGEMENT ===
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(name + '-screen');
+  if (el) el.classList.add('active');
+
+  const hud = document.getElementById('hud');
+  const ap = document.getElementById('action-panel');
+  const ffh = document.getElementById('foodfu-hud');
+  const flyHud = document.getElementById('fly-hud');
+  const flyGo = document.getElementById('fly-gameover');
+
+  hud.classList.remove('active');
+  ap.classList.remove('active');
+  ffh.classList.remove('active');
+  flyHud.classList.remove('active');
+  flyGo.classList.remove('active');
+
+  if (name === 'serving') {
+    hud.classList.add('active');
+    ap.classList.add('active');
+  }
+  if (name === 'fly') {
+    flyHud.classList.add('active');
+  }
+  state.screen = name;
+}
+
+// === TITLE SCREEN ===
+function drawTitleHeather() {
+  const tc = document.getElementById('title-heather');
+  const tcx = tc.getContext('2d');
+  tcx.clearRect(0,0,120,160);
+  drawHeatherSprite(tcx, 60, 90, 2, 1, null, Date.now()/16);
+}
+drawTitleHeather();
+setInterval(drawTitleHeather, 50);
+
+function startDinerMode() {
+  if (state.screen !== 'title') return;
+  showScreen('briefing');
+  showBriefing();
+}
+
+function startFlyMode() {
+  if (state.screen !== 'title') return;
+  initFly();
+}
+
+// === BRIEFING ===
+function showBriefing() {
+  const bs = document.getElementById('briefing-screen');
+  const tableCount = Math.min(2 + state.day, 6);
+  const bossChance = Math.min(15 + state.day * 10, 60);
+  let warning = '';
+  if (state.day === 1) warning = 'First day! Take it easy and learn the ropes.';
+  else if (state.day <= 3) warning = 'Customers are getting pickier...';
+  else if (state.day <= 5) warning = 'Watch out for Coupon Sorcerers!';
+  else if (state.day <= 7) warning = 'Review Wizards spotted in the area!';
+  else warning = 'THE BEEHIVE QUEEN APPROACHES.';
+
+  bs.innerHTML = `<div class="briefing-card">
+    <h2>SHIFT BRIEFING</h2>
+    <div class="day-num">Day ${state.day}</div>
+    <p>\uD83C\uDF7D ${tableCount} tables open today</p>
+    <p>\u23F1 Shift length: ${Math.round(state.shiftDuration/1000)}s</p>
+    <p>\uD83D\uDCB5 Target: Earn as many tips as you can!</p>
+    ${state.managerUsesLeft > 0 ? `<p>\uD83D\uDCCB Manager Card uses: ${state.managerUsesLeft}</p>` : ''}
+    <div class="warning">\u26A0 ${warning}</div>
+    <button class="briefing-btn" onclick="startShift()">START SHIFT</button>
+  </div>`;
+  showScreen('briefing');
+}
+
+// === START SHIFT ===
+function startShift() {
+  state.shiftTime = 0;
+  state.shiftDuration = 90000 + state.day * 10000;
+  state.served = 0;
+  state.meltdowns = 0;
+  state.meltdownsWon = 0;
+  state.tips = 0;
+  state.heather.carrying = null;
+  state.heather.busy = false;
+  state.selectedTable = -1;
+  state.kitchen.orders = [];
+  state.kitchen.ready = [];
+  state.nextCustomerTimer = 1500;
+  state.customersWaiting = 0;
+  state.particles = [];
+  state.floatingTexts = [];
+  state.managerUsesLeft = UPGRADES.manager.values[state.upgrades.manager];
+  state.heather.speed = 2.5 * UPGRADES.speed.values[state.upgrades.speed];
+
+  initTables();
+  state.heather.x = W / 2;
+  state.heather.y = (H - 90) * 0.75 + 45;
+  state.heather.targetX = state.heather.x;
+  state.heather.targetY = state.heather.y;
+
+  showScreen('serving');
+  updateActionButtons();
+}
+
+// === SERVING PHASE ===
+function updateServing(dt) {
+  state.shiftTime += dt;
+
+  // Update HUD
+  const timeLeft = Math.max(0, state.shiftDuration - state.shiftTime);
+  const mins = Math.floor(timeLeft / 60000);
+  const secs = Math.floor((timeLeft % 60000) / 1000);
+  document.getElementById('hud-tips').textContent = '$' + state.tips;
+  document.getElementById('hud-time').textContent = mins + ':' + (secs<10?'0':'') + secs;
+  document.getElementById('hud-served').textContent = state.served;
+  document.getElementById('hud-day').textContent = 'Day ' + state.day;
+
+  // Check shift end
+  if (state.shiftTime >= state.shiftDuration) {
+    endShift();
+    return;
+  }
+
+  // Spawn customers
+  state.nextCustomerTimer -= dt;
+  if (state.nextCustomerTimer <= 0) {
+    const emptyTables = state.tables.filter(t => !t.customer);
+    if (emptyTables.length > 0 && state.customersWaiting < 2) {
+      state.customersWaiting++;
+    }
+    state.nextCustomerTimer = rand(3000, 8000) - state.day * 200;
+  }
+
+  // Move Heather
+  const h = state.heather;
+  const dx = h.targetX - h.x;
+  const dy = h.targetY - h.y;
+  const d = Math.hypot(dx, dy);
+  if (d > 3) {
+    h.x += (dx / d) * h.speed * (dt / 16);
+    h.y += (dy / d) * h.speed * (dt / 16);
+    h.facing = dx > 0 ? 1 : -1;
+    h.frame++;
+  }
+
+  // Update customers
+  state.tables.forEach((table, ti) => {
+    const c = table.customer;
+    if (!c) return;
+
+    // Fuss increases over time (less when eating)
+    if (c.state !== 'eating' && c.state !== 'paying' && c.state !== 'leaving') {
+      c.fuss += c.fussRate * (dt / 1000);
+    }
+
+    // State-specific timers
+    if (c.state === 'ordered') {
+      c.cookTimer -= dt;
+      if (c.cookTimer <= 0) {
+        c.state = 'food_ready';
+        state.kitchen.ready.push({ tableIndex: ti, order: c.order });
+        c.bubble = c.order.emoji + '!';
+        c.bubbleTimer = 3000;
+      }
+    }
+
+    if (c.state === 'eating') {
+      c.eatTimer -= dt;
+      if (c.eatTimer <= 0) {
+        // Random refill check
+        if (!c.refillNeeded && Math.random() < 0.4) {
+          c.refillNeeded = true;
+          c.state = 'wants_refill';
+          c.bubble = '\uD83E\uDDCB?';
+          c.bubbleTimer = 5000;
+          c.fuss += 5;
+        } else {
+          c.state = 'wants_check';
+          c.bubble = '\uD83D\uDCB5';
+          c.bubbleTimer = 5000;
+        }
+      }
+    }
+
+    // Bubble timer
+    if (c.bubbleTimer > 0) {
+      c.bubbleTimer -= dt;
+      if (c.bubbleTimer <= 0) c.bubble = null;
+    }
+
+    // Mood update
+    const fussPct = c.fuss / c.fussMax;
+    c.mood = fussPct < 0.5 ? 'happy' : fussPct < 0.8 ? 'annoyed' : 'angry';
+
+    // MELTDOWN CHECK
+    if (c.fuss >= c.fussMax && c.state !== 'meltdown' && c.state !== 'paying' && c.state !== 'leaving') {
+      c.state = 'meltdown';
+      c.mood = 'meltdown';
+      state.meltdowns++;
+
+      // Determine boss tier
+      let tier = 1;
+      if (state.day >= 8) tier = Math.random() < 0.3 ? 4 : (Math.random() < 0.5 ? 3 : 2);
+      else if (state.day >= 5) tier = Math.random() < 0.4 ? 3 : 2;
+      else if (state.day >= 3) tier = Math.random() < 0.5 ? 2 : 1;
+
+      c.meltdownBoss = BOSS_TIERS[tier - 1];
+      startDialogue(c, ti);
+    }
+  });
+
+  updateParticles(dt);
+  updateActionButtons();
+}
+
+function renderServing() {
+  ctx.clearRect(0, 0, W, H);
+
+  const hudH = 45;
+  const panelH = 55;
+  const gameTop = hudH;
+  const gameH = H - hudH - panelH;
+
+  // Floor
+  ctx.fillStyle = '#c8a060';
+  ctx.fillRect(0, gameTop, W, gameH);
+
+  // Wood planks
+  ctx.strokeStyle = 'rgba(92,58,30,0.15)';
+  ctx.lineWidth = 1;
+  for (let y = gameTop; y < H - panelH; y += 20) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Kitchen counter
+  const kx = LAYOUT.kitchen.x * W;
+  const ky = gameTop + 20;
+  drawTable(ctx, kx - 100, ky, 200, 30, false);
+  ctx.font = 'bold 12px Fredoka One, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText('KITCHEN', kx, ky + 20);
+
+  // Kitchen ready indicators
+  state.kitchen.ready.forEach((item, i) => {
+    ctx.font = '20px sans-serif';
+    ctx.fillText(item.order.emoji, kx - 60 + i * 35, ky + 5);
+  });
+
+  // Tea station
+  const tsx = LAYOUT.teaStation.x * W;
+  const tsy = LAYOUT.teaStation.y * (gameH) + gameTop;
+  ctx.fillStyle = '#2d8a2d';
+  ctx.beginPath();
+  ctx.roundRect(tsx - 20, tsy - 15, 40, 30, 6);
+  ctx.fill();
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\uD83E\uDDCB', tsx, tsy + 5);
+
+  // Door
+  const dx = LAYOUT.door.x * W;
+  const dy = H - panelH - 15;
+  ctx.fillStyle = '#5c3a1e';
+  ctx.beginPath();
+  ctx.roundRect(dx - 30, dy - 20, 60, 25, 4);
+  ctx.fill();
+  ctx.font = 'bold 11px Fredoka One, sans-serif';
+  ctx.fillStyle = '#f0d060';
+  ctx.fillText('ENTRANCE', dx, dy - 4);
+  // Waiting customers
+  if (state.customersWaiting > 0) {
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('\uD83D\uDC64 ' + state.customersWaiting + ' waiting', dx, dy + 12);
+  }
+
+  // Tables & customers
+  state.tables.forEach((table, ti) => {
+    const tx = table.x;
+    const ty = table.y;
+    const selected = state.selectedTable === ti;
+
+    // Selection highlight
+    if (selected) {
+      ctx.strokeStyle = '#f0d060';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.roundRect(tx - TABLE_W/2 - 8, ty - TABLE_H/2 - 8, TABLE_W + 16, TABLE_H + 16, 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Table
+    drawTable(ctx, tx - TABLE_W/2, ty - TABLE_H/2, TABLE_W, TABLE_H, true);
+
+    // Table number
+    ctx.font = 'bold 10px Nunito, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'center';
+    ctx.fillText('#' + (ti+1), tx, ty + 3);
+
+    // Customer
+    const c = table.customer;
+    if (c) {
+      drawCustomerSprite(ctx, tx, ty - TABLE_H/2 - 20, 0.8, c.type, c.mood, c.meltdownBoss ? c.meltdownBoss.tier : 0);
+
+      // Fuss meter
+      drawFussMeter(ctx, tx, ty - TABLE_H/2 - 50, c.fuss, c.fussMax);
+
+      // State icon
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      let icon = '';
+      if (c.state === 'waiting_to_order') icon = '\uD83D\uDCDD';
+      else if (c.state === 'ordered') icon = '\u23F3';
+      else if (c.state === 'food_ready') icon = '\uD83D\uDD14';
+      else if (c.state === 'eating') icon = '\uD83C\uDF7D';
+      else if (c.state === 'wants_refill') icon = '\uD83E\uDDCB';
+      else if (c.state === 'wants_check') icon = '\uD83D\uDCB5';
+      else if (c.state === 'meltdown') icon = '\uD83D\uDCA2';
+      else if (c.state === 'paying') icon = '\u2714';
+
+      if (icon) ctx.fillText(icon, tx + TABLE_W/2 + 12, ty - TABLE_H/2);
+
+      // Bubble
+      if (c.bubble) {
+        drawBubble(ctx, tx, ty - TABLE_H/2 - 55, c.bubble, 'white');
+      }
+
+      // Name
+      ctx.font = '10px Nunito, sans-serif';
+      ctx.fillStyle = '#5c3a1e';
+      ctx.fillText(c.name, tx, ty + TABLE_H/2 + 14);
+    }
+  });
+
+  // Heather
+  drawHeatherSprite(ctx, state.heather.x, state.heather.y, 1, state.heather.facing, state.heather.carrying, state.heather.frame);
+
+  // Particles
+  drawParticles(ctx);
+}
+
+// === ACTION SYSTEM ===
+function updateActionButtons() {
+  const h = state.heather;
+  const sel = state.selectedTable >= 0 ? state.tables[state.selectedTable] : null;
+  const c = sel ? sel.customer : null;
+
+  const seatBtn = document.getElementById('btn-seat');
+  const orderBtn = document.getElementById('btn-order');
+  const pickupBtn = document.getElementById('btn-pickup');
+  const deliverBtn = document.getElementById('btn-deliver');
+  const refillBtn = document.getElementById('btn-refill');
+  const checkBtn = document.getElementById('btn-check');
+
+  // Reset
+  [seatBtn, orderBtn, pickupBtn, deliverBtn, refillBtn, checkBtn].forEach(b => b.classList.add('disabled'));
+
+  // Seat: need waiting customers & selected empty table
+  if (state.customersWaiting > 0 && sel && !sel.customer) seatBtn.classList.remove('disabled');
+
+  // Order: customer waiting to order, heather near table
+  if (c && c.state === 'waiting_to_order' && isNearTable(state.selectedTable)) orderBtn.classList.remove('disabled');
+
+  // Pickup: food ready in kitchen
+  if (state.kitchen.ready.length > 0 && isNearKitchen()) pickupBtn.classList.remove('disabled');
+
+  // Deliver: carrying food, near the right table
+  if (h.carrying && sel && c && c.state === 'food_ready' && isNearTable(state.selectedTable)) deliverBtn.classList.remove('disabled');
+
+  // Refill: customer wants refill, heather near table
+  if (c && c.state === 'wants_refill' && isNearTable(state.selectedTable)) refillBtn.classList.remove('disabled');
+
+  // Check: customer wants check, heather near table
+  if (c && c.state === 'wants_check' && isNearTable(state.selectedTable)) checkBtn.classList.remove('disabled');
+}
+
+function isNearTable(ti) {
+  if (ti < 0) return false;
+  const t = state.tables[ti];
+  return Math.hypot(state.heather.x - t.x, state.heather.y - t.y) < 80;
+}
+
+function isNearKitchen() {
+  const kx = LAYOUT.kitchen.x * W;
+  const ky = 65;
+  return Math.hypot(state.heather.x - kx, state.heather.y - ky) < 100;
+}
+
+function doAction(action) {
+  const sel = state.selectedTable >= 0 ? state.tables[state.selectedTable] : null;
+  const c = sel ? sel.customer : null;
+  const h = state.heather;
+
+  switch (action) {
+    case 'seat':
+      if (state.customersWaiting > 0 && sel && !sel.customer) {
+        state.customersWaiting--;
+        sel.customer = createCustomer(state.selectedTable);
+        spawnParticle(sel.x, sel.y - 20, '#f0d060', 8);
+        spawnFloatingText(sel.x, sel.y - 60, 'Seated!', '#44aa44');
+      }
+      break;
+
+    case 'order':
+      if (c && c.state === 'waiting_to_order' && isNearTable(state.selectedTable)) {
+        c.state = 'ordered';
+        c.cookTimer = c.order.cookTime;
+        c.bubble = c.order.emoji + '...';
+        c.bubbleTimer = 2000;
+        c.fuss = Math.max(0, c.fuss - 5);
+        spawnFloatingText(sel.x, sel.y - 60, 'Order taken!', '#44aa44');
+        state.kitchen.orders.push({ tableIndex: state.selectedTable, order: c.order });
+      }
+      break;
+
+    case 'pickup':
+      if (state.kitchen.ready.length > 0 && isNearKitchen()) {
+        const item = state.kitchen.ready.shift();
+        h.carrying = item.order;
+        h.carryingForTable = item.tableIndex;
+        spawnFloatingText(LAYOUT.kitchen.x * W, 70, 'Picked up!', '#44aa44');
+      }
+      break;
+
+    case 'deliver':
+      if (h.carrying && sel && c && c.state === 'food_ready' && isNearTable(state.selectedTable)) {
+        c.state = 'eating';
+        c.eatTimer = rand(5000, 8000);
+        c.fuss = Math.max(0, c.fuss - 15);
+        c.bubble = '\uD83D\uDE0B';
+        c.bubbleTimer = 2000;
+        h.carrying = null;
+        h.carryingForTable = -1;
+        spawnParticle(sel.x, sel.y, '#44cc44', 10);
+        spawnFloatingText(sel.x, sel.y - 60, 'Delivered!', '#44aa44');
+      }
+      break;
+
+    case 'refill':
+      if (c && c.state === 'wants_refill' && isNearTable(state.selectedTable)) {
+        c.state = 'eating';
+        c.eatTimer = rand(3000, 5000);
+        c.refillNeeded = false;
+        c.fuss = Math.max(0, c.fuss - 10);
+        c.bubble = '\uD83E\uDDCB\u2714';
+        c.bubbleTimer = 1500;
+        spawnFloatingText(sel.x, sel.y - 60, 'Refilled!', '#2288cc');
+      }
+      break;
+
+    case 'check':
+      if (c && c.state === 'wants_check' && isNearTable(state.selectedTable)) {
+        c.state = 'paying';
+        const fussPct = c.fuss / c.fussMax;
+        const tipMult = fussPct < 0.3 ? 1.5 : fussPct < 0.6 ? 1.0 : 0.6;
+        const tip = Math.round(c.tipBase * tipMult);
+        state.tips += tip;
+        state.totalTips += tip;
+        state.served++;
+        spawnParticle(sel.x, sel.y, '#f0d060', 12);
+        spawnFloatingText(sel.x, sel.y - 60, '+$' + tip, '#f0d060');
+
+        // Customer leaves after a moment
+        setTimeout(() => {
+          if (sel.customer === c) {
+            sel.customer = null;
+          }
+        }, 1000);
+      }
+      break;
+  }
+  updateActionButtons();
+}
+
+// === CLICK HANDLING (SERVING) ===
+C.addEventListener('click', (e) => {
+  if (state.screen !== 'serving') return;
+
+  const mx = e.clientX;
+  const my = e.clientY;
+
+  // Check table clicks
+  let clickedTable = -1;
+  state.tables.forEach((t, i) => {
+    if (Math.abs(mx - t.x) < TABLE_W && Math.abs(my - t.y) < TABLE_H) {
+      clickedTable = i;
+    }
+  });
+
+  if (clickedTable >= 0) {
+    state.selectedTable = clickedTable;
+    const t = state.tables[clickedTable];
+    state.heather.targetX = t.x;
+    state.heather.targetY = t.y + TABLE_H/2 + 20;
+  } else {
+    // Check kitchen click
+    const kx = LAYOUT.kitchen.x * W;
+    const ky = 65;
+    if (Math.abs(mx - kx) < 120 && Math.abs(my - ky) < 40) {
+      state.heather.targetX = kx;
+      state.heather.targetY = ky + 30;
+      state.selectedTable = -1;
+    }
+    // Check door click
+    else if (Math.abs(mx - LAYOUT.door.x * W) < 50 && my > H - 100) {
+      state.heather.targetX = LAYOUT.door.x * W;
+      state.heather.targetY = H - 100;
+      state.selectedTable = -1;
+    }
+    // General movement
+    else {
+      state.heather.targetX = mx;
+      state.heather.targetY = clamp(my, 60, H - 70);
+      state.selectedTable = -1;
+    }
+  }
+  updateActionButtons();
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', (e) => {
+  if (state.screen === 'serving') {
+    if (e.key === '1') doAction('seat');
+    else if (e.key === '2') doAction('order');
+    else if (e.key === '3') doAction('pickup');
+    else if (e.key === '4') doAction('deliver');
+    else if (e.key === '5') doAction('refill');
+    else if (e.key === '6') doAction('check');
+  }
+  if (state.screen === 'foodfu') {
+    handleFoodFuKey(e);
+  }
+});
+
+// === DIALOGUE SYSTEM ===
+function startDialogue(customer, tableIndex) {
+  const boss = customer.meltdownBoss;
+  state.dialogue.active = true;
+  state.dialogue.boss = boss;
+  state.dialogue.customer = customer;
+  state.dialogue.tableIndex = tableIndex;
+  state.dialogue.rageBar = 100;
+  state.dialogue.tipBonus = 0;
+  state.dialogue.dialogueIndex = 0;
+  state.dialogue.phase = 'choose';
+
+  renderDialogue();
+  showScreen('dialogue');
+}
+
+function renderDialogue() {
+  const d = state.dialogue;
+  const boss = d.boss;
+  const dial = boss.dialogues[d.dialogueIndex % boss.dialogues.length];
+  const deescMult = UPGRADES.deesc.values[state.upgrades.deesc];
+
+  const ds = document.getElementById('dialogue-screen');
+  ds.innerHTML = `
+    <div class="dialogue-box">
+      <div class="dialogue-header" style="background:linear-gradient(135deg,${boss.color},#3a2210)">
+        <div class="dialogue-portrait">${boss.emoji}</div>
+        <div class="dialogue-info">
+          <h2>${boss.name}</h2>
+          <div class="tier">Tier ${boss.tier} Meltdown</div>
+          <div class="rage-bar-container">
+            <div class="rage-bar-fill" style="width:${d.rageBar}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="dialogue-body">
+        <div class="dialogue-text">${dial.text}</div>
+        <div class="dialogue-choices">
+          ${dial.choices.map((ch, i) => `
+            <button class="choice-btn" onclick="selectChoice(${i})">
+              ${ch.text}
+              <span class="effect">${ch.effect === 'calm' ? '\uD83D\uDFE2 De-escalate' : ch.effect === 'manager' ? '\uD83D\uDCCB Manager Card' : '\uD83C\uDFB2 Risky but funny'}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function selectChoice(index) {
+  const d = state.dialogue;
+  const boss = d.boss;
+  const dial = boss.dialogues[d.dialogueIndex % boss.dialogues.length];
+  const choice = dial.choices[index];
+  const deescMult = UPGRADES.deesc.values[state.upgrades.deesc];
+
+  if (choice.effect === 'manager') {
+    if (state.managerUsesLeft > 0) {
+      state.managerUsesLeft--;
+      d.rageBar += choice.rage * deescMult;
+    } else {
+      d.rageBar -= 10; // Small penalty if no uses left
+      spawnFloatingText(W/2, H/2, 'No manager uses left!', '#cc2222');
+    }
+  } else if (choice.effect === 'risky') {
+    // Risky: 40% chance of big success, 60% chance of rage increase
+    if (Math.random() < 0.4) {
+      d.rageBar += choice.rage * deescMult * -2; // Double calm
+      d.tipBonus += choice.tipMod * 2;
+    } else {
+      d.rageBar += Math.abs(choice.rage);
+      d.tipBonus += Math.floor(choice.tipMod / 2);
+    }
+  } else {
+    d.rageBar += choice.rage * deescMult;
+    d.tipBonus += choice.tipMod;
+  }
+
+  d.rageBar = clamp(d.rageBar, 0, 100);
+
+  if (d.rageBar <= 0) {
+    // De-escalation success!
+    resolveDialogueSuccess();
+  } else {
+    d.dialogueIndex++;
+    if (d.dialogueIndex >= boss.dialogues.length) {
+      // Ran out of dialogue, go to Food Fu!
+      startFoodFu();
+    } else {
+      renderDialogue();
+    }
+  }
+}
+
+function resolveDialogueSuccess() {
+  const d = state.dialogue;
+  const table = state.tables[d.tableIndex];
+  const c = d.customer;
+
+  const tip = Math.max(1, c.tipBase + d.tipBonus);
+  state.tips += tip;
+  state.totalTips += tip;
+  state.served++;
+  state.meltdownsWon++;
+
+  table.customer = null;
+  d.active = false;
+
+  spawnFloatingText(W/2, H/3, 'De-escalated! +$' + tip, '#44cc44');
+  showScreen('serving');
+}
+
+// === FOOD FU MODE ===
+function startFoodFu() {
+  const d = state.dialogue;
+  const boss = d.boss;
+  const ff = state.foodfu;
+
+  ff.active = true;
+  ff.heather = { x: 100, y: H/2, vy: 0, speed: 4 * UPGRADES.speed.values[state.upgrades.speed] };
+  ff.boss = {
+    x: W - 150, y: H/2,
+    hp: boss.hp, maxHp: boss.hp,
+    speed: boss.speed, attacks: boss.attacks,
+    stunTimer: 0, slowTimer: 0, freezeTimer: 0,
+    attackTimer: 2000,
+    phase: 1, vy: 1.5,
+    flashTimer: 0,
+  };
+  ff.projectiles = [];
+  ff.enemyProjectiles = [];
+  ff.selectedFood = 0;
+  ff.shieldActive = false;
+  ff.speedBoostTimer = 0;
+  ff.confusionTimer = 0;
+  ff.bossData = boss;
+  ff.keys = {};
+  ff.outOfAmmoTimer = 0;
+
+  // Generate ammo
+  const traySize = UPGRADES.tray.values[state.upgrades.tray];
+  ff.ammo = [];
+  const foodTypes = [0, 1, 2, 3]; // biscuit, gravy, tea, okra
+  for (let i = 0; i < traySize; i++) {
+    ff.ammo.push(pick(foodTypes));
+  }
+
+  // Render food HUD
+  renderFoodFuHUD();
+  showScreen('foodfu');
+  document.getElementById('foodfu-hud').classList.add('active');
+  document.getElementById('hud').classList.remove('active');
+  document.getElementById('action-panel').classList.remove('active');
+}
+
+function renderFoodFuHUD() {
+  const ff = state.foodfu;
+  const hud = document.getElementById('foodfu-hud');
+
+  // Count ammo by type
+  const counts = {};
+  ff.ammo.forEach(fi => { counts[fi] = (counts[fi]||0) + 1; });
+
+  // Add shield and coffee
+  const allItems = [0, 1, 2, 3, 4, 5]; // All food types
+  let html = '';
+  allItems.forEach((fi, idx) => {
+    const food = FOOD_ITEMS[fi];
+    const count = fi <= 3 ? (counts[fi] || 0) : (fi === 4 ? 1 : 1);
+    const selected = ff.selectedFood === fi;
+    const disabled = fi <= 3 && count === 0;
+
+    html += `<div class="food-slot ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
+      onclick="selectFoodSlot(${fi})" style="${disabled ? 'opacity:0.3' : ''}">
+      <span class="emoji">${food.emoji}</span>
+      ${fi <= 3 ? `<span class="count">${count}</span>` : ''}
+      <span class="key-hint">${idx+1}</span>
+    </div>`;
+  });
+  hud.innerHTML = html;
+}
+
+function selectFoodSlot(fi) {
+  state.foodfu.selectedFood = fi;
+  renderFoodFuHUD();
+}
+
+function handleFoodFuKey(e) {
+  const ff = state.foodfu;
+  if (!ff.active) return;
+
+  if (e.key >= '1' && e.key <= '6') {
+    selectFoodSlot(parseInt(e.key) - 1);
+  }
+  if (e.key === ' ' || e.key === 'Enter') {
+    fireFoodProjectile();
+  }
+  ff.keys = ff.keys || {};
+  if (e.type === 'keydown') ff.keys[e.key] = true;
+}
+
+window.addEventListener('keyup', (e) => {
+  if (state.foodfu.active && state.foodfu.keys) {
+    state.foodfu.keys[e.key] = false;
+  }
+});
+
+// Click to fire in Food Fu
+C.addEventListener('click', (e) => {
+  if (state.screen === 'foodfu') {
+    fireFoodProjectile();
+  }
+});
+
+function fireFoodProjectile() {
+  const ff = state.foodfu;
+  const fi = ff.selectedFood;
+  const food = FOOD_ITEMS[fi];
+
+  // Shield / Coffee are instant use
+  if (fi === 4) { // Cornbread shield
+    ff.shieldActive = true;
+    spawnFloatingText(ff.heather.x, ff.heather.y - 40, '\uD83D\uDEE1 Shield!', '#f0d060');
+    return;
+  }
+  if (fi === 5) { // Hot Coffee boost
+    ff.speedBoostTimer = 4000;
+    spawnFloatingText(ff.heather.x, ff.heather.y - 40, '\u26A1 Speed Boost!', '#ff6600');
+    return;
+  }
+
+  // Check ammo
+  const idx = ff.ammo.indexOf(fi);
+  if (idx === -1) return;
+  ff.ammo.splice(idx, 1);
+
+  const dmgMult = UPGRADES.foodfu.values[state.upgrades.foodfu];
+
+  if (food.effect === 'scatter') {
+    // 3-way spread
+    for (let angle = -0.3; angle <= 0.3; angle += 0.3) {
+      ff.projectiles.push({
+        x: ff.heather.x + 20, y: ff.heather.y,
+        vx: food.speed, vy: angle * food.speed,
+        damage: food.damage * dmgMult, effect: food.effect,
+        emoji: food.emoji, life: 1,
+      });
+    }
+  } else {
+    ff.projectiles.push({
+      x: ff.heather.x + 20, y: ff.heather.y,
+      vx: food.speed, vy: 0,
+      damage: food.damage * dmgMult, effect: food.effect,
+      emoji: food.emoji, life: 1,
+    });
+  }
+
+  renderFoodFuHUD();
+}
+
+function updateFoodFu(dt) {
+  const ff = state.foodfu;
+  if (!ff.active) return;
+
+  const keys = ff.keys || {};
+  const confusion = ff.confusionTimer > 0 ? -1 : 1;
+  const speedMult = ff.speedBoostTimer > 0 ? 1.8 : 1;
+  const spd = ff.heather.speed * speedMult * (dt / 16);
+
+  // Move heather
+  if (keys['w'] || keys['W'] || keys['ArrowUp']) ff.heather.y -= spd * confusion;
+  if (keys['s'] || keys['S'] || keys['ArrowDown']) ff.heather.y += spd * confusion;
+  if (keys['a'] || keys['A'] || keys['ArrowLeft']) ff.heather.x -= spd * confusion;
+  if (keys['d'] || keys['D'] || keys['ArrowRight']) ff.heather.x += spd * confusion;
+  ff.heather.x = clamp(ff.heather.x, 30, W * 0.4);
+  ff.heather.y = clamp(ff.heather.y, 60, H - 80);
+
+  // Timers
+  if (ff.speedBoostTimer > 0) ff.speedBoostTimer -= dt;
+  if (ff.confusionTimer > 0) ff.confusionTimer -= dt;
+
+  // Boss movement
+  const b = ff.boss;
+  if (b.freezeTimer > 0) {
+    b.freezeTimer -= dt;
+  } else if (b.stunTimer > 0) {
+    b.stunTimer -= dt;
+  } else {
+    const bSpd = b.slowTimer > 0 ? b.speed * 0.5 : b.speed;
+    b.y += b.vy * bSpd * (dt / 16);
+    if (b.y < 80 || b.y > H - 100) b.vy *= -1;
+  }
+  if (b.slowTimer > 0) b.slowTimer -= dt;
+  if (b.flashTimer > 0) b.flashTimer -= dt;
+
+  // Boss attacks
+  b.attackTimer -= dt;
+  if (b.attackTimer <= 0 && b.stunTimer <= 0 && b.freezeTimer <= 0) {
+    const atkType = pick(b.attacks);
+    const atk = ENEMY_ATTACKS[atkType];
+    const proj = {
+      x: b.x - 30, y: b.y,
+      vx: -atk.speed, vy: 0,
+      text: atk.text, color: atk.color,
+      damage: atk.damage, pattern: atk.pattern,
+      life: 1, timer: 0, type: atkType,
+    };
+    if (atk.pattern === 'wave') proj.baseY = b.y;
+    if (atk.pattern === 'zigzag') { proj.baseY = b.y; proj.zigDir = 1; }
+    if (atk.pattern === 'big') { proj.big = true; }
+    ff.enemyProjectiles.push(proj);
+    b.attackTimer = rand(1200, 2500) / (1 + (state.day - 1) * 0.1);
+  }
+
+  // Update player projectiles
+  for (let i = ff.projectiles.length - 1; i >= 0; i--) {
+    const p = ff.projectiles[i];
+    p.x += p.vx * (dt / 16);
+    p.y += p.vy * (dt / 16);
+
+    // Hit boss?
+    if (Math.hypot(p.x - b.x, p.y - b.y) < 40) {
+      b.hp -= p.damage;
+      b.flashTimer = 150;
+      spawnParticle(b.x, b.y, '#ffaa00', 6);
+      spawnFloatingText(b.x, b.y - 50, '-' + Math.round(p.damage), '#ff4444');
+
+      // Apply effects
+      if (p.effect === 'stun') b.stunTimer = 1500;
+      if (p.effect === 'slow') b.slowTimer = 3000;
+      if (p.effect === 'freeze') b.freezeTimer = 2000;
+
+      ff.projectiles.splice(i, 1);
+      continue;
+    }
+
+    if (p.x > W + 20 || p.x < -20 || p.y > H + 20 || p.y < -20) {
+      ff.projectiles.splice(i, 1);
+    }
+  }
+
+  // Update enemy projectiles
+  for (let i = ff.enemyProjectiles.length - 1; i >= 0; i--) {
+    const p = ff.enemyProjectiles[i];
+    p.x += p.vx * (dt / 16);
+    p.timer += dt;
+
+    if (p.pattern === 'wave') {
+      p.y = p.baseY + Math.sin(p.timer * 0.003) * 60;
+    } else if (p.pattern === 'zigzag') {
+      p.y += p.zigDir * 3 * (dt/16);
+      if (p.timer % 400 < dt) p.zigDir *= -1;
+    }
+
+    // Hit heather?
+    if (Math.hypot(p.x - ff.heather.x, p.y - ff.heather.y) < 30) {
+      if (ff.shieldActive) {
+        ff.shieldActive = false;
+        spawnFloatingText(ff.heather.x, ff.heather.y - 40, 'Blocked!', '#44aaff');
+        ff.enemyProjectiles.splice(i, 1);
+        continue;
+      }
+      // Hit effects
+      if (p.type === 'tiktok') {
+        ff.confusionTimer = 3000;
+        spawnFloatingText(ff.heather.x, ff.heather.y - 40, 'CONFUSED!', '#ff00aa');
+      } else {
+        spawnFloatingText(ff.heather.x, ff.heather.y - 40, 'Ouch!', '#ff2222');
+      }
+      // Damage reduces tips
+      state.tips = Math.max(0, state.tips - p.damage);
+      ff.enemyProjectiles.splice(i, 1);
+      continue;
+    }
+
+    if (p.x < -200) ff.enemyProjectiles.splice(i, 1);
+  }
+
+  // Boss defeated?
+  if (b.hp <= 0) {
+    resolveFoodFuWin();
+  }
+
+  // Out of ammo and no projectiles? Auto-end (loss of tips but customer leaves)
+  if (ff.ammo.length === 0 && ff.projectiles.length === 0) {
+    // Give a few seconds grace
+    if (!ff.outOfAmmoTimer) ff.outOfAmmoTimer = 3000;
+    ff.outOfAmmoTimer -= dt;
+    if (ff.outOfAmmoTimer <= 0) resolveFoodFuWin(); // They leave anyway
+  }
+
+  updateParticles(dt);
+}
+
+function renderFoodFu() {
+  ctx.clearRect(0, 0, W, H);
+  const ff = state.foodfu;
+
+  // Background - dramatic diner
+  ctx.fillStyle = '#1a0f0a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Floor
+  ctx.fillStyle = '#3a2210';
+  ctx.fillRect(0, H * 0.6, W, H * 0.4);
+  // Floor lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, H*0.6); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // Wall pattern
+  ctx.strokeStyle = 'rgba(139,105,20,0.1)';
+  for (let y = 0; y < H * 0.6; y += 30) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // "FOOD FU MODE" banner
+  ctx.font = 'bold 16px Bangers, cursive';
+  ctx.fillStyle = '#ff4444';
+  ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF3F FOOD FU MODE \uD83C\uDF3F', W/2, 30);
+
+  // Boss HP bar
+  const b = ff.boss;
+  const hpPct = clamp(b.hp / b.maxHp, 0, 1);
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(W/2 - 150, 42, 300, 14);
+  const hpColor = hpPct > 0.5 ? '#44cc44' : hpPct > 0.25 ? '#ccaa22' : '#cc2222';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(W/2 - 150, 42, 300 * hpPct, 14);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.strokeRect(W/2 - 150, 42, 300, 14);
+  ctx.font = '11px Nunito, sans-serif';
+  ctx.fillStyle = 'white';
+  ctx.fillText(`${ff.bossData.name} - ${Math.ceil(b.hp)}/${b.maxHp} HP`, W/2, 53);
+
+  // Status effects on boss
+  let statusText = '';
+  if (b.stunTimer > 0) statusText += '\uD83D\uDCAB STUNNED ';
+  if (b.slowTimer > 0) statusText += '\uD83D\uDC0C SLOWED ';
+  if (b.freezeTimer > 0) statusText += '\u2744 FROZEN ';
+  if (statusText) {
+    ctx.font = 'bold 12px Nunito, sans-serif';
+    ctx.fillStyle = '#00ccff';
+    ctx.fillText(statusText, W/2, 72);
+  }
+
+  // Heather player effects
+  if (ff.confusionTimer > 0) {
+    ctx.font = 'bold 12px Nunito, sans-serif';
+    ctx.fillStyle = '#ff00aa';
+    ctx.textAlign = 'left';
+    ctx.fillText('\uD83D\uDE35 CONTROLS REVERSED!', 20, 30);
+  }
+  if (ff.speedBoostTimer > 0) {
+    ctx.font = 'bold 12px Nunito, sans-serif';
+    ctx.fillStyle = '#ff6600';
+    ctx.textAlign = 'left';
+    ctx.fillText('\u26A1 SPEED BOOST!', 20, 46);
+  }
+  ctx.textAlign = 'center';
+
+  // Draw boss
+  const bossFlash = b.flashTimer > 0 && Math.floor(b.flashTimer / 50) % 2 === 0;
+  if (!bossFlash) {
+    drawCustomerSprite(ctx, b.x, b.y, 1.8, 3, 'angry', ff.bossData.tier);
+  }
+
+  // Boss freeze/stun effect
+  if (b.freezeTimer > 0) {
+    ctx.fillStyle = 'rgba(100,200,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 40, 0, Math.PI*2);
+    ctx.fill();
+  }
+  if (b.stunTimer > 0) {
+    ctx.font = '20px sans-serif';
+    const starAngle = Date.now() * 0.005;
+    for (let i = 0; i < 3; i++) {
+      const a = starAngle + i * (Math.PI * 2 / 3);
+      ctx.fillText('\u2B50', b.x + Math.cos(a) * 30, b.y - 30 + Math.sin(a) * 15);
+    }
+  }
+
+  // Draw Heather
+  drawHeatherSprite(ctx, ff.heather.x, ff.heather.y, 1.3, 1, null, Date.now() / 16);
+
+  // Shield indicator
+  if (ff.shieldActive) {
+    ctx.strokeStyle = 'rgba(100,200,255,0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(ff.heather.x, ff.heather.y, 35, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  // Player projectiles
+  ff.projectiles.forEach(p => {
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.emoji, p.x, p.y);
+  });
+
+  // Enemy projectiles
+  ff.enemyProjectiles.forEach(p => {
+    const w = p.big ? 180 : 120;
+    const h2 = p.big ? 36 : 28;
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.roundRect(p.x - w/2, p.y - h2/2, w, h2, h2/2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = `bold ${p.big ? 14 : 11}px Nunito, sans-serif`;
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.text, p.x, p.y + 4);
+  });
+
+  // Movement instructions
+  ctx.font = '11px Nunito, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.textAlign = 'left';
+  ctx.fillText('WASD/Arrows to move | SPACE/Click to throw | 1-6 select food', 10, H - 70);
+
+  drawParticles(ctx);
+}
+
+function resolveFoodFuWin() {
+  const ff = state.foodfu;
+  const d = state.dialogue;
+  const c = d.customer;
+  const table = state.tables[d.tableIndex];
+
+  ff.active = false;
+  state.meltdownsWon++;
+
+  const tip = Math.max(1, c.tipBase + d.tipBonus + Math.round(ff.boss.maxHp / 20));
+  state.tips += tip;
+  state.totalTips += tip;
+  state.served++;
+
+  table.customer = null;
+  d.active = false;
+
+  document.getElementById('foodfu-hud').classList.remove('active');
+  spawnFloatingText(W/2, H/3, 'Food Fu Victory! +$' + tip, '#44cc44');
+  showScreen('serving');
+}
+
+// === SHIFT END ===
+function endShift() {
+  // Clear remaining customers (they auto-pay reduced)
+  state.tables.forEach(t => {
+    if (t.customer && t.customer.state !== 'meltdown') {
+      const c = t.customer;
+      const tip = Math.max(1, Math.round(c.tipBase * 0.5));
+      state.tips += tip;
+      state.totalTips += tip;
+    }
+    t.customer = null;
+  });
+
+  showSummary();
+}
+
+function showSummary() {
+  const ss = document.getElementById('summary-screen');
+  const shiftBonus = state.meltdownsWon * 10 + state.served * 2;
+  state.tips += shiftBonus;
+  state.totalTips += shiftBonus;
+
+  const review = state.meltdownsWon > 0 ? pick(REVIEWS_FIGHT) : pick(REVIEWS_GOOD);
+
+  ss.innerHTML = `
+    <div class="summary-card">
+      <h2>SHIFT COMPLETE!</h2>
+      <div class="day-label">Day ${state.day} - Country Barrel</div>
+      <div class="summary-stats">
+        <div class="stat-row"><span class="label">\uD83C\uDF7D Customers Served</span><span class="value">${state.served}</span></div>
+        <div class="stat-row"><span class="label">\uD83D\uDCA2 Meltdowns</span><span class="value">${state.meltdowns}</span></div>
+        <div class="stat-row"><span class="label">\u2714 De-escalated</span><span class="value" style="color:#44aa44">${state.meltdownsWon}</span></div>
+        <div class="stat-row"><span class="label">\uD83C\uDF1F Shift Bonus</span><span class="value">+$${shiftBonus}</span></div>
+        <div class="stat-row"><span class="label">\uD83D\uDCB5 Total Tips</span><span class="value" style="color:#d4a020;font-size:22px">$${state.tips}</span></div>
+      </div>
+      <div class="summary-review">${review}</div>
+      <button class="summary-btn" onclick="goToShop()">UPGRADE SHOP</button>
+    </div>
+  `;
+  showScreen('summary');
+}
+
+// === UPGRADE SHOP ===
+function goToShop() {
+  renderShop();
+  showScreen('shop');
+}
+
+function renderShop() {
+  const ss = document.getElementById('shop-screen');
+  let html = `
+    <div class="shop-container">
+      <div class="shop-header">
+        <h2>\uD83D\uDED2 UPGRADE SHOP</h2>
+        <div class="tips-display">Tips: <span>$${state.totalTips}</span></div>
+      </div>
+      <div class="shop-grid">
+  `;
+
+  Object.keys(UPGRADES).forEach(key => {
+    const up = UPGRADES[key];
+    const lvl = state.upgrades[key];
+    const maxed = lvl >= up.levels.length;
+    const cost = maxed ? 0 : up.costs[lvl];
+    const canAfford = state.totalTips >= cost;
+
+    html += `
+      <div class="shop-card ${maxed ? 'maxed' : ''}" onclick="${!maxed && canAfford ? `buyUpgrade('${key}')` : ''}">
+        <div class="card-icon">${up.icon}</div>
+        <h3>${up.name}</h3>
+        <div class="card-desc">${up.desc}</div>
+        <div class="card-level">${maxed ? 'MAX LEVEL' : `Level ${lvl} → ${lvl+1}: ${up.levels[lvl]}`}</div>
+        <div class="card-cost">${maxed ? 'MAXED OUT' : (canAfford ? `$${cost}` : `$${cost} (need $${cost - state.totalTips} more)`)}</div>
+      </div>
+    `;
+  });
+
+  html += `</div>
+    <button class="shop-done" onclick="nextDay()">NEXT SHIFT \u27A1</button>
+    </div>`;
+
+  ss.innerHTML = html;
+}
+
+function buyUpgrade(key) {
+  const up = UPGRADES[key];
+  const lvl = state.upgrades[key];
+  if (lvl >= up.levels.length) return;
+  const cost = up.costs[lvl];
+  if (state.totalTips < cost) return;
+
+  state.totalTips -= cost;
+  state.upgrades[key]++;
+  renderShop();
+}
+
+function nextDay() {
+  state.day++;
+  if (state.day > 10) {
+    showGameWin();
+  } else {
+    showBriefing();
+  }
+}
+
+// === GAME WIN / GAME OVER ===
+function showGameWin() {
+  const gs = document.getElementById('gameover-screen');
+  gs.innerHTML = `
+    <div class="gameover-card" style="border-color:#d4a020">
+      <h2 style="color:#d4a020">\uD83C\uDFC6 YOU SURVIVED ALL 10 SHIFTS!</h2>
+      <p>Heather is officially the greatest waitress Country Barrel has ever seen.</p>
+      <div class="final-tips">\uD83D\uDCB5 Total Career Tips: $${state.totalTips}</div>
+      <p style="font-style:italic;color:#8b6914;margin-top:10px">"She can de-escalate a Beehive Queen with nothing but a biscuit and a smile."</p>
+      <button class="summary-btn" onclick="resetGame()">PLAY AGAIN</button>
+    </div>
+  `;
+  showScreen('gameover');
+}
+
+function resetGame() {
+  state.day = 1;
+  state.totalTips = 0;
+  state.upgrades = { speed:0, tray:0, deesc:0, foodfu:0, manager:0 };
+  showScreen('title');
+}
+
+// ====================================================================
+//  FLY MODE - Endless sky flyer with gorgeous visuals
+// ====================================================================
+
+const FLY_QUOTES = [
+  '"She served chicken fried steak at 30,000 feet. Legend."',
+  '"The sky is just a really big dining room." - Heather',
+  '"Birds aren\'t real, but that score sure was."',
+  '"She flew so high the Beehive Queen filed a complaint with the FAA."',
+  '"Altitude: yes. Attitude: also yes."',
+  '"That\'s not a bird, that\'s a waitress with dreams."',
+  '"Country Barrel now offers in-flight service."',
+  '"She dodged a cloud like she dodges bad Yelp reviews."',
+];
+
+const FLY_OBSTACLES = [
+  { type:'bird', emoji:'\uD83D\uDC26', w:30, h:25, speed:1.2 },
+  { type:'balloon', emoji:'\uD83C\uDF88', w:28, h:35, speed:0.6 },
+  { type:'plane', emoji:'\u2708\uFE0F', w:40, h:25, speed:1.8 },
+  { type:'kite', emoji:'\uD83C\uDFD7', w:25, h:30, speed:0.8 },
+  { type:'drone', emoji:'\uD83D\uDEF8', w:30, h:20, speed:1.5 },
+  { type:'storm', emoji:'\u26C8\uFE0F', w:50, h:45, speed:0.7 },
+  { type:'eagle', emoji:'\uD83E\uDD85', w:35, h:30, speed:2.0 },
+  { type:'ufo', emoji:'\uD83D\uDEF8', w:35, h:20, speed:2.5 },
+];
+
+const FLY_COLLECTIBLES = [
+  { type:'biscuit', emoji:'\uD83E\uDD50', points:50, effect:null },
+  { type:'tea', emoji:'\uD83E\uDDCB', points:25, effect:'shield' },
+  { type:'star', emoji:'\u2B50', points:100, effect:'multiplier' },
+  { type:'pie', emoji:'\uD83E\uDD67', points:75, effect:null },
+  { type:'coffee', emoji:'\u2615', points:30, effect:'boost' },
+];
+
+function initFly() {
+  const f = state.fly;
+  f.active = true;
+  f.y = H * 0.45;
+  f.vy = 0;
+  f.score = 0;
+  f.distance = 0;
+  f.speed = 3;
+  f.baseSpeed = 3;
+  f.multiplier = 1;
+  f.multTimer = 0;
+  f.obstacles = [];
+  f.clouds = [];
+  f.bgClouds = [];
+  f.stars = [];
+  f.collectibles = [];
+  f.trailParticles = [];
+  f.dead = false;
+  f.shieldTimer = 0;
+  f.invincibleTimer = 0;
+  f.frame = 0;
+  f.keys = {};
+  f.skyTime = 0;
+  f.groundY = H * 0.82;
+  f.windParticles = [];
+  f.obstacleTimer = 0;
+  f.collectibleTimer = 0;
+  f.speedBoostTimer = 0;
+
+  // Generate mountains
+  f.mountains = [];
+  for (let i = 0; i < 12; i++) {
+    f.mountains.push({
+      x: i * (W / 5), w: rand(80, 200), h: rand(40, 120),
+      color: `hsl(${randInt(140,220)}, ${randInt(15,30)}%, ${randInt(25,40)}%)`,
+    });
+  }
+
+  // Pre-fill clouds
+  for (let i = 0; i < 8; i++) {
+    f.bgClouds.push(makeBgCloud(rand(0, W)));
+  }
+  for (let i = 0; i < 4; i++) {
+    f.clouds.push(makeFgCloud(rand(0, W)));
+  }
+
+  // Pre-fill stars
+  for (let i = 0; i < 60; i++) {
+    f.stars.push({ x: rand(0,W), y: rand(0, H*0.7), size: rand(0.5,2.5), twinkle: rand(0,Math.PI*2) });
+  }
+
+  // Load best score
+  try { f.bestScore = parseInt(localStorage.getItem('cb_fly_best') || '0'); } catch(e) { f.bestScore = 0; }
+
+  showScreen('fly');
+  document.getElementById('fly-hud').classList.add('active');
+  document.getElementById('fly-gameover').classList.remove('active');
+}
+
+function makeBgCloud(x) {
+  return {
+    x, y: rand(30, H*0.55),
+    w: rand(80, 200), h: rand(30, 60),
+    speed: rand(0.3, 0.8), opacity: rand(0.15, 0.4),
+  };
+}
+
+function makeFgCloud(x) {
+  return {
+    x, y: rand(50, H*0.65),
+    w: rand(60, 140), h: rand(25, 50),
+    speed: rand(1.2, 2.5), opacity: rand(0.5, 0.85),
+  };
+}
+
+// Sky color cycle: sunrise -> day -> sunset -> twilight -> night -> dawn
+function getSkyColors(t) {
+  const cycle = (t * 0.00003) % 1; // 0-1 continuous
+  const stops = [
+    { at:0.00, top:[15,10,40],  bot:[40,20,60]  },  // night
+    { at:0.15, top:[30,20,60],  bot:[80,50,90]  },  // pre-dawn
+    { at:0.25, top:[255,140,80],bot:[255,200,100]},  // sunrise
+    { at:0.35, top:[100,180,255],bot:[180,220,255]}, // morning
+    { at:0.50, top:[70,150,255],bot:[150,210,255]},  // midday
+    { at:0.65, top:[80,160,240],bot:[170,210,250]},  // afternoon
+    { at:0.75, top:[255,120,60],bot:[255,180,80] },  // sunset
+    { at:0.85, top:[60,30,90],  bot:[120,50,100]},   // twilight
+    { at:1.00, top:[15,10,40],  bot:[40,20,60]  },   // night again
+  ];
+  // Find surrounding stops
+  let a = stops[0], b = stops[1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (cycle >= stops[i].at && cycle < stops[i+1].at) {
+      a = stops[i]; b = stops[i+1]; break;
+    }
+  }
+  const localT = (cycle - a.at) / (b.at - a.at);
+  const lerpC = (c1, c2, t) => c1.map((v,i) => Math.round(lerp(v, c2[i], t)));
+  return {
+    top: lerpC(a.top, b.top, localT),
+    bot: lerpC(a.bot, b.bot, localT),
+    isNight: cycle < 0.2 || cycle > 0.82,
+    isSunrise: cycle > 0.2 && cycle < 0.35,
+    isSunset: cycle > 0.7 && cycle < 0.85,
+  };
+}
+
+function updateFly(dt) {
+  const f = state.fly;
+  if (f.dead) return;
+
+  f.frame++;
+  f.skyTime += dt * (1 + f.speed * 0.1);
+
+  // Gravity & input
+  const gravity = 0.12;
+  const flapPower = -4.5;
+  const maxFall = 6;
+  const maxRise = -5;
+
+  if (f.keys['ArrowUp'] || f.keys['w'] || f.keys['W'] || f.keys[' ']) {
+    f.vy += (flapPower - f.vy) * 0.08; // smooth flap
+  } else {
+    f.vy += gravity;
+  }
+  if (f.keys['ArrowDown'] || f.keys['s'] || f.keys['S']) {
+    f.vy += 0.2; // dive
+  }
+  f.vy = clamp(f.vy, maxRise, maxFall);
+  f.y += f.vy * (dt / 16);
+
+  // Boundaries
+  if (f.y < 25) { f.y = 25; f.vy = 0.5; }
+  if (f.y > f.groundY - 10) {
+    // Hit ground = dead
+    flyDie();
+    return;
+  }
+
+  // Speed ramp
+  f.speed = f.baseSpeed + f.distance * 0.0003;
+  if (f.speedBoostTimer > 0) {
+    f.speedBoostTimer -= dt;
+    f.speed *= 1.4;
+  }
+  const spd = f.speed * (dt / 16);
+
+  // Distance & score
+  f.distance += spd * 2;
+  f.score += spd * f.multiplier * 0.5;
+
+  // Multiplier decay
+  if (f.multTimer > 0) {
+    f.multTimer -= dt;
+    if (f.multTimer <= 0) {
+      f.multiplier = Math.max(1, f.multiplier - 1);
+      f.multTimer = 0;
+    }
+  }
+
+  // Shield & invincibility
+  if (f.shieldTimer > 0) f.shieldTimer -= dt;
+  if (f.invincibleTimer > 0) f.invincibleTimer -= dt;
+
+  // --- Spawn obstacles ---
+  f.obstacleTimer -= dt;
+  if (f.obstacleTimer <= 0) {
+    const templ = pick(FLY_OBSTACLES);
+    // Filter harder obstacles to later in the game
+    const allowed = f.distance < 500 ? FLY_OBSTACLES.slice(0,3) :
+                    f.distance < 1500 ? FLY_OBSTACLES.slice(0,5) :
+                    FLY_OBSTACLES;
+    const obs = pick(allowed);
+    f.obstacles.push({
+      x: W + 60,
+      y: rand(40, f.groundY - 60),
+      w: obs.w, h: obs.h,
+      emoji: obs.emoji,
+      speed: obs.speed,
+      type: obs.type,
+      wobble: rand(0, Math.PI*2),
+      wobbleAmp: obs.type === 'balloon' ? 20 : (obs.type === 'kite' ? 15 : 5),
+      baseY: 0,
+    });
+    f.obstacles[f.obstacles.length-1].baseY = f.obstacles[f.obstacles.length-1].y;
+    f.obstacleTimer = rand(700, 1800) / (1 + f.distance * 0.0002);
+  }
+
+  // --- Spawn collectibles ---
+  f.collectibleTimer -= dt;
+  if (f.collectibleTimer <= 0) {
+    const col = pick(FLY_COLLECTIBLES);
+    f.collectibles.push({
+      x: W + 30,
+      y: rand(50, f.groundY - 50),
+      ...col,
+      bobPhase: rand(0, Math.PI*2),
+    });
+    f.collectibleTimer = rand(2000, 4500);
+  }
+
+  // --- Move obstacles ---
+  for (let i = f.obstacles.length - 1; i >= 0; i--) {
+    const o = f.obstacles[i];
+    o.x -= spd * o.speed;
+    o.wobble += 0.03;
+    o.y = o.baseY + Math.sin(o.wobble) * o.wobbleAmp;
+
+    // Collision with heather (circle at x=100, y=f.y, r~18)
+    const hx = 100, hy = f.y, hr = 16;
+    if (f.invincibleTimer <= 0 &&
+        hx + hr > o.x - o.w/2 && hx - hr < o.x + o.w/2 &&
+        hy + hr > o.y - o.h/2 && hy - hr < o.y + o.h/2) {
+      if (f.shieldTimer > 0) {
+        f.shieldTimer = 0;
+        f.invincibleTimer = 500;
+        f.score += 20 * f.multiplier;
+        spawnFlyText(o.x, o.y, '\uD83D\uDEE1 Blocked!', '#44ddff');
+        f.obstacles.splice(i, 1);
+        continue;
+      }
+      flyDie();
+      return;
+    }
+
+    if (o.x < -80) f.obstacles.splice(i, 1);
+  }
+
+  // --- Move collectibles ---
+  for (let i = f.collectibles.length - 1; i >= 0; i--) {
+    const c = f.collectibles[i];
+    c.x -= spd * 1.0;
+    c.bobPhase += 0.05;
+
+    const hx = 100, hy = f.y;
+    if (Math.hypot(hx - c.x, hy - (c.y + Math.sin(c.bobPhase)*8)) < 28) {
+      f.score += c.points * f.multiplier;
+      spawnFlyText(c.x, c.y, '+' + (c.points * f.multiplier), '#ffdd44');
+      spawnFlyBurst(c.x, c.y, '#ffdd44');
+
+      if (c.effect === 'shield') { f.shieldTimer = 8000; spawnFlyText(c.x, c.y - 20, '\uD83D\uDEE1 Shield!', '#44ddff'); }
+      if (c.effect === 'multiplier') { f.multiplier = Math.min(f.multiplier + 1, 8); f.multTimer = 10000; spawnFlyText(c.x, c.y - 20, 'x'+f.multiplier+'!', '#ff44ff'); }
+      if (c.effect === 'boost') { f.speedBoostTimer = 3000; spawnFlyText(c.x, c.y - 20, '\u26A1 Boost!', '#ff8800'); }
+
+      f.collectibles.splice(i, 1);
+      continue;
+    }
+
+    if (c.x < -40) f.collectibles.splice(i, 1);
+  }
+
+  // --- Move clouds ---
+  f.bgClouds.forEach(c => { c.x -= spd * c.speed * 0.3; if (c.x < -c.w) { c.x = W + rand(20,100); c.y = rand(30,H*0.55); } });
+  f.clouds.forEach(c => { c.x -= spd * c.speed * 0.6; if (c.x < -c.w) { c.x = W + rand(20,100); c.y = rand(50,H*0.65); } });
+
+  // --- Move mountains ---
+  f.mountains.forEach(m => {
+    m.x -= spd * 0.15;
+    if (m.x < -m.w) { m.x = W + rand(20, 100); m.h = rand(40,120); m.w = rand(80,200); }
+  });
+
+  // --- Trail particles ---
+  if (f.frame % 2 === 0) {
+    f.trailParticles.push({
+      x: 85, y: f.y + rand(-3,3),
+      vx: rand(-1.5, -0.5), vy: rand(-0.5, 0.5),
+      life: 1, size: rand(2, 5),
+      color: f.speedBoostTimer > 0 ? `hsl(${randInt(20,50)},100%,60%)` : `hsl(${randInt(190,260)},80%,70%)`,
+    });
+  }
+  // Wind streaks
+  if (f.frame % 8 === 0) {
+    f.windParticles.push({
+      x: W + 10, y: rand(0, H),
+      len: rand(20, 60), speed: rand(8, 15) + f.speed,
+      opacity: rand(0.1, 0.3), life: 1,
+    });
+  }
+
+  for (let i = f.trailParticles.length - 1; i >= 0; i--) {
+    const p = f.trailParticles[i];
+    p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+    if (p.life <= 0) f.trailParticles.splice(i, 1);
+  }
+  for (let i = f.windParticles.length - 1; i >= 0; i--) {
+    const p = f.windParticles[i];
+    p.x -= p.speed * (dt/16); p.life -= 0.008;
+    if (p.life <= 0 || p.x < -p.len) f.windParticles.splice(i, 1);
+  }
+
+  // Update HUD
+  document.getElementById('fly-score-val').textContent = Math.floor(f.score);
+  document.getElementById('fly-mult').textContent = f.multiplier > 1 ? ('x' + f.multiplier) : '';
+  document.getElementById('fly-dist').textContent = Math.floor(f.distance);
+  document.getElementById('fly-best').textContent = Math.max(Math.floor(f.score), f.bestScore);
+}
+
+function spawnFlyText(x, y, text, color) {
+  state.fly.trailParticles.push({ x, y, text, color, life: 1, isText: true, vx: 0, vy: -1.5, size: 0 });
+}
+
+function spawnFlyBurst(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    state.fly.trailParticles.push({
+      x, y, vx: Math.cos(a)*3, vy: Math.sin(a)*3,
+      life: 1, size: rand(2,4), color,
+    });
+  }
+}
+
+function renderFly() {
+  const f = state.fly;
+  const sky = getSkyColors(f.skyTime);
+
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${sky.top.join(',')})`);
+  grad.addColorStop(0.7, `rgb(${sky.bot.join(',')})`);
+  grad.addColorStop(1, `rgb(${sky.bot.map(v=>Math.max(0,v-30)).join(',')})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sun/Moon
+  if (sky.isSunrise || sky.isSunset) {
+    const sunX = sky.isSunrise ? W * 0.8 : W * 0.2;
+    const sunY = f.groundY - 30;
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 120);
+    sunGrad.addColorStop(0, 'rgba(255,200,50,0.9)');
+    sunGrad.addColorStop(0.3, 'rgba(255,150,50,0.4)');
+    sunGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = sunGrad;
+    ctx.fillRect(sunX-120, sunY-120, 240, 240);
+    ctx.fillStyle = '#ffe080';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 25, 0, Math.PI*2); ctx.fill();
+  }
+  if (sky.isNight) {
+    const moonX = W * 0.75; const moonY = 80;
+    ctx.fillStyle = '#eeeedd';
+    ctx.beginPath(); ctx.arc(moonX, moonY, 20, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgb(${sky.top.join(',')})`;
+    ctx.beginPath(); ctx.arc(moonX+7, moonY-3, 17, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Stars (visible in darker sky)
+  const brightness = (sky.top[0] + sky.top[1] + sky.top[2]) / 3;
+  if (brightness < 100) {
+    const starAlpha = clamp((100 - brightness) / 100, 0, 0.9);
+    f.stars.forEach(s => {
+      const twink = (Math.sin(f.frame * 0.02 + s.twinkle) + 1) * 0.5;
+      ctx.globalAlpha = starAlpha * (0.3 + twink * 0.7);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // Background clouds
+  f.bgClouds.forEach(c => drawCloud(ctx, c.x, c.y, c.w, c.h, c.opacity * 0.6));
+
+  // Mountains
+  f.mountains.forEach(m => {
+    ctx.fillStyle = m.color;
+    ctx.beginPath();
+    ctx.moveTo(m.x, f.groundY);
+    ctx.lineTo(m.x + m.w * 0.5, f.groundY - m.h);
+    ctx.lineTo(m.x + m.w, f.groundY);
+    ctx.fill();
+    // Snow cap
+    if (m.h > 70) {
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      ctx.moveTo(m.x + m.w*0.35, f.groundY - m.h*0.7);
+      ctx.lineTo(m.x + m.w*0.5, f.groundY - m.h);
+      ctx.lineTo(m.x + m.w*0.65, f.groundY - m.h*0.7);
+      ctx.fill();
+    }
+  });
+
+  // Ground
+  const groundGrad = ctx.createLinearGradient(0, f.groundY, 0, H);
+  groundGrad.addColorStop(0, '#3a7a3a');
+  groundGrad.addColorStop(0.3, '#2d6a2d');
+  groundGrad.addColorStop(1, '#1a4a1a');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, f.groundY, W, H - f.groundY);
+  // Ground line
+  ctx.strokeStyle = '#4a9a4a';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, f.groundY); ctx.lineTo(W, f.groundY); ctx.stroke();
+
+  // Wind particles
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  f.windParticles.forEach(p => {
+    ctx.globalAlpha = p.opacity * p.life;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.len, p.y); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+
+  // Collectibles
+  f.collectibles.forEach(c => {
+    const bobY = c.y + Math.sin(c.bobPhase) * 8;
+    // Glow
+    ctx.fillStyle = 'rgba(255,221,68,0.15)';
+    ctx.beginPath(); ctx.arc(c.x, bobY, 18, 0, Math.PI*2); ctx.fill();
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.emoji, c.x, bobY);
+  });
+
+  // Obstacles
+  f.obstacles.forEach(o => {
+    // Danger glow for close ones
+    const dx = 100 - o.x;
+    if (Math.abs(dx) < 120) {
+      ctx.fillStyle = 'rgba(255,50,50,0.08)';
+      ctx.beginPath(); ctx.arc(o.x, o.y, Math.max(o.w, o.h), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.font = `${Math.max(o.w, o.h)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(o.emoji, o.x, o.y);
+  });
+
+  // Foreground clouds
+  f.clouds.forEach(c => drawCloud(ctx, c.x, c.y, c.w, c.h, c.opacity));
+
+  // Trail particles
+  f.trailParticles.forEach(p => {
+    if (p.isText) {
+      ctx.globalAlpha = p.life;
+      ctx.font = 'bold 16px Fredoka One, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+      p.y += p.vy;
+    } else {
+      ctx.globalAlpha = p.life * 0.8;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  // Heather (flying!)
+  drawFlyingHeather(ctx, 100, f.y, f.vy, f.frame, f.shieldTimer > 0, f.invincibleTimer > 0, f.speedBoostTimer > 0);
+
+  // Ground detail - scrolling grass lines
+  ctx.strokeStyle = 'rgba(100,180,100,0.3)';
+  ctx.lineWidth = 1;
+  const grassOffset = (f.distance * 3) % 30;
+  for (let gx = -grassOffset; gx < W; gx += 30) {
+    ctx.beginPath();
+    ctx.moveTo(gx, f.groundY);
+    ctx.lineTo(gx + 8, f.groundY - 6);
+    ctx.stroke();
+  }
+}
+
+function drawFlyingHeather(cx, x, y, vy, frame, shield, invincible, boosting) {
+  if (invincible && Math.floor(frame / 4) % 2 === 0) return; // blink when invincible
+
+  cx.save();
+  cx.translate(x, y);
+
+  const tilt = clamp(vy * 3, -20, 20);
+  cx.rotate(tilt * Math.PI / 180);
+
+  const s = 1.1;
+
+  // Cape / apron flowing behind
+  const capeWave = Math.sin(frame * 0.15) * 5;
+  cx.fillStyle = boosting ? '#ff8844' : '#cc3333';
+  cx.beginPath();
+  cx.moveTo(-5*s, 0);
+  cx.quadraticCurveTo(-25*s, 5*s + capeWave, -35*s, 15*s + capeWave*1.5);
+  cx.quadraticCurveTo(-30*s, 8*s + capeWave, -20*s, 2*s);
+  cx.quadraticCurveTo(-15*s, -2*s, -5*s, -5*s);
+  cx.fill();
+  // Second cape layer
+  cx.fillStyle = boosting ? 'rgba(255,150,50,0.6)' : 'rgba(200,50,50,0.5)';
+  cx.beginPath();
+  cx.moveTo(-5*s, 2*s);
+  cx.quadraticCurveTo(-22*s, 8*s - capeWave, -30*s, 18*s - capeWave*1.2);
+  cx.quadraticCurveTo(-25*s, 10*s - capeWave, -15*s, 5*s);
+  cx.fill();
+
+  // Body
+  cx.fillStyle = '#ffffff';
+  cx.fillRect(-8*s, -4*s, 16*s, 16*s);
+  cx.fillStyle = '#cc3333';
+  cx.fillRect(-10*s, -8*s, 20*s, 8*s);
+
+  // Arms (stretched forward like superman)
+  cx.fillStyle = '#f5c9a0';
+  const armBob = Math.sin(frame * 0.1) * 2;
+  cx.beginPath();
+  cx.ellipse(14*s, -8*s + armBob, 8*s, 3.5*s, -0.2, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.ellipse(12*s, -3*s - armBob, 7*s, 3.5*s, 0.2, 0, Math.PI*2);
+  cx.fill();
+
+  // Head
+  cx.fillStyle = '#f5c9a0';
+  cx.beginPath();
+  cx.arc(2*s, -14*s, 10*s, 0, Math.PI*2);
+  cx.fill();
+
+  // Hair + ponytail streaming back
+  cx.fillStyle = '#8B4513';
+  cx.beginPath();
+  cx.arc(2*s, -18*s, 10*s, Math.PI, Math.PI*2);
+  cx.fill();
+  // Ponytail streaming back
+  cx.beginPath();
+  cx.moveTo(-6*s, -18*s);
+  cx.quadraticCurveTo(-20*s - capeWave, -22*s, -28*s - capeWave*1.5, -16*s);
+  cx.quadraticCurveTo(-22*s - capeWave, -14*s, -10*s, -14*s);
+  cx.fill();
+
+  // Face
+  cx.fillStyle = '#2a1a0a';
+  cx.beginPath(); cx.arc(6*s, -15*s, 1.8*s, 0, Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(0, -15*s, 1.8*s, 0, Math.PI*2); cx.fill();
+  cx.fillStyle = 'white';
+  cx.beginPath(); cx.arc(6.5*s, -15.5*s, 0.7*s, 0, Math.PI*2); cx.fill();
+  cx.beginPath(); cx.arc(0.5*s, -15.5*s, 0.7*s, 0, Math.PI*2); cx.fill();
+  // Determined smile
+  cx.strokeStyle = '#cc5544';
+  cx.lineWidth = 1.5*s;
+  cx.beginPath();
+  cx.arc(3*s, -11*s, 3*s, 0, 0.8*Math.PI);
+  cx.stroke();
+
+  // Legs trailing
+  cx.fillStyle = '#2a5599';
+  const legKick = Math.sin(frame * 0.12) * 4;
+  cx.save();
+  cx.translate(-4*s, 10*s);
+  cx.rotate((10 + legKick) * Math.PI / 180);
+  cx.fillRect(0, 0, 5*s, 14*s);
+  cx.restore();
+  cx.save();
+  cx.translate(2*s, 10*s);
+  cx.rotate((10 - legKick) * Math.PI / 180);
+  cx.fillRect(0, 0, 5*s, 14*s);
+  cx.restore();
+
+  cx.restore();
+
+  // Shield aura
+  if (shield) {
+    cx.strokeStyle = 'rgba(68,221,255,0.5)';
+    cx.lineWidth = 3;
+    ctx.setLineDash([8, 4]);
+    cx.beginPath();
+    cx.arc(x, y, 30, 0, Math.PI*2);
+    cx.stroke();
+    ctx.setLineDash([]);
+    cx.lineWidth = 1;
+  }
+
+  // Boost flames
+  if (boosting) {
+    const flameLen = 15 + Math.random() * 10;
+    cx.fillStyle = `hsl(${randInt(20,50)},100%,60%)`;
+    cx.beginPath();
+    cx.moveTo(x - 20, y);
+    cx.lineTo(x - 20 - flameLen, y + rand(-5,5));
+    cx.lineTo(x - 15, y + 3);
+    cx.fill();
+    cx.fillStyle = 'rgba(255,100,0,0.4)';
+    cx.beginPath();
+    cx.moveTo(x - 20, y + 3);
+    cx.lineTo(x - 20 - flameLen * 0.7, y + rand(-3,8));
+    cx.lineTo(x - 15, y + 6);
+    cx.fill();
+  }
+}
+
+function drawCloud(cx, x, y, w, h, opacity) {
+  cx.globalAlpha = opacity;
+  cx.fillStyle = 'white';
+  const r = h * 0.5;
+  cx.beginPath();
+  cx.ellipse(x, y, w*0.5, r, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.ellipse(x - w*0.25, y + r*0.2, w*0.3, r*0.8, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.beginPath();
+  cx.ellipse(x + w*0.25, y + r*0.1, w*0.35, r*0.9, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.globalAlpha = 1;
+}
+
+function flyDie() {
+  const f = state.fly;
+  f.dead = true;
+  const finalScore = Math.floor(f.score);
+
+  if (finalScore > f.bestScore) {
+    f.bestScore = finalScore;
+    try { localStorage.setItem('cb_fly_best', String(finalScore)); } catch(e) {}
+  }
+
+  // Show game over
+  const go = document.getElementById('fly-gameover');
+  go.innerHTML = `
+    <div class="fly-go-card">
+      <h2>\u2601 FLIGHT OVER \u2601</h2>
+      <div class="fly-final-score">${finalScore}</div>
+      <div class="fly-final-best">\uD83C\uDFC6 Best: ${f.bestScore}</div>
+      <div class="fly-final-dist">\uD83D\uDCCF Distance: ${Math.floor(f.distance)}m | Top Multiplier: x${f.multiplier}</div>
+      <div class="fly-quote">${pick(FLY_QUOTES)}</div>
+      <div class="fly-go-btns">
+        <button class="fly-go-btn retry" onclick="initFly()">FLY AGAIN</button>
+        <button class="fly-go-btn menu" onclick="flyToMenu()">MENU</button>
+      </div>
+    </div>
+  `;
+  go.classList.add('active');
+}
+
+function flyToMenu() {
+  state.fly.active = false;
+  document.getElementById('fly-hud').classList.remove('active');
+  document.getElementById('fly-gameover').classList.remove('active');
+  showScreen('title');
+}
+
+// Fly mode key tracking
+window.addEventListener('keydown', (e) => {
+  if (state.screen === 'fly') {
+    state.fly.keys[e.key] = true;
+    if (state.fly.dead && (e.key === ' ' || e.key === 'Enter')) {
+      initFly();
+    }
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (state.fly.keys) state.fly.keys[e.key] = false;
+});
+
+// Fly mode touch/click support (hold to flap)
+C.addEventListener('mousedown', () => { if (state.screen === 'fly') state.fly.keys[' '] = true; });
+C.addEventListener('mouseup', () => { if (state.screen === 'fly') state.fly.keys[' '] = false; });
+C.addEventListener('touchstart', (e) => { if (state.screen === 'fly') { e.preventDefault(); state.fly.keys[' '] = true; } }, {passive:false});
+C.addEventListener('touchend', () => { if (state.screen === 'fly') state.fly.keys[' '] = false; });
+
+// === MAIN GAME LOOP ===
+let lastTime = 0;
+function gameLoop(ts) {
+  const dt = Math.min(ts - lastTime, 50);
+  lastTime = ts;
+
+  if (state.screen === 'serving') {
+    updateServing(dt);
+    renderServing();
+  } else if (state.screen === 'foodfu') {
+    updateFoodFu(dt);
+    renderFoodFu();
+  } else if (state.screen === 'fly') {
+    updateFly(dt);
+    renderFly();
+  } else if (state.screen === 'title') {
+    // Ambient background on title
+    ctx.clearRect(0, 0, W, H);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+
+// === PREVENT SCROLLING ON SPACE/ARROWS ===
+window.addEventListener('keydown', (e) => {
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+    if (state.screen === 'foodfu' || state.screen === 'serving' || state.screen === 'fly') {
+      e.preventDefault();
+    }
+  }
+});
+</script>
+</body>
+</html>

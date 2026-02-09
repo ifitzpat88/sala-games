@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVATAR - Austyn's Dinosaur Adventure</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Nunito',sans-serif; }
+canvas { display:block; }
+#gameCanvas { position:absolute; top:0; left:0; }
+
+/* Title Screen */
+#titleScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background: linear-gradient(135deg, #1a0533 0%, #0d2137 30%, #0a3d2e 60%, #1a4a1a 100%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:100;
+}
+#titleScreen h1 {
+  font-family:'Fredoka One',cursive; font-size:120px; color:#FFD700;
+  text-shadow: 0 0 30px #FF6B00, 0 0 60px #FF4500, 4px 4px 0 #8B4513;
+  letter-spacing:15px; animation: titlePulse 2s ease-in-out infinite;
+}
+#titleScreen h2 {
+  font-family:'Nunito',sans-serif; font-size:28px; color:#7FDBCA;
+  margin-top:10px; text-shadow: 0 0 10px #00CED1;
+}
+#titleScreen .subtitle {
+  font-family:'Press Start 2P',cursive; font-size:14px; color:#FFB347;
+  margin-top:30px; animation: blink 1.5s step-end infinite;
+}
+#titleScreen .credit {
+  font-family:'Nunito',sans-serif; font-size:18px; color:#C8A2C8;
+  margin-top:20px; font-style:italic;
+}
+#titleScreen .dinoScene {
+  margin:30px 0; font-size:60px; animation: dinoWalk 3s ease-in-out infinite;
+}
+@keyframes titlePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes dinoWalk { 0%{transform:translateX(-50px)} 50%{transform:translateX(50px)} 100%{transform:translateX(-50px)} }
+
+.btn {
+  font-family:'Fredoka One',cursive; font-size:22px; padding:15px 40px;
+  border:none; border-radius:12px; cursor:pointer; margin-top:20px;
+  transition: all 0.2s; text-transform:uppercase; letter-spacing:2px;
+}
+.btn:hover { transform:scale(1.08); }
+.btn-primary { background:linear-gradient(135deg,#FF6B35,#FF2E63); color:#fff; box-shadow:0 4px 15px rgba(255,46,99,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#00B4D8,#0077B6); color:#fff; box-shadow:0 4px 15px rgba(0,180,216,0.4); }
+.btn-success { background:linear-gradient(135deg,#06D6A0,#1B9AAA); color:#fff; box-shadow:0 4px 15px rgba(6,214,160,0.4); }
+
+/* Avatar Creation */
+#creationScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display:none; z-index:100; overflow-y:auto;
+}
+.creation-container {
+  max-width:900px; margin:20px auto; padding:20px;
+  display:flex; flex-wrap:wrap; gap:20px; justify-content:center;
+}
+.creation-container h1 {
+  width:100%; text-align:center; font-family:'Fredoka One',cursive;
+  font-size:42px; color:#FFD700; text-shadow:2px 2px 0 #FF6B00;
+}
+.creation-panel {
+  background:rgba(255,255,255,0.08); border-radius:16px; padding:20px;
+  border:2px solid rgba(255,255,255,0.1); flex:1; min-width:300px;
+}
+.creation-panel h3 {
+  font-family:'Fredoka One',cursive; font-size:20px; color:#7FDBCA; margin-bottom:12px;
+}
+.creation-panel label {
+  display:block; color:#ccc; font-size:14px; margin-bottom:5px; font-weight:700;
+}
+.creation-panel input[type="text"] {
+  width:100%; padding:10px 15px; border-radius:8px; border:2px solid #444;
+  background:#1a1a2e; color:#fff; font-size:16px; font-family:'Nunito',sans-serif;
+  margin-bottom:15px;
+}
+.color-options, .style-options {
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;
+}
+.color-opt {
+  width:36px; height:36px; border-radius:50%; cursor:pointer;
+  border:3px solid transparent; transition:all 0.2s;
+}
+.color-opt:hover, .color-opt.selected { border-color:#FFD700; transform:scale(1.2); }
+.style-opt {
+  padding:8px 14px; border-radius:8px; cursor:pointer;
+  background:rgba(255,255,255,0.1); color:#ccc; font-size:13px;
+  border:2px solid transparent; transition:all 0.2s; font-weight:700;
+}
+.style-opt:hover, .style-opt.selected { border-color:#FFD700; color:#FFD700; background:rgba(255,215,0,0.15); }
+#previewCanvas {
+  display:block; margin:10px auto; border-radius:12px;
+  background:#2a2a4a; border:2px solid rgba(255,255,255,0.15);
+}
+
+/* HUD Styles */
+#hud {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  pointer-events:none; z-index:10; display:none;
+}
+#hud > * { pointer-events:auto; }
+.hud-panel {
+  background:rgba(10,10,30,0.85); border:2px solid rgba(255,255,255,0.15);
+  border-radius:12px; padding:10px 14px; backdrop-filter:blur(5px);
+}
+#playerHud { position:absolute; top:12px; left:12px; display:flex; align-items:center; gap:10px; }
+#playerPortrait { width:48px; height:48px; border-radius:8px; border:2px solid #FFD700; background:#1a1a2e; }
+#playerInfo { color:#fff; }
+#playerInfo .name { font-family:'Fredoka One',cursive; font-size:16px; color:#FFD700; }
+#playerInfo .level { font-size:12px; color:#7FDBCA; }
+.xp-bar-outer { width:120px; height:8px; background:#333; border-radius:4px; margin-top:3px; }
+.xp-bar-inner { height:100%; background:linear-gradient(90deg,#06D6A0,#FFD700); border-radius:4px; transition:width 0.3s; }
+.hp-bar-outer { width:100px; height:8px; background:#333; border-radius:4px; margin-top:3px; }
+.hp-bar-inner { height:100%; background:linear-gradient(90deg,#FF4444,#FF6B6B); border-radius:4px; transition:width 0.3s; }
+.stamina-bar-outer { width:80px; height:6px; background:#333; border-radius:3px; margin-top:2px; }
+.stamina-bar-inner { height:100%; background:linear-gradient(90deg,#4488FF,#44CCFF); border-radius:3px; transition:width 0.1s; }
+
+#dinoHud { position:absolute; top:12px; right:12px; display:flex; align-items:center; gap:10px; }
+#dinoPortrait { width:40px; height:40px; border-radius:8px; border:2px solid #06D6A0; background:#1a1a2e; font-size:28px; text-align:center; line-height:40px; }
+#dinoInfo { color:#fff; }
+#dinoInfo .name { font-family:'Fredoka One',cursive; font-size:14px; color:#06D6A0; }
+
+#biomeWeather { position:absolute; top:12px; left:50%; transform:translateX(-50%); text-align:center; }
+#biomeWeather .biome-name { font-family:'Fredoka One',cursive; font-size:16px; color:#fff; }
+#biomeWeather .weather { font-size:12px; color:#aaa; margin-top:2px; }
+
+#hotbar {
+  position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+  display:flex; gap:4px;
+}
+.hotbar-slot {
+  width:52px; height:52px; background:rgba(10,10,30,0.85);
+  border:2px solid rgba(255,255,255,0.2); border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; position:relative; cursor:pointer;
+}
+.hotbar-slot.active { border-color:#FFD700; box-shadow:0 0 10px rgba(255,215,0,0.3); }
+.hotbar-slot .key { position:absolute; top:2px; left:4px; font-size:9px; color:#888; font-family:'Press Start 2P'; }
+.hotbar-slot .count { position:absolute; bottom:2px; right:4px; font-size:10px; color:#fff; font-weight:700; }
+
+#minimap {
+  position:absolute; bottom:12px; right:12px; width:150px; height:150px;
+  border:2px solid rgba(255,255,255,0.3); border-radius:8px; overflow:hidden;
+}
+#minimapCanvas { width:100%; height:100%; }
+
+#notifications {
+  position:absolute; top:70px; right:12px;
+  display:flex; flex-direction:column; gap:6px; max-width:300px;
+}
+.notification {
+  padding:10px 16px; border-radius:8px; color:#fff; font-size:13px;
+  font-weight:700; animation: slideIn 0.3s ease-out;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+.notification.info { background:rgba(0,119,182,0.9); }
+.notification.success { background:rgba(6,214,160,0.9); }
+.notification.warning { background:rgba(255,107,53,0.9); }
+.notification.epic { background:rgba(147,51,234,0.9); }
+@keyframes slideIn { from{transform:translateX(100px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* Battle Screen */
+#battleScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.85); display:none; z-index:50;
+  flex-direction:column; align-items:center; justify-content:center;
+}
+#battleCanvas { border-radius:16px; border:3px solid #444; }
+.battle-ui { display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; justify-content:center; }
+.battle-btn {
+  font-family:'Fredoka One',cursive; font-size:18px; padding:12px 28px;
+  border:none; border-radius:10px; cursor:pointer; transition:all 0.2s;
+  min-width:120px;
+}
+.battle-btn:hover { transform:scale(1.06); }
+.battle-btn.attack { background:linear-gradient(135deg,#FF4444,#CC0000); color:#fff; }
+.battle-btn.special { background:linear-gradient(135deg,#9B59B6,#6C3483); color:#fff; }
+.battle-btn.defend { background:linear-gradient(135deg,#3498DB,#2471A3); color:#fff; }
+.battle-btn.item { background:linear-gradient(135deg,#F39C12,#D68910); color:#fff; }
+.battle-btn.run { background:linear-gradient(135deg,#666,#444); color:#fff; }
+.battle-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+#battleLog {
+  color:#ccc; font-size:14px; text-align:center; margin-top:10px;
+  min-height:24px; font-family:'Nunito',sans-serif;
+}
+
+/* Inventory Overlay */
+#inventoryScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.8); display:none; z-index:40;
+  align-items:center; justify-content:center;
+}
+.inventory-panel {
+  background:linear-gradient(135deg,#1a1a2e,#16213e);
+  border:3px solid #FFD700; border-radius:16px; padding:24px;
+  min-width:500px; max-height:80vh; overflow-y:auto;
+}
+.inventory-panel h2 { font-family:'Fredoka One',cursive; color:#FFD700; font-size:28px; margin-bottom:15px; text-align:center; }
+.inv-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.inv-slot {
+  width:64px; height:64px; background:rgba(255,255,255,0.05);
+  border:2px solid rgba(255,255,255,0.15); border-radius:8px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:28px; cursor:pointer; position:relative;
+}
+.inv-slot:hover { border-color:#FFD700; background:rgba(255,215,0,0.1); }
+.inv-slot .count { font-size:10px; color:#fff; position:absolute; bottom:2px; right:4px; }
+
+/* Dino Management */
+#dinoScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.8); display:none; z-index:40;
+  align-items:center; justify-content:center;
+}
+.dino-panel {
+  background:linear-gradient(135deg,#1a1a2e,#0a3d2e);
+  border:3px solid #06D6A0; border-radius:16px; padding:24px;
+  min-width:600px; max-width:700px; max-height:80vh; overflow-y:auto;
+}
+.dino-panel h2 { font-family:'Fredoka One',cursive; color:#06D6A0; font-size:28px; margin-bottom:15px; text-align:center; }
+.dino-card {
+  background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1);
+  border-radius:10px; padding:12px; margin-bottom:8px; display:flex;
+  align-items:center; gap:12px; cursor:pointer; transition:all 0.2s;
+}
+.dino-card:hover { border-color:#06D6A0; background:rgba(6,214,160,0.1); }
+.dino-card.active-dino { border-color:#FFD700; box-shadow:0 0 12px rgba(255,215,0,0.3); }
+.dino-card .emoji { font-size:36px; }
+.dino-card .info { flex:1; }
+.dino-card .info .dname { font-family:'Fredoka One',cursive; font-size:16px; color:#FFD700; }
+.dino-card .info .stats { font-size:11px; color:#aaa; font-family:'Press Start 2P'; margin-top:4px; }
+.dino-card .rarity { font-size:11px; font-weight:900; padding:3px 8px; border-radius:6px; }
+.rarity-Common { background:#666; color:#fff; }
+.rarity-Uncommon { background:#2ECC71; color:#fff; }
+.rarity-Rare { background:#3498DB; color:#fff; }
+.rarity-Legendary { background:linear-gradient(135deg,#F39C12,#E74C3C); color:#fff; }
+
+/* Build Mode */
+#buildUI {
+  position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+  display:none; z-index:15;
+}
+.build-options { display:flex; gap:6px; }
+.build-opt {
+  width:56px; height:56px; background:rgba(10,10,30,0.9);
+  border:2px solid rgba(255,255,255,0.2); border-radius:8px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:22px; cursor:pointer; transition:all 0.2s; color:#fff;
+}
+.build-opt:hover { border-color:#FFD700; }
+.build-opt.selected { border-color:#FFD700; box-shadow:0 0 10px rgba(255,215,0,0.3); }
+.build-opt span { font-size:8px; margin-top:2px; }
+
+/* Pause */
+#pauseScreen {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.7); display:none; z-index:60;
+  flex-direction:column; align-items:center; justify-content:center;
+}
+#pauseScreen h1 { font-family:'Fredoka One',cursive; font-size:60px; color:#FFD700; }
+#pauseScreen p { color:#aaa; font-size:18px; margin-top:10px; }
+
+/* NPC Dialog */
+#npcDialog {
+  position:absolute; bottom:100px; left:50%; transform:translateX(-50%);
+  background:rgba(10,10,30,0.95); border:3px solid #C8A2C8;
+  border-radius:16px; padding:20px; min-width:400px; display:none; z-index:30;
+  text-align:center;
+}
+#npcDialog .npc-name { font-family:'Fredoka One',cursive; font-size:20px; color:#C8A2C8; }
+#npcDialog .npc-text { color:#ddd; margin:10px 0; font-size:15px; }
+.npc-btns { display:flex; gap:8px; justify-content:center; margin-top:10px; }
+.npc-btn {
+  padding:8px 20px; border:none; border-radius:8px; cursor:pointer;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:14px; transition:all 0.2s;
+}
+.npc-btn:hover { transform:scale(1.05); }
+</style>
+</head>
+<body>
+
+<!-- Title Screen -->
+<div id="titleScreen">
+  <div class="dinoScene">&#x1F995; &#x1F996; &#x1F995;</div>
+  <h1>AVATAR</h1>
+  <h2>Dinosaur Adventure</h2>
+  <div class="credit">Created by Austyn</div>
+  <div class="subtitle">PRESS START</div>
+  <button class="btn btn-primary" onclick="showCreation()" style="margin-top:30px;">START GAME</button>
+</div>
+
+<!-- Avatar Creation -->
+<div id="creationScreen">
+  <div class="creation-container">
+    <h1>Create Your Avatar</h1>
+    <div class="creation-panel">
+      <h3>Identity</h3>
+      <label>Name</label>
+      <input type="text" id="avatarName" value="Austyn" maxlength="12" oninput="updatePreview()">
+      <label>Hair Style</label>
+      <div class="style-options" id="hairStyleOpts"></div>
+      <label>Hair Color</label>
+      <div class="color-options" id="hairColorOpts"></div>
+      <label>Skin Tone</label>
+      <div class="color-options" id="skinToneOpts"></div>
+    </div>
+    <div class="creation-panel">
+      <h3>Outfit</h3>
+      <label>Shirt Color</label>
+      <div class="color-options" id="outfitColorOpts"></div>
+      <label>Pants Color</label>
+      <div class="color-options" id="pantsColorOpts"></div>
+      <h3 style="margin-top:20px;">Preview</h3>
+      <canvas id="previewCanvas" width="160" height="200"></canvas>
+    </div>
+    <button class="btn btn-success" onclick="startAdventure()" style="width:100%;">START ADVENTURE!</button>
+  </div>
+</div>
+
+<!-- Game Canvas -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="playerHud" class="hud-panel">
+    <canvas id="playerPortrait" width="48" height="48"></canvas>
+    <div id="playerInfo">
+      <div class="name" id="hudName">Austyn</div>
+      <div class="level" id="hudLevel">Lv. 1</div>
+      <div class="xp-bar-outer"><div class="xp-bar-inner" id="xpBar" style="width:0%"></div></div>
+      <div class="stamina-bar-outer"><div class="stamina-bar-inner" id="staminaBar" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div id="dinoHud" class="hud-panel" style="display:none;">
+    <div id="dinoPortrait"></div>
+    <div id="dinoInfo">
+      <div class="name" id="hudDinoName">-</div>
+      <div class="hp-bar-outer"><div class="hp-bar-inner" id="dinoHpBar" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div id="biomeWeather" class="hud-panel">
+    <div class="biome-name" id="hudBiome">Grasslands</div>
+    <div class="weather" id="hudWeather">Clear</div>
+  </div>
+  <div id="hotbar"></div>
+  <div id="minimap"><canvas id="minimapCanvas" width="150" height="150"></canvas></div>
+  <div id="notifications"></div>
+</div>
+
+<!-- Battle Screen -->
+<div id="battleScreen">
+  <canvas id="battleCanvas" width="700" height="350"></canvas>
+  <div id="battleLog">A wild dinosaur appears!</div>
+  <div class="battle-ui" id="battleUI">
+    <button class="battle-btn attack" onclick="battleAction('attack')">Attack</button>
+    <button class="battle-btn special" id="specialBtn" onclick="battleAction('special')">Special</button>
+    <button class="battle-btn defend" onclick="battleAction('defend')">Defend</button>
+    <button class="battle-btn item" onclick="battleAction('item')">Item</button>
+    <button class="battle-btn run" onclick="battleAction('run')">Run</button>
+  </div>
+</div>
+
+<!-- Inventory -->
+<div id="inventoryScreen">
+  <div class="inventory-panel">
+    <h2>Inventory</h2>
+    <div class="inv-grid" id="invGrid"></div>
+  </div>
+</div>
+
+<!-- Dino Screen -->
+<div id="dinoScreen">
+  <div class="dino-panel">
+    <h2>My Dinosaurs</h2>
+    <div id="dinoList"></div>
+  </div>
+</div>
+
+<!-- Build UI -->
+<div id="buildUI">
+  <div class="build-options" id="buildOptions"></div>
+</div>
+
+<!-- NPC Dialog -->
+<div id="npcDialog">
+  <div class="npc-name" id="npcName"></div>
+  <div class="npc-text" id="npcText"></div>
+  <div class="npc-btns" id="npcBtns"></div>
+</div>
+
+<!-- Pause -->
+<div id="pauseScreen">
+  <h1>PAUSED</h1>
+  <p>Press ESC to resume</p>
+  <button class="btn btn-secondary" onclick="togglePause()" style="margin-top:20px;">RESUME</button>
+</div>
+
+<script>
+// ============================================================
+// GAME DATA & CONFIGURATION
+// ============================================================
+
+const TILE_SIZE = 32;
+const WORLD_W = 80;
+const WORLD_H = 80;
+const DAY_CYCLE_MS = 240000; // 4 minutes
+const WEATHER_MIN = 60000;
+const WEATHER_MAX = 120000;
+const MAX_WILD_DINOS = 12;
+const AUTOSAVE_INTERVAL = 30000;
+
+// --- Avatar Creation Options ---
+const HAIR_STYLES = ['Spiky','Messy','Buzz','Long','Mohawk','Curly'];
+const HAIR_COLORS = ['#2C1810','#8B4513','#DAA520','#FF4500','#1a1a1a','#C0C0C0','#4169E1','#9B59B6'];
+const SKIN_TONES = ['#FFDFC4','#F0C08A','#D2946B','#AA724B','#70483C','#3B2219'];
+const OUTFIT_COLORS = ['#E74C3C','#3498DB','#2ECC71','#F39C12','#9B59B6','#1ABC9C','#E67E22','#ECF0F1'];
+const PANTS_COLORS = ['#2C3E50','#34495E','#2E4053','#1B4F72','#6C3483','#784212'];
+
+// --- 20 Dinosaurs ---
+const DINO_DEFS = [
+  { name:'Raptor', emoji:'\u{1F996}', hp:60, str:18, def:8, spd:22, special:'Swift Strike', specDesc:'Double-speed slash attack', rarity:'Common', biome:'Grasslands', color:'#4CAF50' },
+  { name:'Triceratops', emoji:'\u{1F995}', hp:120, str:15, def:22, spd:8, special:'Horn Charge', specDesc:'Devastating charge attack', rarity:'Uncommon', biome:'Grasslands', color:'#8BC34A' },
+  { name:'Stegosaurus', emoji:'\u{1F995}', hp:100, str:12, def:25, spd:6, special:'Tail Whip', specDesc:'Spiky tail sweep', rarity:'Common', biome:'Forest', color:'#FF9800' },
+  { name:'Pteranodon', emoji:'\u{1F985}', hp:55, str:14, def:6, spd:28, special:'Sky Dive', specDesc:'Swoops from the sky', rarity:'Uncommon', biome:'Beach', color:'#03A9F4' },
+  { name:'T-Rex', emoji:'\u{1F996}', hp:150, str:30, def:15, spd:12, special:'Mega Bite', specDesc:'Earth-shaking bite attack', rarity:'Legendary', biome:'Volcanic', color:'#F44336' },
+  { name:'Brachiosaurus', emoji:'\u{1F995}', hp:200, str:10, def:20, spd:4, special:'Earthquake', specDesc:'Shakes the ground!', rarity:'Rare', biome:'Forest', color:'#4DB6AC' },
+  { name:'Dilophosaurus', emoji:'\u{1F98E}', hp:50, str:16, def:7, spd:20, special:'Venom Spit', specDesc:'Toxic venom spray', rarity:'Common', biome:'Forest', color:'#AB47BC' },
+  { name:'Ankylosaurus', emoji:'\u{1F422}', hp:140, str:14, def:30, spd:5, special:'Shell Bash', specDesc:'Unbreakable shell slam', rarity:'Uncommon', biome:'Desert', color:'#795548' },
+  { name:'Spinosaurus', emoji:'\u{1F40A}', hp:130, str:25, def:12, spd:16, special:'Water Cannon', specDesc:'Powerful water blast', rarity:'Rare', biome:'Beach', color:'#00897B' },
+  { name:'Parasaurolophus', emoji:'\u{1F995}', hp:80, str:10, def:12, spd:18, special:'Sonic Horn', specDesc:'Deafening sound wave', rarity:'Common', biome:'Grasslands', color:'#FFEB3B' },
+  { name:'Compsognathus', emoji:'\u{1F98E}', hp:25, str:8, def:4, spd:30, special:'Swarm Rush', specDesc:'Calls pack to attack', rarity:'Common', biome:'Forest', color:'#8BC34A' },
+  { name:'Carnotaurus', emoji:'\u{1F996}', hp:90, str:22, def:10, spd:20, special:'Bull Rush', specDesc:'Unstoppable charge', rarity:'Uncommon', biome:'Desert', color:'#D32F2F' },
+  { name:'Pachycephalosaurus', emoji:'\u{1F995}', hp:85, str:20, def:18, spd:14, special:'Skull Bash', specDesc:'Thick-skulled headbutt', rarity:'Uncommon', biome:'Snow', color:'#607D8B' },
+  { name:'Allosaurus', emoji:'\u{1F996}', hp:110, str:24, def:13, spd:17, special:'Frenzy Claw', specDesc:'Multi-claw frenzy attack', rarity:'Rare', biome:'Volcanic', color:'#E65100' },
+  { name:'Ice Raptor', emoji:'\u{1F976}', hp:70, str:19, def:10, spd:24, special:'Frost Fang', specDesc:'Freezing bite attack', rarity:'Rare', biome:'Snow', color:'#B3E5FC' },
+  { name:'Volcano Rex', emoji:'\u{1F525}', hp:160, str:28, def:16, spd:10, special:'Lava Breath', specDesc:'Molten fire breath!', rarity:'Legendary', biome:'Volcanic', color:'#FF5722' },
+  { name:'Crystal Stego', emoji:'\u{1F48E}', hp:130, str:16, def:28, spd:7, special:'Prism Shield', specDesc:'Reflects damage back', rarity:'Legendary', biome:'Snow', color:'#E1BEE7' },
+  { name:'Sand Wyrm', emoji:'\u{1F40D}', hp:95, str:21, def:9, spd:19, special:'Sand Storm', specDesc:'Blinding sand attack', rarity:'Rare', biome:'Desert', color:'#FFD54F' },
+  { name:'Plesiosaurus', emoji:'\u{1F40B}', hp:110, str:17, def:14, spd:15, special:'Tidal Wave', specDesc:'Massive wave attack', rarity:'Rare', biome:'Beach', color:'#0288D1' },
+  { name:'Mega Raptor', emoji:'\u{1F409}', hp:180, str:26, def:18, spd:22, special:'Dragon Fury', specDesc:'Ancient dragon power!', rarity:'Legendary', biome:'Volcanic', color:'#9C27B0' }
+];
+
+// --- Biome Definitions ---
+const BIOMES = {
+  Grasslands: {
+    tiles:['#5B8C3E','#4E7A34','#68A044','#7BB553'],
+    obstacles:['tree','rock','bush'],
+    dinos:['Raptor','Triceratops','Parasaurolophus'],
+    decoEmoji:['🌿','🌻','🌾'],
+    id:0
+  },
+  Forest: {
+    tiles:['#2E5A1E','#1E4A10','#3B6B28','#2A5020'],
+    obstacles:['tree','tree','rock','mushroom'],
+    dinos:['Stegosaurus','Brachiosaurus','Dilophosaurus','Compsognathus'],
+    decoEmoji:['🌲','🍄','🌳'],
+    id:1
+  },
+  Desert: {
+    tiles:['#D4A843','#C9993A','#DEB955','#BF8E30'],
+    obstacles:['cactus','rock','skull'],
+    dinos:['Ankylosaurus','Carnotaurus','Sand Wyrm'],
+    decoEmoji:['🌵','💀','🏜️'],
+    id:2
+  },
+  Snow: {
+    tiles:['#E8F0F8','#D5E5F0','#C8DBE8','#F0F5FA'],
+    obstacles:['ice_rock','snow_tree','crystal'],
+    dinos:['Pachycephalosaurus','Ice Raptor','Crystal Stego'],
+    decoEmoji:['🧊','❄️','🌨️'],
+    id:3
+  },
+  Volcanic: {
+    tiles:['#4A3030','#5C3A3A','#3D2626','#6B4040'],
+    obstacles:['lava_rock','obsidian','fire_vent'],
+    dinos:['T-Rex','Allosaurus','Volcano Rex','Mega Raptor'],
+    decoEmoji:['🔥','🌋','💎'],
+    id:4
+  },
+  Beach: {
+    tiles:['#F5DEB3','#ECD8A8','#D2B48C','#DEC198'],
+    obstacles:['palm','shell','driftwood'],
+    dinos:['Pteranodon','Spinosaurus','Plesiosaurus'],
+    decoEmoji:['🐚','🌴','🦀'],
+    id:5
+  }
+};
+const BIOME_NAMES = Object.keys(BIOMES);
+
+// --- Level Reward Table ---
+const LEVEL_REWARDS = {
+  5:'Unlock: Dino Pen building',10:'Unlock: Stone walls',15:'New tool: Iron Pickaxe',
+  20:'Unlock: Dino Healer',25:'Special: Tame chance +10%',30:'Unlock: Egg Incubator',
+  35:'New tool: Crystal Axe',40:'Special: Sprint speed +20%',50:'Title: Dino Master',
+  60:'Unlock: Legendary tracking',75:'Title: Apex Predator',100:'Title: AVATAR LEGEND'
+};
+
+// --- Crafting Recipes ---
+const RECIPES = [
+  { name:'Wood Wall', icon:'🪵', needs:{wood:5}, type:'building' },
+  { name:'Stone Wall', icon:'🧱', needs:{stone:8}, type:'building' },
+  { name:'Floor Tile', icon:'🟫', needs:{wood:2,stone:2}, type:'building' },
+  { name:'Dino Pen', icon:'🏗️', needs:{wood:15,stone:10}, type:'building' },
+  { name:'Crafting Table', icon:'🔨', needs:{wood:10,stone:5}, type:'building' },
+  { name:'Storage Chest', icon:'📦', needs:{wood:12}, type:'building' },
+  { name:'Dino Healer', icon:'💚', needs:{stone:10,herbs:5,crystal:3}, type:'building' },
+  { name:'Egg Incubator', icon:'🥚', needs:{stone:15,crystal:5,iron:5}, type:'building' },
+  { name:'Health Potion', icon:'❤️', needs:{herbs:3}, type:'item' },
+  { name:'Speed Berry', icon:'⚡', needs:{herbs:2}, type:'item' },
+  { name:'Tame Treat', icon:'🍖', needs:{herbs:2,wood:1}, type:'item' }
+];
+
+// --- Item Definitions ---
+const ITEMS = {
+  wood:{ name:'Wood', icon:'🪵', stack:99 },
+  stone:{ name:'Stone', icon:'🪨', stack:99 },
+  iron:{ name:'Iron Ore', icon:'⛏️', stack:50 },
+  crystal:{ name:'Crystal', icon:'💎', stack:30 },
+  herbs:{ name:'Herbs', icon:'🌿', stack:50 },
+  health_potion:{ name:'Health Potion', icon:'❤️', stack:10 },
+  speed_berry:{ name:'Speed Berry', icon:'⚡', stack:10 },
+  tame_treat:{ name:'Tame Treat', icon:'🍖', stack:10 },
+  dino_egg:{ name:'Dino Egg', icon:'🥚', stack:5 },
+  pickaxe:{ name:'Pickaxe', icon:'⛏️', stack:1 },
+  axe:{ name:'Axe', icon:'🪓', stack:1 }
+};
+
+// --- NPCs ---
+const NPC_DEFS = [
+  { name:'Rex', emoji:'👨‍🔬', color:'#3498DB', dialog:'Hey! I study dinosaurs. Want to battle or trade?', biome:'Grasslands', personality:'scientist' },
+  { name:'Luna', emoji:'🧙‍♀️', color:'#9B59B6', dialog:'Welcome, traveler! I have rare herbs and crystals.', biome:'Forest', personality:'mystic' },
+  { name:'Blaze', emoji:'🧑‍🚒', color:'#E74C3C', dialog:'The volcanic zone is dangerous! Need backup?', biome:'Desert', personality:'brave' },
+  { name:'Frost', emoji:'🧑‍🎤', color:'#00BCD4', dialog:'Brr! These snow dinos are tough. Team up?', biome:'Snow', personality:'cool' }
+];
+
+// --- Build Items ---
+const BUILD_ITEMS = [
+  { name:'Wood Wall', icon:'🪵', cost:{wood:5}, solid:true, color:'#8B6914' },
+  { name:'Stone Wall', icon:'🧱', cost:{stone:8}, solid:true, color:'#808080' },
+  { name:'Floor', icon:'🟫', cost:{wood:2,stone:2}, solid:false, color:'#A0522D' },
+  { name:'Dino Pen', icon:'🏗️', cost:{wood:15,stone:10}, solid:true, color:'#228B22' },
+  { name:'Craft Table', icon:'🔨', cost:{wood:10,stone:5}, solid:true, color:'#CD853F' },
+  { name:'Chest', icon:'📦', cost:{wood:12}, solid:true, color:'#DAA520' },
+  { name:'Healer', icon:'💚', cost:{stone:10,herbs:5,crystal:3}, solid:true, color:'#00C853' },
+  { name:'Incubator', icon:'🥚', cost:{stone:15,crystal:5,iron:5}, solid:true, color:'#FF8F00' }
+];
+
+// ============================================================
+// GAME STATE
+// ============================================================
+
+let gameState = 'title'; // title, creation, playing, battle, paused
+let canvas, ctx, battleCanvas, battleCtx, minimapCanvas, minimapCtx, previewCtx;
+
+const player = {
+  x: 40*TILE_SIZE, y: 40*TILE_SIZE, w:24, h:28,
+  speed: 2.5, sprintSpeed: 4.5,
+  stamina: 100, maxStamina: 100,
+  hp: 100, maxHp: 100,
+  level: 1, xp: 0, xpNeeded: 50,
+  name: 'Austyn',
+  hair: { style:0, color:'#2C1810' },
+  skin: '#F0C08A',
+  outfit: '#3498DB',
+  pants: '#2C3E50',
+  dir: 0, // 0=down,1=left,2=right,3=up
+  frame: 0, frameTimer: 0,
+  sprinting: false,
+  riding: false,
+  activeDinoIdx: -1
+};
+
+let camera = { x:0, y:0 };
+let keys = {};
+let world = [];
+let worldObstacles = [];
+let worldBiomes = [];
+let wildDinos = [];
+let structures = [];
+let particles = [];
+let notifications = [];
+let eggs = [];
+
+let inventory = [
+  { id:'pickaxe', count:1 },
+  { id:'axe', count:1 },
+  null, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null, null, null
+];
+let hotbarSlot = 0;
+
+let myDinos = [];
+let dayTime = 0;
+let weatherType = 'Clear';
+let weatherTimer = 0;
+let nextWeatherChange = 90000;
+
+let buildMode = false;
+let buildSelected = 0;
+let buildCursorX = 0, buildCursorY = 0;
+
+// Battle state
+let battle = {
+  active: false,
+  playerDino: null,
+  enemyDino: null,
+  enemyHp: 0, enemyMaxHp: 0,
+  playerHp: 0, playerMaxHp: 0,
+  turn: 'player',
+  specialCooldown: 0,
+  defending: false,
+  animating: false,
+  animType: '',
+  animTimer: 0,
+  damageNums: [],
+  log: ''
+};
+
+let npcs = [];
+let interactTarget = null;
+let lastTime = 0;
+let saveTimer = 0;
+let exploredTiles = new Set();
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+function init() {
+  canvas = document.getElementById('gameCanvas');
+  ctx = canvas.getContext('2d');
+  battleCanvas = document.getElementById('battleCanvas');
+  battleCtx = battleCanvas.getContext('2d');
+  minimapCanvas = document.getElementById('minimapCanvas');
+  minimapCtx = minimapCanvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === 'Shift') keys['shift'] = true;
+    handleKeyPress(e.key.toLowerCase());
+  });
+  window.addEventListener('keyup', e => {
+    keys[e.key.toLowerCase()] = false;
+    if (e.key === 'Shift') keys['shift'] = false;
+  });
+  canvas.addEventListener('click', handleClick);
+  canvas.addEventListener('contextmenu', e => { e.preventDefault(); handleRightClick(e); });
+  canvas.addEventListener('mousemove', handleMouseMove);
+  setupCreationScreen();
+  requestAnimationFrame(gameLoop);
+}
+
+function setupCreationScreen() {
+  const hairDiv = document.getElementById('hairStyleOpts');
+  HAIR_STYLES.forEach((s,i) => {
+    const el = document.createElement('div');
+    el.className = 'style-opt' + (i===0?' selected':'');
+    el.textContent = s;
+    el.onclick = () => { document.querySelectorAll('#hairStyleOpts .style-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); player.hair.style=i; updatePreview(); };
+    hairDiv.appendChild(el);
+  });
+  const hairCDiv = document.getElementById('hairColorOpts');
+  HAIR_COLORS.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-opt' + (i===0?' selected':'');
+    el.style.background = c;
+    el.onclick = () => { document.querySelectorAll('#hairColorOpts .color-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); player.hair.color=c; updatePreview(); };
+    hairCDiv.appendChild(el);
+  });
+  const skinDiv = document.getElementById('skinToneOpts');
+  SKIN_TONES.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-opt' + (i===1?' selected':'');
+    el.style.background = c;
+    el.onclick = () => { document.querySelectorAll('#skinToneOpts .color-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); player.skin=c; updatePreview(); };
+    skinDiv.appendChild(el);
+  });
+  const outDiv = document.getElementById('outfitColorOpts');
+  OUTFIT_COLORS.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-opt' + (i===1?' selected':'');
+    el.style.background = c;
+    el.onclick = () => { document.querySelectorAll('#outfitColorOpts .color-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); player.outfit=c; updatePreview(); };
+    outDiv.appendChild(el);
+  });
+  const pantDiv = document.getElementById('pantsColorOpts');
+  PANTS_COLORS.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-opt' + (i===0?' selected':'');
+    el.style.background = c;
+    el.onclick = () => { document.querySelectorAll('#pantsColorOpts .color-opt').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); player.pants=c; updatePreview(); };
+    pantDiv.appendChild(el);
+  });
+  updatePreview();
+}
+
+function updatePreview() {
+  const pc = document.getElementById('previewCanvas');
+  const pctx = pc.getContext('2d');
+  pctx.clearRect(0,0,160,200);
+  drawAvatar(pctx, 80, 100, 4, player, 0, 0);
+  player.name = document.getElementById('avatarName').value || 'Austyn';
+  pctx.fillStyle = '#FFD700';
+  pctx.font = '16px "Fredoka One"';
+  pctx.textAlign = 'center';
+  pctx.fillText(player.name, 80, 185);
+}
+
+function showCreation() {
+  document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('creationScreen').style.display = 'block';
+  gameState = 'creation';
+  updatePreview();
+}
+
+function startAdventure() {
+  player.name = document.getElementById('avatarName').value || 'Austyn';
+  document.getElementById('creationScreen').style.display = 'none';
+  document.getElementById('hud').style.display = 'block';
+  gameState = 'playing';
+  if (!loadGame()) {
+    generateWorld();
+    spawnWildDinos();
+    spawnNPCs();
+    spawnEggs();
+    addNotification('Welcome to your adventure, ' + player.name + '!', 'success');
+    addNotification('WASD to move, E to interact, I for inventory', 'info');
+  }
+  setupHotbar();
+  updateHUD();
+  lastTime = performance.now();
+}
+
+// ============================================================
+// WORLD GENERATION
+// ============================================================
+
+function generateWorld() {
+  world = []; worldObstacles = []; worldBiomes = [];
+  const biomeCenters = [
+    {x:20,y:20,biome:'Grasslands'},{x:15,y:55,biome:'Forest'},
+    {x:55,y:15,biome:'Desert'},{x:65,y:55,biome:'Snow'},
+    {x:55,y:40,biome:'Volcanic'},{x:25,y:70,biome:'Beach'},
+    {x:70,y:75,biome:'Beach'},{x:40,y:40,biome:'Grasslands'}
+  ];
+  for (let y=0;y<WORLD_H;y++) {
+    world[y]=[]; worldObstacles[y]=[]; worldBiomes[y]=[];
+    for (let x=0;x<WORLD_W;x++) {
+      let minDist=Infinity, biome='Grasslands';
+      for (const bc of biomeCenters) {
+        const d=Math.sqrt((x-bc.x)**2+(y-bc.y)**2);
+        if(d<minDist){minDist=d;biome=bc.biome;}
+      }
+      const bd=BIOMES[biome];
+      worldBiomes[y][x]=biome;
+      world[y][x]=bd.tiles[Math.floor(Math.random()*bd.tiles.length)];
+      if(Math.random()<0.12 && !(x>38&&x<42&&y>38&&y<42)){
+        worldObstacles[y][x]=bd.obstacles[Math.floor(Math.random()*bd.obstacles.length)];
+      } else { worldObstacles[y][x]=null; }
+    }
+  }
+  for(let y=38;y<=42;y++) for(let x=38;x<=42;x++) worldObstacles[y][x]=null;
+}
+
+function spawnWildDinos() {
+  wildDinos=[];
+  for(let i=0;i<MAX_WILD_DINOS;i++) spawnOneDino();
+}
+
+function spawnOneDino() {
+  const biome=BIOME_NAMES[Math.floor(Math.random()*BIOME_NAMES.length)];
+  const bd=BIOMES[biome];
+  const dinoName=bd.dinos[Math.floor(Math.random()*bd.dinos.length)];
+  const def=DINO_DEFS.find(d=>d.name===dinoName);
+  if(!def) return;
+  let tx,ty,att=0;
+  do{ tx=Math.floor(Math.random()*WORLD_W); ty=Math.floor(Math.random()*WORLD_H); att++; }while(worldBiomes[ty][tx]!==biome&&att<100);
+  const lv=Math.max(1,player.level+Math.floor(Math.random()*7)-3);
+  const hpM=1+(lv-1)*0.12;
+  wildDinos.push({...def,x:tx*TILE_SIZE+TILE_SIZE/2,y:ty*TILE_SIZE+TILE_SIZE/2,
+    currentHp:Math.floor(def.hp*hpM),maxHp:Math.floor(def.hp*hpM),level:lv,
+    moveTimer:0,moveDir:Math.random()*Math.PI*2,
+    aggressive:def.str>16||def.rarity==='Legendary',id:Date.now()+Math.random()});
+}
+
+function spawnNPCs() {
+  npcs=[];
+  NPC_DEFS.forEach(nd=>{
+    let tx,ty,att=0;
+    do{tx=Math.floor(Math.random()*WORLD_W);ty=Math.floor(Math.random()*WORLD_H);att++;}while(worldBiomes[ty][tx]!==nd.biome&&att<200);
+    npcs.push({...nd,x:tx*TILE_SIZE+TILE_SIZE/2,y:ty*TILE_SIZE+TILE_SIZE/2,moveTimer:0,moveDir:Math.random()*Math.PI*2,following:false});
+  });
+}
+
+function spawnEggs() {
+  eggs=[];
+  for(let i=0;i<8;i++){
+    const tx=Math.floor(Math.random()*WORLD_W),ty=Math.floor(Math.random()*WORLD_H);
+    const biome=worldBiomes[ty][tx],bd=BIOMES[biome];
+    const dinoName=bd.dinos[Math.floor(Math.random()*bd.dinos.length)];
+    eggs.push({x:tx*TILE_SIZE+TILE_SIZE/2,y:ty*TILE_SIZE+TILE_SIZE/2,dino:dinoName,glowTimer:0});
+  }
+}
+
+// ============================================================
+// DRAWING HELPERS
+// ============================================================
+
+function drawAvatar(c,cx,cy,scale,p,dir,frame) {
+  const s=scale;
+  c.fillStyle=p.pants;
+  if(frame%2===0){c.fillRect(cx-4*s,cy+4*s,3*s,5*s);c.fillRect(cx+1*s,cy+4*s,3*s,5*s);}
+  else{c.fillRect(cx-3*s,cy+4*s,3*s,5*s);c.fillRect(cx+0*s,cy+4*s,3*s,5*s);}
+  c.fillStyle=p.outfit;
+  c.fillRect(cx-5*s,cy-4*s,10*s,9*s);
+  if(frame%2===0){c.fillRect(cx-7*s,cy-3*s,2*s,7*s);c.fillRect(cx+5*s,cy-3*s,2*s,7*s);}
+  else{c.fillRect(cx-7*s,cy-2*s,2*s,6*s);c.fillRect(cx+5*s,cy-4*s,2*s,6*s);}
+  c.fillStyle=p.skin;
+  c.fillRect(cx-7*s,cy+2*s,2*s,3*s);c.fillRect(cx+5*s,cy+2*s,2*s,3*s);
+  c.fillRect(cx-5*s,cy-11*s,10*s,8*s);
+  c.fillStyle='#fff';
+  if(dir!==3){c.fillRect(cx-3*s,cy-8*s,2*s,2*s);c.fillRect(cx+1*s,cy-8*s,2*s,2*s);
+    c.fillStyle='#222';c.fillRect(cx-2*s,cy-7*s,1*s,1*s);c.fillRect(cx+2*s,cy-7*s,1*s,1*s);}
+  c.fillStyle=p.hair.color;
+  const hs=p.hair.style;
+  if(hs===0){c.fillRect(cx-5*s,cy-13*s,10*s,3*s);c.fillRect(cx-3*s,cy-15*s,2*s,3*s);c.fillRect(cx+1*s,cy-15*s,2*s,3*s);c.fillRect(cx-1*s,cy-16*s,2*s,3*s);}
+  else if(hs===1){c.fillRect(cx-6*s,cy-13*s,12*s,4*s);c.fillRect(cx-6*s,cy-10*s,2*s,3*s);c.fillRect(cx+5*s,cy-10*s,2*s,3*s);}
+  else if(hs===2){c.fillRect(cx-5*s,cy-12*s,10*s,2*s);}
+  else if(hs===3){c.fillRect(cx-6*s,cy-13*s,12*s,3*s);c.fillRect(cx-7*s,cy-10*s,2*s,8*s);c.fillRect(cx+5*s,cy-10*s,2*s,8*s);}
+  else if(hs===4){c.fillRect(cx-1*s,cy-17*s,2*s,7*s);c.fillRect(cx-2*s,cy-15*s,4*s,3*s);}
+  else{c.fillRect(cx-6*s,cy-14*s,12*s,5*s);c.beginPath();c.arc(cx-4*s,cy-10*s,2*s,0,Math.PI*2);c.arc(cx+4*s,cy-10*s,2*s,0,Math.PI*2);c.arc(cx,cy-14*s,2*s,0,Math.PI*2);c.fill();}
+}
+
+function drawObstacle(c,x,y,type) {
+  const s=TILE_SIZE;
+  switch(type){
+    case 'tree':
+      c.fillStyle='#5D3A1A';c.fillRect(x+12,y+16,8,16);
+      c.fillStyle='#228B22';c.beginPath();c.arc(x+16,y+12,12,0,Math.PI*2);c.fill();
+      c.fillStyle='#1B7A1B';c.beginPath();c.arc(x+13,y+10,8,0,Math.PI*2);c.fill();break;
+    case 'rock':
+      c.fillStyle='#888';c.beginPath();c.ellipse(x+16,y+22,12,8,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#999';c.beginPath();c.ellipse(x+14,y+20,8,6,0,0,Math.PI*2);c.fill();break;
+    case 'bush':
+      c.fillStyle='#2D8B2D';c.beginPath();c.arc(x+16,y+24,10,0,Math.PI*2);c.fill();
+      c.fillStyle='#3CA03C';c.beginPath();c.arc(x+14,y+22,7,0,Math.PI*2);c.fill();break;
+    case 'cactus':
+      c.fillStyle='#2E7D32';c.fillRect(x+13,y+8,6,24);
+      c.fillRect(x+7,y+12,6,4);c.fillRect(x+7,y+12,3,10);
+      c.fillRect(x+19,y+16,6,4);c.fillRect(x+22,y+16,3,8);break;
+    case 'palm':
+      c.fillStyle='#8B6914';c.fillRect(x+14,y+14,4,18);
+      c.fillStyle='#228B22';
+      c.beginPath();c.moveTo(x+16,y+8);c.lineTo(x+4,y+14);c.lineTo(x+16,y+14);c.fill();
+      c.beginPath();c.moveTo(x+16,y+8);c.lineTo(x+28,y+14);c.lineTo(x+16,y+14);c.fill();break;
+    case 'snow_tree':
+      c.fillStyle='#5D3A1A';c.fillRect(x+12,y+18,8,14);
+      c.fillStyle='#E8F0F8';c.beginPath();c.moveTo(x+16,y+2);c.lineTo(x+4,y+18);c.lineTo(x+28,y+18);c.fill();break;
+    case 'ice_rock':
+      c.fillStyle='#B3E5FC';c.beginPath();c.ellipse(x+16,y+22,12,8,0,0,Math.PI*2);c.fill();break;
+    case 'crystal':
+      c.fillStyle='#E1BEE7';c.beginPath();c.moveTo(x+16,y+4);c.lineTo(x+10,y+24);c.lineTo(x+22,y+24);c.fill();
+      c.fillStyle='#CE93D8';c.beginPath();c.moveTo(x+12,y+8);c.lineTo(x+6,y+24);c.lineTo(x+16,y+24);c.fill();break;
+    case 'lava_rock':
+      c.fillStyle='#3E2723';c.beginPath();c.ellipse(x+16,y+22,12,8,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#FF5722';c.fillRect(x+12,y+18,3,3);c.fillRect(x+18,y+20,3,3);break;
+    case 'obsidian':
+      c.fillStyle='#1a1a2e';c.beginPath();c.moveTo(x+16,y+6);c.lineTo(x+6,y+26);c.lineTo(x+26,y+26);c.fill();break;
+    case 'fire_vent':
+      c.fillStyle='#4A3030';c.beginPath();c.ellipse(x+16,y+24,10,6,0,0,Math.PI*2);c.fill();
+      c.fillStyle='#FF6D00';c.beginPath();c.arc(x+16,y+22,4,0,Math.PI*2);c.fill();break;
+    case 'shell':
+      c.fillStyle='#FFCCBC';c.beginPath();c.arc(x+16,y+24,7,0,Math.PI*2);c.fill();
+      c.fillStyle='#FF8A65';c.beginPath();c.arc(x+16,y+24,4,0,Math.PI*2);c.fill();break;
+    case 'driftwood':
+      c.fillStyle='#A1887F';c.fillRect(x+4,y+22,24,4);c.fillRect(x+6,y+18,4,6);break;
+    case 'skull':
+      c.fillStyle='#EFEBE9';c.beginPath();c.arc(x+16,y+20,8,0,Math.PI*2);c.fill();
+      c.fillStyle='#333';c.fillRect(x+12,y+18,3,3);c.fillRect(x+18,y+18,3,3);break;
+    case 'mushroom':
+      c.fillStyle='#EFEBE9';c.fillRect(x+14,y+20,4,10);
+      c.fillStyle='#D32F2F';c.beginPath();c.ellipse(x+16,y+18,8,6,0,0,Math.PI*2);c.fill();break;
+    default: c.fillStyle='#888';c.fillRect(x+8,y+8,16,16);
+  }
+}
+
+// ============================================================
+// CAMERA + RENDERING
+// ============================================================
+
+function updateCamera() {
+  const targetX=player.x-canvas.width/2, targetY=player.y-canvas.height/2;
+  camera.x+=(targetX-camera.x)*0.08; camera.y+=(targetY-camera.y)*0.08;
+  camera.x=Math.max(0,Math.min(camera.x,WORLD_W*TILE_SIZE-canvas.width));
+  camera.y=Math.max(0,Math.min(camera.y,WORLD_H*TILE_SIZE-canvas.height));
+}
+
+function renderWorld() {
+  const startCol=Math.max(0,Math.floor(camera.x/TILE_SIZE)-1);
+  const endCol=Math.min(WORLD_W-1,Math.ceil((camera.x+canvas.width)/TILE_SIZE)+1);
+  const startRow=Math.max(0,Math.floor(camera.y/TILE_SIZE)-1);
+  const endRow=Math.min(WORLD_H-1,Math.ceil((camera.y+canvas.height)/TILE_SIZE)+1);
+  for(let y=startRow;y<=endRow;y++){
+    for(let x=startCol;x<=endCol;x++){
+      ctx.fillStyle=world[y][x];
+      ctx.fillRect(x*TILE_SIZE-camera.x,y*TILE_SIZE-camera.y,TILE_SIZE+1,TILE_SIZE+1);
+      exploredTiles.add(y*WORLD_W+x);
+    }
+  }
+  for(let y=startRow;y<=endRow;y++){
+    for(let x=startCol;x<=endCol;x++){
+      if(worldObstacles[y][x]) drawObstacle(ctx,x*TILE_SIZE-camera.x,y*TILE_SIZE-camera.y,worldObstacles[y][x]);
+    }
+  }
+  for(const s of structures){
+    const sx=s.x*TILE_SIZE-camera.x,sy=s.y*TILE_SIZE-camera.y;
+    if(sx>-TILE_SIZE&&sx<canvas.width+TILE_SIZE&&sy>-TILE_SIZE&&sy<canvas.height+TILE_SIZE){
+      ctx.fillStyle=BUILD_ITEMS[s.type].color;ctx.fillRect(sx+2,sy+2,TILE_SIZE-4,TILE_SIZE-4);
+      ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText(BUILD_ITEMS[s.type].icon,sx+TILE_SIZE/2,sy+TILE_SIZE/2+5);
+    }
+  }
+  for(const egg of eggs){
+    const ex=egg.x-camera.x,ey=egg.y-camera.y;
+    if(ex>-20&&ex<canvas.width+20&&ey>-20&&ey<canvas.height+20){
+      egg.glowTimer+=0.05;const glow=Math.sin(egg.glowTimer)*0.3+0.7;
+      ctx.globalAlpha=glow;ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('\u{1F95A}',ex,ey+6);ctx.globalAlpha=1;
+      ctx.beginPath();ctx.arc(ex,ey,12+Math.sin(egg.glowTimer)*4,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(255,215,0,${0.3+Math.sin(egg.glowTimer)*0.2})`;ctx.lineWidth=2;ctx.stroke();
+    }
+  }
+}
+
+function renderWildDinos() {
+  for(const d of wildDinos){
+    const dx=d.x-camera.x,dy=d.y-camera.y;
+    if(dx>-30&&dx<canvas.width+30&&dy>-30&&dy<canvas.height+30){
+      ctx.fillStyle='rgba(0,0,0,0.2)';ctx.beginPath();ctx.ellipse(dx,dy+14,10,4,0,0,Math.PI*2);ctx.fill();
+      ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(d.emoji,dx,dy+6);
+      ctx.font='9px "Press Start 2P"';ctx.fillStyle=d.aggressive?'#FF4444':'#4CAF50';ctx.fillText('Lv'+d.level,dx,dy-12);
+      if(d.currentHp<d.maxHp){ctx.fillStyle='#333';ctx.fillRect(dx-15,dy-18,30,4);ctx.fillStyle='#FF4444';ctx.fillRect(dx-15,dy-18,30*(d.currentHp/d.maxHp),4);}
+      if(d.aggressive){ctx.fillStyle='#FF4444';ctx.font='10px sans-serif';ctx.fillText('!',dx+14,dy-10);}
+    }
+  }
+}
+
+function renderNPCs() {
+  for(const n of npcs){
+    const nx=n.x-camera.x,ny=n.y-camera.y;
+    if(nx>-30&&nx<canvas.width+30&&ny>-30&&ny<canvas.height+30){
+      ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText(n.emoji,nx,ny+6);
+      ctx.font='12px "Fredoka One"';ctx.fillStyle=n.color;ctx.fillText(n.name,nx,ny-16);
+    }
+  }
+}
+
+function renderPlayer() {
+  const px=player.x-camera.x,py=player.y-camera.y;
+  if(player.riding&&player.activeDinoIdx>=0){
+    const dino=myDinos[player.activeDinoIdx];
+    ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText(dino.emoji,px,py+10);
+    drawAvatar(ctx,px,py-8,1.5,player,player.dir,player.frame);
+  } else {
+    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.beginPath();ctx.ellipse(px,py+14,8,3,0,0,Math.PI*2);ctx.fill();
+    drawAvatar(ctx,px,py,1.5,player,player.dir,player.frame);
+  }
+  if(!player.riding&&player.activeDinoIdx>=0&&myDinos[player.activeDinoIdx]){
+    const dino=myDinos[player.activeDinoIdx];
+    if(!dino.followX){dino.followX=player.x-40;dino.followY=player.y;}
+    const tdx=player.x-40*Math.cos(player.dir===2?0:player.dir===1?Math.PI:player.dir===3?Math.PI/2:-Math.PI/2);
+    const tdy=player.y-40*Math.sin(player.dir===0?1:player.dir===3?-1:0);
+    dino.followX+=(tdx-dino.followX)*0.05;dino.followY+=(tdy-dino.followY)*0.05;
+    ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText(dino.emoji,dino.followX-camera.x,dino.followY-camera.y+6);
+  }
+  ctx.font='11px "Fredoka One"';ctx.fillStyle='#FFD700';ctx.textAlign='center';ctx.fillText(player.name,px,py-22);
+}
+
+// ============================================================
+// DAY/NIGHT CYCLE
+// ============================================================
+
+function renderDayNight(dt) {
+  dayTime=(dayTime+dt)%DAY_CYCLE_MS;
+  const phase=dayTime/DAY_CYCLE_MS;
+  let overlayColor,overlayAlpha;
+  if(phase<0.25){const t=phase/0.25;overlayColor=lerpColor('#1a1a4e','#FF8C42',t);overlayAlpha=0.35*(1-t);}
+  else if(phase<0.5){overlayAlpha=0;overlayColor='#000';}
+  else if(phase<0.65){const t=(phase-0.5)/0.15;overlayColor=lerpColor('#FFA500','#FF4500',t);overlayAlpha=t*0.25;}
+  else if(phase<0.85){overlayColor='#0a0a2e';overlayAlpha=0.45;
+    ctx.fillStyle='#fff';for(let i=0;i<40;i++){const sx=((i*137+43)%canvas.width),sy=((i*251+17)%canvas.height);
+    const tw=Math.sin(dayTime/500+i)*0.5+0.5;ctx.globalAlpha=tw*0.8;ctx.fillRect(sx,sy,2,2);}ctx.globalAlpha=1;
+  } else {const t=(phase-0.85)/0.15;overlayColor=lerpColor('#0a0a2e','#1a1a4e',t);overlayAlpha=0.45*(1-t*0.3);}
+  if(overlayAlpha>0){ctx.fillStyle=overlayColor;ctx.globalAlpha=overlayAlpha;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;}
+}
+
+function lerpColor(a,b,t) {
+  const ar=parseInt(a.slice(1,3),16),ag=parseInt(a.slice(3,5),16),ab=parseInt(a.slice(5,7),16);
+  const br=parseInt(b.slice(1,3),16),bg=parseInt(b.slice(3,5),16),bb=parseInt(b.slice(5,7),16);
+  const r=Math.round(ar+(br-ar)*t),g=Math.round(ag+(bg-ag)*t),bl=Math.round(ab+(bb-ab)*t);
+  return `rgb(${r},${g},${bl})`;
+}
+
+// ============================================================
+// WEATHER SYSTEM
+// ============================================================
+
+function updateWeather(dt) {
+  weatherTimer+=dt;
+  if(weatherTimer>nextWeatherChange){
+    weatherTimer=0;nextWeatherChange=WEATHER_MIN+Math.random()*(WEATHER_MAX-WEATHER_MIN);
+    const currentBiome=getBiomeAt(player.x,player.y);
+    const weathers=['Clear','Clear','Rain','Thunderstorm'];
+    if(currentBiome==='Snow') weathers.push('Snow','Snow');
+    if(currentBiome==='Desert') weathers.push('Sandstorm');
+    if(currentBiome==='Volcanic') weathers.push('Volcanic Ash');
+    weatherType=weathers[Math.floor(Math.random()*weathers.length)];
+    document.getElementById('hudWeather').textContent=getWeatherIcon(weatherType)+' '+weatherType;
+  }
+}
+
+function getWeatherIcon(w){switch(w){case'Rain':return'\u{1F327}';case'Thunderstorm':return'\u{26C8}';case'Snow':return'\u{1F328}';case'Sandstorm':return'\u{1F32A}';case'Volcanic Ash':return'\u{1F30B}';default:return'\u{2600}';}}
+
+function renderWeather() {
+  if(weatherType==='Rain'||weatherType==='Thunderstorm'){
+    ctx.strokeStyle='rgba(100,149,237,0.5)';ctx.lineWidth=1;
+    for(let i=0;i<80;i++){const rx=((i*97+performance.now()/3)%canvas.width),ry=((i*53+performance.now()/2)%canvas.height);
+    ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx-2,ry+10);ctx.stroke();}
+    if(weatherType==='Thunderstorm'&&Math.random()<0.003){ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillRect(0,0,canvas.width,canvas.height);}
+  } else if(weatherType==='Snow'){
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    for(let i=0;i<60;i++){const sx=((i*131+performance.now()/8+Math.sin(i+performance.now()/1000)*20)%canvas.width),sy=((i*67+performance.now()/4)%canvas.height);
+    ctx.beginPath();ctx.arc(sx,sy,2,0,Math.PI*2);ctx.fill();}
+  } else if(weatherType==='Sandstorm'){
+    ctx.fillStyle='rgba(210,170,70,0.15)';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(180,140,50,0.4)';for(let i=0;i<40;i++){const sx=((i*89+performance.now()/2)%canvas.width),sy=((i*127+performance.now()/6)%canvas.height);ctx.fillRect(sx,sy,4,2);}
+  } else if(weatherType==='Volcanic Ash'){
+    ctx.fillStyle='rgba(50,50,50,0.1)';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(80,80,80,0.6)';for(let i=0;i<30;i++){const sx=((i*111+performance.now()/5)%canvas.width),sy=((i*73+performance.now()/3)%canvas.height);ctx.fillRect(sx,sy,3,3);}
+  }
+}
+
+// ============================================================
+// MINIMAP
+// ============================================================
+
+function renderMinimap() {
+  minimapCtx.fillStyle='#111';minimapCtx.fillRect(0,0,150,150);
+  const scale=150/WORLD_W;
+  for(const tileKey of exploredTiles){const ty=Math.floor(tileKey/WORLD_W),tx=tileKey%WORLD_W;
+    minimapCtx.fillStyle=world[ty][tx];minimapCtx.fillRect(tx*scale,ty*scale,Math.ceil(scale),Math.ceil(scale));}
+  minimapCtx.fillStyle='#FFD700';const px=(player.x/TILE_SIZE)*scale,py=(player.y/TILE_SIZE)*scale;minimapCtx.fillRect(px-2,py-2,4,4);
+  minimapCtx.fillStyle='#FF4444';for(const d of wildDinos) minimapCtx.fillRect((d.x/TILE_SIZE)*scale-1,(d.y/TILE_SIZE)*scale-1,2,2);
+  minimapCtx.fillStyle='#C8A2C8';for(const n of npcs) minimapCtx.fillRect((n.x/TILE_SIZE)*scale-1,(n.y/TILE_SIZE)*scale-1,3,3);
+}
+
+function getBiomeAt(wx,wy){const tx=Math.floor(wx/TILE_SIZE),ty=Math.floor(wy/TILE_SIZE);
+  if(tx>=0&&tx<WORLD_W&&ty>=0&&ty<WORLD_H) return worldBiomes[ty][tx]; return 'Grasslands';}
+
+// ============================================================
+// PARTICLES
+// ============================================================
+
+function spawnParticle(x,y,color,life,vx,vy,size){particles.push({x,y,color,life,maxLife:life,vx:vx||0,vy:vy||-1,size:size||3});}
+
+function updateParticles(dt){for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;if(p.life<=0)particles.splice(i,1);}}
+
+function renderParticles(){for(const p of particles){ctx.globalAlpha=p.life/p.maxLife;ctx.fillStyle=p.color;ctx.fillRect(p.x-camera.x,p.y-camera.y,p.size,p.size);}ctx.globalAlpha=1;}
+
+// ============================================================
+// PLAYER MOVEMENT & INTERACTION
+// ============================================================
+
+function updatePlayer(dt) {
+  let dx=0,dy=0;
+  if(keys['w']||keys['arrowup']){dy=-1;player.dir=3;}
+  if(keys['s']||keys['arrowdown']){dy=1;player.dir=0;}
+  if(keys['a']||keys['arrowleft']){dx=-1;player.dir=1;}
+  if(keys['d']||keys['arrowright']){dx=1;player.dir=2;}
+  if(dx!==0&&dy!==0){dx*=0.707;dy*=0.707;}
+
+  player.sprinting=keys['shift']&&player.stamina>0;
+  let spd=player.sprinting?player.sprintSpeed:player.speed;
+  if(player.riding&&player.activeDinoIdx>=0){
+    const dino=myDinos[player.activeDinoIdx];
+    spd=dino.spd/6+1;
+  }
+  if(player.sprinting){player.stamina=Math.max(0,player.stamina-dt*0.05);}
+  else{player.stamina=Math.min(player.maxStamina,player.stamina+dt*0.02);}
+  document.getElementById('staminaBar').style.width=(player.stamina/player.maxStamina*100)+'%';
+
+  const newX=player.x+dx*spd*dt/16;
+  const newY=player.y+dy*spd*dt/16;
+  if(!isColliding(newX,player.y)) player.x=newX;
+  if(!isColliding(player.x,newY)) player.y=newY;
+  player.x=Math.max(16,Math.min(player.x,WORLD_W*TILE_SIZE-16));
+  player.y=Math.max(16,Math.min(player.y,WORLD_H*TILE_SIZE-16));
+
+  if(dx!==0||dy!==0){
+    player.frameTimer+=dt;
+    if(player.frameTimer>200){player.frame=(player.frame+1)%2;player.frameTimer=0;}
+    // XP from exploring
+    const tileKey=Math.floor(player.y/TILE_SIZE)*WORLD_W+Math.floor(player.x/TILE_SIZE);
+    if(!exploredTiles.has(tileKey)){exploredTiles.add(tileKey);gainXP(1);}
+  }
+
+  // Update biome display
+  const biome=getBiomeAt(player.x,player.y);
+  document.getElementById('hudBiome').textContent=biome;
+
+  // Check aggressive dinos
+  for(const d of wildDinos){
+    if(d.aggressive){
+      const dist=Math.sqrt((d.x-player.x)**2+(d.y-player.y)**2);
+      if(dist<120){
+        const angle=Math.atan2(player.y-d.y,player.x-d.x);
+        d.x+=Math.cos(angle)*1.5*dt/16;
+        d.y+=Math.sin(angle)*1.5*dt/16;
+      }
+      if(dist<20&&!battle.active){
+        startBattle(d);
+      }
+    }
+  }
+
+  // Check egg pickup
+  for(let i=eggs.length-1;i>=0;i--){
+    const dist=Math.sqrt((eggs[i].x-player.x)**2+(eggs[i].y-player.y)**2);
+    if(dist<25){
+      const eggDino=eggs[i].dino;
+      addToInventory('dino_egg',1);
+      addNotification('Found a '+eggDino+' egg!','epic');
+      // Auto-hatch after delay
+      setTimeout(()=>{
+        const def=DINO_DEFS.find(d=>d.name===eggDino);
+        if(def){
+          const lv=Math.max(1,player.level-2);
+          myDinos.push({...def,nickname:def.name,level:lv,currentHp:def.hp,maxHp:def.hp,xp:0,followX:0,followY:0});
+          addNotification('Your '+eggDino+' egg hatched!','epic');
+          for(let j=0;j<20;j++) spawnParticle(player.x+Math.random()*40-20,player.y+Math.random()*40-20,'#FFD700',1000,(Math.random()-0.5)*3,-Math.random()*3,4);
+        }
+      },30000);
+      eggs.splice(i,1);
+    }
+  }
+}
+
+function isColliding(x,y) {
+  const tx=Math.floor(x/TILE_SIZE),ty=Math.floor(y/TILE_SIZE);
+  for(let dy=-1;dy<=1;dy++){for(let dx=-1;dx<=1;dx++){
+    const cx=tx+dx,cy=ty+dy;
+    if(cx<0||cx>=WORLD_W||cy<0||cy>=WORLD_H) return true;
+    if(worldObstacles[cy][cx]) {
+      const ox=cx*TILE_SIZE+TILE_SIZE/2,oy=cy*TILE_SIZE+TILE_SIZE/2;
+      if(Math.abs(x-ox)<14&&Math.abs(y-oy)<14) return true;
+    }
+  }}
+  for(const s of structures){
+    if(BUILD_ITEMS[s.type].solid){
+      const sx=s.x*TILE_SIZE+TILE_SIZE/2,sy=s.y*TILE_SIZE+TILE_SIZE/2;
+      if(Math.abs(x-sx)<14&&Math.abs(y-sy)<14) return true;
+    }
+  }
+  return false;
+}
+
+function updateWildDinos(dt) {
+  for(const d of wildDinos){
+    d.moveTimer+=dt;
+    if(d.moveTimer>2000+Math.random()*2000){
+      d.moveTimer=0;d.moveDir=Math.random()*Math.PI*2;
+    }
+    if(!d.aggressive||Math.sqrt((d.x-player.x)**2+(d.y-player.y)**2)>120){
+      d.x+=Math.cos(d.moveDir)*0.3*dt/16;
+      d.y+=Math.sin(d.moveDir)*0.3*dt/16;
+    }
+    d.x=Math.max(16,Math.min(d.x,WORLD_W*TILE_SIZE-16));
+    d.y=Math.max(16,Math.min(d.y,WORLD_H*TILE_SIZE-16));
+  }
+  // Respawn if needed
+  if(wildDinos.length<MAX_WILD_DINOS&&Math.random()<0.001*dt) spawnOneDino();
+}
+
+function updateNPCs(dt) {
+  for(const n of npcs){
+    if(n.following){
+      const angle=Math.atan2(player.y-n.y,player.x-n.x);
+      const dist=Math.sqrt((n.x-player.x)**2+(n.y-player.y)**2);
+      if(dist>50){n.x+=Math.cos(angle)*2*dt/16;n.y+=Math.sin(angle)*2*dt/16;}
+    } else {
+      n.moveTimer+=dt;
+      if(n.moveTimer>3000+Math.random()*3000){n.moveTimer=0;n.moveDir=Math.random()*Math.PI*2;}
+      n.x+=Math.cos(n.moveDir)*0.2*dt/16;n.y+=Math.sin(n.moveDir)*0.2*dt/16;
+    }
+    n.x=Math.max(16,Math.min(n.x,WORLD_W*TILE_SIZE-16));
+    n.y=Math.max(16,Math.min(n.y,WORLD_H*TILE_SIZE-16));
+  }
+}
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+
+function handleKeyPress(key) {
+  if(gameState==='playing'&&!battle.active){
+    if(key==='e') handleInteract();
+    if(key==='i') toggleInventory();
+    if(key==='tab') { event.preventDefault(); toggleDinoScreen(); }
+    if(key==='b') toggleBuildMode();
+    if(key==='r') toggleRiding();
+    if(key==='escape'){
+      if(buildMode){buildMode=false;document.getElementById('buildUI').style.display='none';}
+      else if(document.getElementById('npcDialog').style.display==='block'){document.getElementById('npcDialog').style.display='none';}
+      else togglePause();
+    }
+    if(key>='1'&&key<='5') hotbarSlot=parseInt(key)-1;
+  } else if(gameState==='paused'&&key==='escape') togglePause();
+  else if(key==='escape'&&document.getElementById('inventoryScreen').style.display==='flex'){toggleInventory();}
+  else if(key==='escape'&&document.getElementById('dinoScreen').style.display==='flex'){toggleDinoScreen();}
+}
+
+function handleInteract() {
+  // Check for nearby harvestable obstacles
+  const tx=Math.floor(player.x/TILE_SIZE),ty=Math.floor(player.y/TILE_SIZE);
+  for(let dy=-1;dy<=1;dy++){for(let dx=-1;dx<=1;dx++){
+    const cx=tx+dx,cy=ty+dy;
+    if(cx>=0&&cx<WORLD_W&&cy>=0&&cy<WORLD_H&&worldObstacles[cy][cx]){
+      const type=worldObstacles[cy][cx];
+      let item=null,amt=0;
+      if(type==='tree'||type==='palm'||type==='snow_tree'){item='wood';amt=2+Math.floor(Math.random()*3);}
+      else if(type==='rock'||type==='ice_rock'||type==='lava_rock'){item='stone';amt=2+Math.floor(Math.random()*2);if(Math.random()<0.2){addToInventory('iron',1);addNotification('+1 Iron Ore!','info');}}
+      else if(type==='crystal'||type==='obsidian'){item='crystal';amt=1+Math.floor(Math.random()*2);}
+      else if(type==='bush'||type==='mushroom'){item='herbs';amt=2+Math.floor(Math.random()*2);}
+      else if(type==='cactus'){item='herbs';amt=1;}
+      if(item){
+        addToInventory(item,amt);
+        addNotification('+'+amt+' '+ITEMS[item].name,'info');
+        gainXP(3);
+        worldObstacles[cy][cx]=null;
+        for(let i=0;i<8;i++) spawnParticle(cx*TILE_SIZE+16,cy*TILE_SIZE+16,item==='wood'?'#8B6914':'#888',600,(Math.random()-0.5)*3,(Math.random()-0.5)*3,3);
+        return;
+      }
+    }
+  }}
+
+  // Check for nearby wild dinos (taming)
+  for(const d of wildDinos){
+    const dist=Math.sqrt((d.x-player.x)**2+(d.y-player.y)**2);
+    if(dist<40){
+      const tameChance=(player.level/Math.max(1,d.level))*0.5;
+      const hasTreat=inventory.find(s=>s&&s.id==='tame_treat');
+      const bonus=hasTreat?0.2:0;
+      if(Math.random()<tameChance+bonus){
+        // Tame success!
+        if(hasTreat){hasTreat.count--;if(hasTreat.count<=0){const idx=inventory.indexOf(hasTreat);inventory[idx]=null;}}
+        myDinos.push({...d,nickname:d.name,currentHp:d.maxHp,xp:0,followX:0,followY:0});
+        wildDinos.splice(wildDinos.indexOf(d),1);
+        addNotification('You tamed '+d.name+'!','epic');
+        gainXP(20+d.level*5);
+        for(let i=0;i<15;i++) spawnParticle(d.x,d.y,'#FFD700',800,(Math.random()-0.5)*4,-Math.random()*3,4);
+        updateDinoHUD();
+        return;
+      } else {
+        addNotification('Taming failed! '+d.name+' attacks!','warning');
+        startBattle(d);
+        return;
+      }
+    }
+  }
+
+  // Check for nearby NPCs
+  for(const n of npcs){
+    const dist=Math.sqrt((n.x-player.x)**2+(n.y-player.y)**2);
+    if(dist<50){
+      showNPCDialog(n);
+      return;
+    }
+  }
+
+  // Check for structures (healing, incubator, chest, crafting)
+  for(const s of structures){
+    const sx=s.x*TILE_SIZE+TILE_SIZE/2,sy=s.y*TILE_SIZE+TILE_SIZE/2;
+    const dist=Math.sqrt((sx-player.x)**2+(sy-player.y)**2);
+    if(dist<40){
+      if(BUILD_ITEMS[s.type].name==='Healer'&&player.activeDinoIdx>=0){
+        myDinos[player.activeDinoIdx].currentHp=myDinos[player.activeDinoIdx].maxHp;
+        addNotification('Dino fully healed!','success');updateDinoHUD();
+      } else if(BUILD_ITEMS[s.type].name==='Craft Table'){
+        addNotification('Crafting not yet available in this version','info');
+      }
+      return;
+    }
+  }
+}
+
+// ============================================================
+// BATTLE SYSTEM
+// ============================================================
+
+function startBattle(enemyDino) {
+  if(battle.active) return;
+  if(myDinos.length===0){
+    addNotification('You need a dinosaur to battle! Try taming one.','warning');
+    // Give starter dino
+    const starter=DINO_DEFS[0]; // Raptor
+    myDinos.push({...starter,nickname:'Starter Raptor',level:1,currentHp:starter.hp,maxHp:starter.hp,xp:0,followX:0,followY:0});
+    player.activeDinoIdx=0;
+    addNotification('A friendly Raptor joins you!','epic');
+    updateDinoHUD();
+  }
+  const pDino=myDinos[player.activeDinoIdx>=0?player.activeDinoIdx:0];
+  if(player.activeDinoIdx<0) player.activeDinoIdx=0;
+
+  battle.active=true;
+  battle.playerDino={...pDino};
+  battle.enemyDino={...enemyDino};
+  battle.playerHp=pDino.currentHp;
+  battle.playerMaxHp=pDino.maxHp;
+  battle.enemyHp=enemyDino.currentHp;
+  battle.enemyMaxHp=enemyDino.maxHp;
+  battle.turn=pDino.spd>=enemyDino.spd?'player':'enemy';
+  battle.specialCooldown=0;
+  battle.defending=false;
+  battle.animating=false;
+  battle.damageNums=[];
+  battle.log='A wild '+enemyDino.name+' (Lv'+enemyDino.level+') attacks!';
+  battle.enemyRef=enemyDino;
+
+  document.getElementById('battleScreen').style.display='flex';
+  document.getElementById('battleLog').textContent=battle.log;
+  updateBattleButtons();
+  renderBattle();
+}
+
+function updateBattleButtons() {
+  const btns=document.querySelectorAll('.battle-btn');
+  btns.forEach(b=>b.disabled=battle.turn!=='player'||battle.animating);
+  document.getElementById('specialBtn').textContent=battle.specialCooldown>0?
+    battle.playerDino.special+' ('+battle.specialCooldown+')':battle.playerDino.special;
+  document.getElementById('specialBtn').disabled=battle.specialCooldown>0||battle.turn!=='player'||battle.animating;
+}
+
+function battleAction(action) {
+  if(battle.turn!=='player'||battle.animating) return;
+
+  battle.defending=false;
+  let damage=0;
+
+  if(action==='attack'){
+    damage=calcDamage(battle.playerDino.str,battle.enemyDino.def,battle.playerDino.level);
+    battle.enemyHp=Math.max(0,battle.enemyHp-damage);
+    battle.log=battle.playerDino.nickname+' attacks for '+damage+' damage!';
+    battle.animType='attack';battle.animating=true;battle.animTimer=0;
+    battle.damageNums.push({x:500,y:120,val:damage,color:'#FF4444',life:60});
+  } else if(action==='special'){
+    damage=Math.floor(calcDamage(battle.playerDino.str*1.8,battle.enemyDino.def*0.5,battle.playerDino.level));
+    battle.enemyHp=Math.max(0,battle.enemyHp-damage);
+    battle.log=battle.playerDino.nickname+' uses '+battle.playerDino.special+'! '+damage+' damage!';
+    battle.specialCooldown=3;
+    battle.animType='special';battle.animating=true;battle.animTimer=0;
+    battle.damageNums.push({x:500,y:100,val:damage,color:'#9B59B6',life:60});
+  } else if(action==='defend'){
+    battle.defending=true;
+    battle.log=battle.playerDino.nickname+' takes a defensive stance!';
+    battle.animType='defend';battle.animating=true;battle.animTimer=0;
+  } else if(action==='item'){
+    const potion=inventory.find(s=>s&&s.id==='health_potion');
+    if(potion){
+      potion.count--;if(potion.count<=0){const idx=inventory.indexOf(potion);inventory[idx]=null;}
+      const heal=Math.floor(battle.playerMaxHp*0.4);
+      battle.playerHp=Math.min(battle.playerMaxHp,battle.playerHp+heal);
+      battle.log='Used Health Potion! Healed '+heal+' HP!';
+      battle.damageNums.push({x:200,y:120,val:'+'+heal,color:'#2ECC71',life:60});
+    } else {
+      battle.log='No Health Potions!';
+    }
+    battle.animType='item';battle.animating=true;battle.animTimer=0;
+  } else if(action==='run'){
+    if(Math.random()<0.5+player.level*0.02){
+      battle.active=false;
+      document.getElementById('battleScreen').style.display='none';
+      addNotification('Got away safely!','info');
+      return;
+    } else {
+      battle.log='Couldn\'t escape!';
+      battle.animType='';battle.animating=true;battle.animTimer=0;
+    }
+  }
+
+  document.getElementById('battleLog').textContent=battle.log;
+  updateBattleButtons();
+}
+
+function calcDamage(atk,def,level) {
+  const base=Math.max(1,atk-def*0.5);
+  const variance=0.85+Math.random()*0.3;
+  const lvBonus=1+level*0.05;
+  return Math.floor(base*variance*lvBonus);
+}
+
+function enemyTurn() {
+  if(battle.specialCooldown>0) battle.specialCooldown--;
+
+  let damage;
+  const useSpecial=Math.random()<0.25;
+  if(useSpecial){
+    damage=Math.floor(calcDamage(battle.enemyDino.str*1.5,battle.playerDino.def*0.5,battle.enemyDino.level));
+    battle.log=battle.enemyDino.name+' uses '+battle.enemyDino.special+'! '+damage+' damage!';
+    battle.damageNums.push({x:200,y:100,val:damage,color:'#E74C3C',life:60});
+  } else {
+    damage=calcDamage(battle.enemyDino.str,battle.playerDino.def,battle.enemyDino.level);
+    battle.log=battle.enemyDino.name+' attacks for '+damage+' damage!';
+    battle.damageNums.push({x:200,y:120,val:damage,color:'#FF6B6B',life:60});
+  }
+  if(battle.defending) damage=Math.floor(damage*0.5);
+  battle.playerHp=Math.max(0,battle.playerHp-damage);
+
+  document.getElementById('battleLog').textContent=battle.log;
+  battle.animType='enemyAttack';battle.animating=true;battle.animTimer=0;
+}
+
+function checkBattleEnd() {
+  if(battle.enemyHp<=0){
+    // Victory!
+    const xpGain=15+battle.enemyDino.level*8;
+    gainXP(xpGain);
+    // Dino XP
+    if(player.activeDinoIdx>=0){
+      myDinos[player.activeDinoIdx].xp=(myDinos[player.activeDinoIdx].xp||0)+xpGain;
+      if(myDinos[player.activeDinoIdx].xp>=myDinos[player.activeDinoIdx].level*30){
+        myDinos[player.activeDinoIdx].level++;
+        myDinos[player.activeDinoIdx].maxHp+=8;
+        myDinos[player.activeDinoIdx].currentHp=myDinos[player.activeDinoIdx].maxHp;
+        myDinos[player.activeDinoIdx].str+=2;myDinos[player.activeDinoIdx].def+=1;
+        myDinos[player.activeDinoIdx].xp=0;
+        addNotification(myDinos[player.activeDinoIdx].nickname+' leveled up to Lv'+myDinos[player.activeDinoIdx].level+'!','epic');
+      }
+      myDinos[player.activeDinoIdx].currentHp=Math.min(myDinos[player.activeDinoIdx].maxHp,battle.playerHp);
+    }
+    // Drop items
+    const drops=['herbs','stone','wood'];
+    const drop=drops[Math.floor(Math.random()*drops.length)];
+    const amt=1+Math.floor(Math.random()*3);
+    addToInventory(drop,amt);
+
+    // Chance to tame after battle
+    const tameChance=0.3+player.level*0.02;
+    if(Math.random()<tameChance&&battle.enemyRef){
+      myDinos.push({...battle.enemyDino,nickname:battle.enemyDino.name,currentHp:Math.floor(battle.enemyDino.maxHp*0.5),xp:0,followX:0,followY:0});
+      addNotification('The defeated '+battle.enemyDino.name+' respects your strength and joins you!','epic');
+    }
+
+    // Remove from wild
+    const idx=wildDinos.indexOf(battle.enemyRef);
+    if(idx>=0) wildDinos.splice(idx,1);
+
+    addNotification('Victory! +'+xpGain+' XP, +'+amt+' '+ITEMS[drop].name,'success');
+    battle.active=false;
+    document.getElementById('battleScreen').style.display='none';
+    updateDinoHUD();
+    return true;
+  }
+  if(battle.playerHp<=0){
+    // Defeat
+    addNotification('Your '+battle.playerDino.nickname+' fainted!','warning');
+    if(player.activeDinoIdx>=0) myDinos[player.activeDinoIdx].currentHp=1;
+    battle.active=false;
+    document.getElementById('battleScreen').style.display='none';
+    // Teleport to safe area
+    player.x=40*TILE_SIZE;player.y=40*TILE_SIZE;
+    updateDinoHUD();
+    return true;
+  }
+  return false;
+}
+
+function renderBattle() {
+  battleCtx.fillStyle='#1a1a2e';battleCtx.fillRect(0,0,700,350);
+  // Background
+  const biome=getBiomeAt(player.x,player.y);
+  battleCtx.fillStyle=BIOMES[biome]?BIOMES[biome].tiles[0]:'#5B8C3E';
+  battleCtx.fillRect(0,200,700,150);
+
+  // Ground line
+  battleCtx.strokeStyle='rgba(255,255,255,0.1)';battleCtx.lineWidth=2;
+  battleCtx.beginPath();battleCtx.moveTo(0,250);battleCtx.lineTo(700,250);battleCtx.stroke();
+
+  // Player dino (left)
+  let pOffX=0,pOffY=0;
+  if(battle.animating&&battle.animType==='attack'){pOffX=Math.sin(battle.animTimer/10)*30;}
+  if(battle.animating&&battle.animType==='defend'){pOffY=Math.sin(battle.animTimer/8)*5;}
+  if(battle.animating&&battle.animType==='enemyAttack'){pOffX=Math.sin(battle.animTimer/5)*10;}
+
+  battleCtx.font='64px sans-serif';battleCtx.textAlign='center';
+  battleCtx.fillText(battle.playerDino.emoji,160+pOffX,230+pOffY);
+
+  // Enemy dino (right)
+  let eOffX=0,eOffY=0;
+  if(battle.animating&&(battle.animType==='attack'||battle.animType==='special')){eOffX=Math.sin(battle.animTimer/5)*10;}
+
+  battleCtx.fillText(battle.enemyDino.emoji,540+eOffX,230+eOffY);
+
+  // Special effects
+  if(battle.animating&&battle.animType==='special'){
+    const specColor=battle.playerDino.color||'#9B59B6';
+    for(let i=0;i<5;i++){
+      battleCtx.globalAlpha=0.6-battle.animTimer/100;
+      battleCtx.fillStyle=specColor;
+      battleCtx.beginPath();
+      battleCtx.arc(350+Math.cos(battle.animTimer/5+i)*80,200+Math.sin(battle.animTimer/5+i)*40,8+Math.random()*8,0,Math.PI*2);
+      battleCtx.fill();
+    }
+    battleCtx.globalAlpha=1;
+  }
+
+  // HP Bars
+  // Player
+  battleCtx.fillStyle='#333';battleCtx.fillRect(60,280,200,20);
+  const pHpPct=battle.playerHp/battle.playerMaxHp;
+  battleCtx.fillStyle=pHpPct>0.5?'#2ECC71':pHpPct>0.25?'#F39C12':'#E74C3C';
+  battleCtx.fillRect(60,280,200*pHpPct,20);
+  battleCtx.strokeStyle='#fff';battleCtx.strokeRect(60,280,200,20);
+  battleCtx.fillStyle='#fff';battleCtx.font='12px "Press Start 2P"';battleCtx.textAlign='center';
+  battleCtx.fillText(battle.playerHp+'/'+battle.playerMaxHp,160,295);
+  battleCtx.font='14px "Fredoka One"';battleCtx.fillStyle='#FFD700';
+  battleCtx.fillText(battle.playerDino.nickname+' Lv'+battle.playerDino.level,160,275);
+
+  // Enemy
+  battleCtx.fillStyle='#333';battleCtx.fillRect(440,280,200,20);
+  const eHpPct=battle.enemyHp/battle.enemyMaxHp;
+  battleCtx.fillStyle=eHpPct>0.5?'#2ECC71':eHpPct>0.25?'#F39C12':'#E74C3C';
+  battleCtx.fillRect(440,280,200*eHpPct,20);
+  battleCtx.strokeStyle='#fff';battleCtx.strokeRect(440,280,200,20);
+  battleCtx.fillStyle='#fff';battleCtx.font='12px "Press Start 2P"';battleCtx.textAlign='center';
+  battleCtx.fillText(battle.enemyHp+'/'+battle.enemyMaxHp,540,295);
+  battleCtx.font='14px "Fredoka One"';battleCtx.fillStyle='#FF4444';
+  battleCtx.fillText(battle.enemyDino.name+' Lv'+battle.enemyDino.level,540,275);
+
+  // Rarity badge
+  battleCtx.font='11px "Nunito"';
+  battleCtx.fillStyle=battle.enemyDino.rarity==='Legendary'?'#F39C12':battle.enemyDino.rarity==='Rare'?'#3498DB':battle.enemyDino.rarity==='Uncommon'?'#2ECC71':'#999';
+  battleCtx.fillText(battle.enemyDino.rarity,540,315);
+
+  // Damage numbers
+  for(let i=battle.damageNums.length-1;i>=0;i--){
+    const dn=battle.damageNums[i];
+    battleCtx.font='bold 24px "Fredoka One"';battleCtx.fillStyle=dn.color;
+    battleCtx.globalAlpha=dn.life/60;
+    battleCtx.fillText(dn.val,dn.x,dn.y-((60-dn.life)*1.5));
+    battleCtx.globalAlpha=1;
+    dn.life--;
+    if(dn.life<=0) battle.damageNums.splice(i,1);
+  }
+
+  // VS text
+  battleCtx.font='32px "Fredoka One"';battleCtx.fillStyle='rgba(255,255,255,0.15)';
+  battleCtx.textAlign='center';battleCtx.fillText('VS',350,230);
+}
+
+function updateBattle(dt) {
+  if(!battle.active) return;
+  if(battle.animating){
+    battle.animTimer+=dt/16;
+    if(battle.animTimer>40){
+      battle.animating=false;battle.animTimer=0;
+      if(!checkBattleEnd()){
+        if(battle.turn==='player'){
+          battle.turn='enemy';
+          setTimeout(()=>{if(battle.active){enemyTurn();battle.turn='player';}},800);
+        }
+        updateBattleButtons();
+      }
+    }
+  }
+  renderBattle();
+}
+
+// ============================================================
+// INVENTORY SYSTEM
+// ============================================================
+
+function addToInventory(itemId,count) {
+  // Find existing stack
+  for(const slot of inventory){
+    if(slot&&slot.id===itemId&&slot.count<ITEMS[itemId].stack){
+      const canAdd=Math.min(count,ITEMS[itemId].stack-slot.count);
+      slot.count+=canAdd;count-=canAdd;
+      if(count<=0) return true;
+    }
+  }
+  // Find empty slot
+  for(let i=0;i<inventory.length;i++){
+    if(!inventory[i]&&count>0){
+      const canAdd=Math.min(count,ITEMS[itemId].stack);
+      inventory[i]={id:itemId,count:canAdd};count-=canAdd;
+      if(count<=0) return true;
+    }
+  }
+  if(count>0) addNotification('Inventory full!','warning');
+  return count<=0;
+}
+
+function getItemCount(itemId) {
+  let total=0;
+  for(const s of inventory) if(s&&s.id===itemId) total+=s.count;
+  return total;
+}
+
+function removeFromInventory(itemId,count) {
+  for(let i=inventory.length-1;i>=0;i--){
+    if(inventory[i]&&inventory[i].id===itemId){
+      const remove=Math.min(count,inventory[i].count);
+      inventory[i].count-=remove;count-=remove;
+      if(inventory[i].count<=0) inventory[i]=null;
+      if(count<=0) return true;
+    }
+  }
+  return count<=0;
+}
+
+function toggleInventory() {
+  const el=document.getElementById('inventoryScreen');
+  if(el.style.display==='flex'){el.style.display='none';return;}
+  el.style.display='flex';
+  renderInventoryUI();
+}
+
+function renderInventoryUI() {
+  const grid=document.getElementById('invGrid');
+  grid.innerHTML='';
+  for(let i=0;i<20;i++){
+    const slot=document.createElement('div');
+    slot.className='inv-slot';
+    if(inventory[i]){
+      const item=ITEMS[inventory[i].id];
+      slot.innerHTML=item.icon+'<span class="count">'+inventory[i].count+'</span>';
+      slot.title=item.name+' x'+inventory[i].count;
+    }
+    grid.appendChild(slot);
+  }
+}
+
+// ============================================================
+// DINO MANAGEMENT
+// ============================================================
+
+function toggleDinoScreen() {
+  const el=document.getElementById('dinoScreen');
+  if(el.style.display==='flex'){el.style.display='none';return;}
+  el.style.display='flex';
+  renderDinoList();
+}
+
+function renderDinoList() {
+  const list=document.getElementById('dinoList');
+  list.innerHTML='';
+  if(myDinos.length===0){
+    list.innerHTML='<p style="color:#aaa;text-align:center;padding:20px;">No dinosaurs yet! Find and tame wild dinos or collect eggs.</p>';
+    return;
+  }
+  myDinos.forEach((d,i)=>{
+    const card=document.createElement('div');
+    card.className='dino-card'+(i===player.activeDinoIdx?' active-dino':'');
+    card.innerHTML=`
+      <div class="emoji">${d.emoji}</div>
+      <div class="info">
+        <div class="dname">${d.nickname} <small style="color:#aaa">Lv${d.level}</small></div>
+        <div class="stats">HP:${d.currentHp}/${d.maxHp} STR:${d.str} DEF:${d.def} SPD:${d.spd}</div>
+        <div style="color:#7FDBCA;font-size:12px;margin-top:4px">${d.special}: ${d.specDesc}</div>
+      </div>
+      <span class="rarity rarity-${d.rarity}">${d.rarity}</span>
+    `;
+    card.onclick=()=>{
+      player.activeDinoIdx=i;
+      updateDinoHUD();
+      renderDinoList();
+      addNotification(d.nickname+' is now your active dino!','success');
+    };
+    // Rename on double click
+    card.ondblclick=()=>{
+      const newName=prompt('Rename '+d.nickname+':',d.nickname);
+      if(newName&&newName.trim()){d.nickname=newName.trim();renderDinoList();updateDinoHUD();}
+    };
+    list.appendChild(card);
+  });
+}
+
+function toggleRiding() {
+  if(player.activeDinoIdx<0||!myDinos[player.activeDinoIdx]){
+    addNotification('No active dino to ride!','warning');return;
+  }
+  player.riding=!player.riding;
+  addNotification(player.riding?'Riding '+myDinos[player.activeDinoIdx].nickname+'!':'Dismounted.','info');
+}
+
+function updateDinoHUD() {
+  const hudEl=document.getElementById('dinoHud');
+  if(player.activeDinoIdx>=0&&myDinos[player.activeDinoIdx]){
+    hudEl.style.display='flex';
+    const d=myDinos[player.activeDinoIdx];
+    document.getElementById('dinoPortrait').textContent=d.emoji;
+    document.getElementById('hudDinoName').textContent=d.nickname+' Lv'+d.level;
+    document.getElementById('dinoHpBar').style.width=(d.currentHp/d.maxHp*100)+'%';
+  } else {
+    hudEl.style.display='none';
+  }
+}
+
+// ============================================================
+// BUILDING SYSTEM
+// ============================================================
+
+function toggleBuildMode() {
+  buildMode=!buildMode;
+  const el=document.getElementById('buildUI');
+  if(buildMode){
+    el.style.display='block';
+    setupBuildUI();
+    addNotification('Build Mode ON - Click to place, Right-click to remove, ESC to exit','info');
+  } else {
+    el.style.display='none';
+  }
+}
+
+function setupBuildUI() {
+  const opts=document.getElementById('buildOptions');
+  opts.innerHTML='';
+  BUILD_ITEMS.forEach((b,i)=>{
+    const el=document.createElement('div');
+    el.className='build-opt'+(i===buildSelected?' selected':'');
+    el.innerHTML=b.icon+'<span>'+b.name+'</span>';
+    el.onclick=()=>{
+      buildSelected=i;
+      document.querySelectorAll('.build-opt').forEach(e=>e.classList.remove('selected'));
+      el.classList.add('selected');
+    };
+    opts.appendChild(el);
+  });
+}
+
+function handleClick(e) {
+  if(buildMode&&gameState==='playing'){
+    const wx=e.clientX+camera.x;
+    const wy=e.clientY+camera.y;
+    const tx=Math.floor(wx/TILE_SIZE);
+    const ty=Math.floor(wy/TILE_SIZE);
+    if(tx>=0&&tx<WORLD_W&&ty>=0&&ty<WORLD_H){
+      // Check if already occupied
+      if(worldObstacles[ty][tx]) { addNotification('Space occupied!','warning'); return; }
+      if(structures.find(s=>s.x===tx&&s.y===ty)) { addNotification('Already built here!','warning'); return; }
+
+      const bi=BUILD_ITEMS[buildSelected];
+      // Check resources
+      let canBuild=true;
+      for(const [res,amt] of Object.entries(bi.cost)){
+        if(getItemCount(res)<amt){canBuild=false;addNotification('Need '+amt+' '+ITEMS[res].name+'!','warning');break;}
+      }
+      if(canBuild){
+        for(const [res,amt] of Object.entries(bi.cost)) removeFromInventory(res,amt);
+        structures.push({x:tx,y:ty,type:buildSelected});
+        addNotification('Built '+bi.name+'!','success');
+        gainXP(5);
+      }
+    }
+  }
+}
+
+function handleRightClick(e) {
+  if(buildMode&&gameState==='playing'){
+    const wx=e.clientX+camera.x;
+    const wy=e.clientY+camera.y;
+    const tx=Math.floor(wx/TILE_SIZE);
+    const ty=Math.floor(wy/TILE_SIZE);
+    const idx=structures.findIndex(s=>s.x===tx&&s.y===ty);
+    if(idx>=0){
+      const bi=BUILD_ITEMS[structures[idx].type];
+      // Refund half resources
+      for(const [res,amt] of Object.entries(bi.cost)) addToInventory(res,Math.floor(amt/2));
+      structures.splice(idx,1);
+      addNotification('Removed structure','info');
+    }
+  }
+}
+
+function handleMouseMove(e) {
+  if(buildMode){
+    buildCursorX=e.clientX;
+    buildCursorY=e.clientY;
+  }
+}
+
+function renderBuildCursor() {
+  if(!buildMode) return;
+  const wx=buildCursorX+camera.x;
+  const wy=buildCursorY+camera.y;
+  const tx=Math.floor(wx/TILE_SIZE);
+  const ty=Math.floor(wy/TILE_SIZE);
+  const sx=tx*TILE_SIZE-camera.x;
+  const sy=ty*TILE_SIZE-camera.y;
+  ctx.strokeStyle='rgba(255,215,0,0.8)';
+  ctx.lineWidth=2;
+  ctx.strokeRect(sx,sy,TILE_SIZE,TILE_SIZE);
+  ctx.fillStyle='rgba(255,215,0,0.15)';
+  ctx.fillRect(sx,sy,TILE_SIZE,TILE_SIZE);
+  ctx.font='16px sans-serif';ctx.textAlign='center';
+  ctx.fillText(BUILD_ITEMS[buildSelected].icon,sx+TILE_SIZE/2,sy+TILE_SIZE/2+5);
+}
+
+// ============================================================
+// NPC DIALOG
+// ============================================================
+
+function showNPCDialog(npc) {
+  interactTarget=npc;
+  const el=document.getElementById('npcDialog');
+  el.style.display='block';
+  document.getElementById('npcName').textContent=npc.emoji+' '+npc.name;
+  document.getElementById('npcText').textContent=npc.dialog;
+
+  const btns=document.getElementById('npcBtns');
+  btns.innerHTML='';
+
+  const battleBtn=document.createElement('button');
+  battleBtn.className='npc-btn';battleBtn.style.background='#E74C3C';battleBtn.style.color='#fff';
+  battleBtn.textContent='Battle';
+  battleBtn.onclick=()=>{
+    el.style.display='none';
+    // Create NPC dino for battle
+    const npcDinoDef=DINO_DEFS[Math.floor(Math.random()*DINO_DEFS.length)];
+    const npcDino={...npcDinoDef,x:npc.x,y:npc.y,currentHp:npcDinoDef.hp,maxHp:npcDinoDef.hp,
+      level:Math.max(1,player.level+Math.floor(Math.random()*5)-2),aggressive:true,id:Date.now()};
+    startBattle(npcDino);
+  };
+  btns.appendChild(battleBtn);
+
+  const tradeBtn=document.createElement('button');
+  tradeBtn.className='npc-btn';tradeBtn.style.background='#F39C12';tradeBtn.style.color='#fff';
+  tradeBtn.textContent='Trade';
+  tradeBtn.onclick=()=>{
+    el.style.display='none';
+    // Simple trade: give 5 of a resource for another
+    const give=npc.personality==='scientist'?'herbs':'stone';
+    const get=npc.personality==='scientist'?'crystal':npc.personality==='mystic'?'herbs':'iron';
+    if(getItemCount(give)>=5){
+      removeFromInventory(give,5);addToInventory(get,3);
+      addNotification('Traded 5 '+ITEMS[give].name+' for 3 '+ITEMS[get].name+'!','success');
+    } else {
+      addNotification('Need 5 '+ITEMS[give].name+' to trade!','warning');
+    }
+  };
+  btns.appendChild(tradeBtn);
+
+  const followBtn=document.createElement('button');
+  followBtn.className='npc-btn';followBtn.style.background='#2ECC71';followBtn.style.color='#fff';
+  followBtn.textContent=npc.following?'Stay Here':'Follow Me';
+  followBtn.onclick=()=>{
+    npc.following=!npc.following;
+    el.style.display='none';
+    addNotification(npc.name+(npc.following?' is following you!':' will stay here.'),'info');
+  };
+  btns.appendChild(followBtn);
+
+  const closeBtn=document.createElement('button');
+  closeBtn.className='npc-btn';closeBtn.style.background='#666';closeBtn.style.color='#fff';
+  closeBtn.textContent='Leave';
+  closeBtn.onclick=()=>{el.style.display='none';};
+  btns.appendChild(closeBtn);
+}
+
+// ============================================================
+// HUD + NOTIFICATIONS
+// ============================================================
+
+function setupHotbar() {
+  const hb=document.getElementById('hotbar');
+  hb.innerHTML='';
+  for(let i=0;i<5;i++){
+    const slot=document.createElement('div');
+    slot.className='hotbar-slot'+(i===hotbarSlot?' active':'');
+    slot.innerHTML='<span class="key">'+(i+1)+'</span>';
+    if(inventory[i]){
+      const item=ITEMS[inventory[i].id];
+      slot.innerHTML+='<span style="font-size:22px">'+item.icon+'</span>';
+      if(inventory[i].count>1) slot.innerHTML+='<span class="count">'+inventory[i].count+'</span>';
+    }
+    slot.onclick=()=>{hotbarSlot=i;setupHotbar();};
+    hb.appendChild(slot);
+  }
+}
+
+function updateHUD() {
+  document.getElementById('hudName').textContent=player.name;
+  document.getElementById('hudLevel').textContent='Lv. '+player.level;
+  document.getElementById('xpBar').style.width=(player.xp/player.xpNeeded*100)+'%';
+  setupHotbar();
+  updateDinoHUD();
+
+  // Player portrait
+  const pc=document.getElementById('playerPortrait');
+  const pctx=pc.getContext('2d');
+  pctx.clearRect(0,0,48,48);
+  drawAvatar(pctx,24,30,2,player,0,0);
+}
+
+function gainXP(amount) {
+  player.xp+=amount;
+  while(player.xp>=player.xpNeeded){
+    player.xp-=player.xpNeeded;
+    player.level++;
+    player.xpNeeded=Math.floor(50*Math.pow(1.15,player.level-1));
+    player.maxHp+=5;player.hp=player.maxHp;
+    player.maxStamina+=2;player.stamina=player.maxStamina;
+    addNotification('LEVEL UP! You are now level '+player.level+'!','epic');
+    // Level rewards
+    if(LEVEL_REWARDS[player.level]) addNotification(LEVEL_REWARDS[player.level],'epic');
+    // Level up particles
+    for(let i=0;i<25;i++) spawnParticle(player.x+Math.random()*60-30,player.y+Math.random()*60-30,'#FFD700',1200,(Math.random()-0.5)*4,-Math.random()*4,5);
+  }
+  updateHUD();
+}
+
+function addNotification(text,type) {
+  const el=document.getElementById('notifications');
+  const n=document.createElement('div');
+  n.className='notification '+type;
+  n.textContent=text;
+  el.appendChild(n);
+  notifications.push({el:n,timer:3000});
+  setTimeout(()=>{if(n.parentNode) n.parentNode.removeChild(n);},3500);
+}
+
+function updateNotifications(dt) {
+  for(let i=notifications.length-1;i>=0;i--){
+    notifications[i].timer-=dt;
+    if(notifications[i].timer<=0){
+      if(notifications[i].el.parentNode) notifications[i].el.parentNode.removeChild(notifications[i].el);
+      notifications.splice(i,1);
+    }
+  }
+}
+
+function togglePause() {
+  if(gameState==='playing'){
+    gameState='paused';
+    document.getElementById('pauseScreen').style.display='flex';
+  } else if(gameState==='paused'){
+    gameState='playing';
+    document.getElementById('pauseScreen').style.display='none';
+    lastTime=performance.now();
+  }
+}
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+
+function saveGame() {
+  try {
+    const data={
+      player:{x:player.x,y:player.y,level:player.level,xp:player.xp,xpNeeded:player.xpNeeded,
+        name:player.name,hp:player.hp,maxHp:player.maxHp,stamina:player.stamina,maxStamina:player.maxStamina,
+        hair:player.hair,skin:player.skin,outfit:player.outfit,pants:player.pants,
+        activeDinoIdx:player.activeDinoIdx,riding:player.riding},
+      inventory:inventory,
+      myDinos:myDinos.map(d=>({name:d.name,emoji:d.emoji,hp:d.hp,str:d.str,def:d.def,spd:d.spd,
+        special:d.special,specDesc:d.specDesc,rarity:d.rarity,biome:d.biome,color:d.color,
+        nickname:d.nickname,level:d.level,currentHp:d.currentHp,maxHp:d.maxHp,xp:d.xp||0})),
+      structures:structures,
+      world:world,worldObstacles:worldObstacles,worldBiomes:worldBiomes,
+      dayTime:dayTime,weatherType:weatherType,
+      explored:Array.from(exploredTiles).slice(0,5000) // limit save size
+    };
+    localStorage.setItem('avatarSave',JSON.stringify(data));
+  } catch(e) { console.log('Save error:',e); }
+}
+
+function loadGame() {
+  try {
+    const raw=localStorage.getItem('avatarSave');
+    if(!raw) return false;
+    const data=JSON.parse(raw);
+
+    player.x=data.player.x;player.y=data.player.y;
+    player.level=data.player.level;player.xp=data.player.xp;player.xpNeeded=data.player.xpNeeded;
+    player.name=data.player.name;player.hp=data.player.hp||100;player.maxHp=data.player.maxHp||100;
+    player.stamina=data.player.stamina||100;player.maxStamina=data.player.maxStamina||100;
+    player.hair=data.player.hair;player.skin=data.player.skin;
+    player.outfit=data.player.outfit;player.pants=data.player.pants;
+    player.activeDinoIdx=data.player.activeDinoIdx||-1;
+    player.riding=data.player.riding||false;
+
+    inventory=data.inventory||[];
+    while(inventory.length<20) inventory.push(null);
+    myDinos=data.myDinos||[];
+    structures=data.structures||[];
+    world=data.world;worldObstacles=data.worldObstacles;worldBiomes=data.worldBiomes;
+    dayTime=data.dayTime||0;weatherType=data.weatherType||'Clear';
+    exploredTiles=new Set(data.explored||[]);
+
+    spawnWildDinos();
+    spawnNPCs();
+    spawnEggs();
+
+    addNotification('Game loaded!','success');
+    return true;
+  } catch(e) {
+    console.log('Load error:',e);
+    return false;
+  }
+}
+
+// ============================================================
+// MAIN GAME LOOP
+// ============================================================
+
+function gameLoop(timestamp) {
+  requestAnimationFrame(gameLoop);
+  if(gameState!=='playing'&&gameState!=='paused') return;
+  if(gameState==='paused') return;
+
+  const dt=Math.min(timestamp-lastTime,50);
+  lastTime=timestamp;
+
+  // Updates
+  updatePlayer(dt);
+  updateWildDinos(dt);
+  updateNPCs(dt);
+  updateCamera();
+  updateWeather(dt);
+  updateParticles(dt);
+  updateNotifications(dt);
+
+  if(battle.active){
+    updateBattle(dt);
+    return;
+  }
+
+  // Auto-save
+  saveTimer+=dt;
+  if(saveTimer>AUTOSAVE_INTERVAL){saveTimer=0;saveGame();}
+
+  // Render
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  renderWorld();
+  renderWildDinos();
+  renderNPCs();
+  renderPlayer();
+  renderParticles();
+  renderDayNight(dt);
+  renderWeather();
+  renderBuildCursor();
+
+  // Minimap update every ~500ms
+  if(Math.floor(timestamp/500)!==Math.floor((timestamp-dt)/500)) renderMinimap();
+
+  // Interaction hint
+  renderInteractionHint();
+}
+
+function renderInteractionHint() {
+  // Check for nearby interactables
+  let hint='';
+  for(const d of wildDinos){
+    if(Math.sqrt((d.x-player.x)**2+(d.y-player.y)**2)<45){
+      hint='[E] Tame '+d.name;break;
+    }
+  }
+  if(!hint){
+    for(const n of npcs){
+      if(Math.sqrt((n.x-player.x)**2+(n.y-player.y)**2)<55){
+        hint='[E] Talk to '+n.name;break;
+      }
+    }
+  }
+  if(!hint){
+    const tx=Math.floor(player.x/TILE_SIZE),ty=Math.floor(player.y/TILE_SIZE);
+    for(let dy=-1;dy<=1;dy++){for(let dx=-1;dx<=1;dx++){
+      const cx=tx+dx,cy=ty+dy;
+      if(cx>=0&&cx<WORLD_W&&cy>=0&&cy<WORLD_H&&worldObstacles[cy][cx]){
+        const type=worldObstacles[cy][cx];
+        if(['tree','rock','bush','palm','crystal','snow_tree','ice_rock','cactus','mushroom','obsidian','lava_rock'].includes(type)){
+          hint='[E] Harvest';break;
+        }
+      }
+    }if(hint)break;}
+  }
+  if(!hint){
+    for(const s of structures){
+      const sx=s.x*TILE_SIZE+TILE_SIZE/2,sy=s.y*TILE_SIZE+TILE_SIZE/2;
+      if(Math.sqrt((sx-player.x)**2+(sy-player.y)**2)<45){
+        hint='[E] Use '+BUILD_ITEMS[s.type].name;break;
+      }
+    }
+  }
+  if(hint){
+    ctx.font='14px "Nunito"';ctx.fillStyle='rgba(255,255,255,0.9)';ctx.textAlign='center';
+    ctx.fillText(hint,player.x-camera.x,player.y-camera.y+30);
+  }
+}
+
+// ============================================================
+// START
+// ============================================================
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

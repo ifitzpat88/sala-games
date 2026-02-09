@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bob's Arena</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="1000" height="700"></canvas>
+
+    <!-- ===== TITLE SCREEN ===== -->
+    <div id="title-screen" class="overlay active">
+      <div class="title-content">
+        <h1 class="game-title">BOB'S<br><span class="title-highlight">ARENA</span></h1>
+        <p class="subtitle">Defend Bobspace. Survive the Not-Bobs.</p>
+        <div class="menu-buttons">
+          <button class="btn-primary" id="btn-start">START GAME</button>
+          <button class="btn-secondary" id="btn-settings">SETTINGS</button>
+          <button class="btn-secondary btn-danger" id="btn-reset-progress">RESET PROGRESS</button>
+        </div>
+        <div class="controls-hint">
+          <p>WASD: Move &nbsp;|&nbsp; Mouse: Aim &nbsp;|&nbsp; Click: Shoot</p>
+          <p>Shift: Boost &nbsp;|&nbsp; E: Ability &nbsp;|&nbsp; Esc: Pause</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS SCREEN ===== -->
+    <div id="settings-screen" class="overlay">
+      <div class="settings-content">
+        <h2>SETTINGS</h2>
+
+        <div class="settings-group">
+          <h3>Audio</h3>
+          <div class="setting-row">
+            <label for="sfx-volume">SFX Volume</label>
+            <input type="range" id="sfx-volume" min="0" max="100" value="50">
+          </div>
+          <div class="setting-row">
+            <label for="music-volume">Music Volume</label>
+            <input type="range" id="music-volume" min="0" max="100" value="30">
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Accessibility</h3>
+          <div class="setting-row">
+            <label for="shake-toggle">Screen Shake</label>
+            <input type="checkbox" id="shake-toggle" checked>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Controls</h3>
+          <div class="controls-ref">
+            <div class="ctrl-row"><span class="ctrl-key">WASD / Arrows</span> <span>Move</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Mouse</span> <span>Aim</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Left Click / Space</span> <span>Shoot</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Shift</span> <span>Boost</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">E</span> <span>Ability</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Esc</span> <span>Pause</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">R</span> <span>Restart (on result screen)</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">F3</span> <span>Debug overlay</span></div>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-settings-back">BACK</button>
+      </div>
+    </div>
+
+    <!-- ===== CHARACTER SELECT ===== -->
+    <div id="char-select" class="overlay">
+      <div class="select-content">
+        <h2>CHOOSE YOUR BOB</h2>
+        <div id="bob-cards" class="bob-cards"></div>
+      </div>
+    </div>
+
+    <!-- ===== MESSAGE / DIALOGUE ===== -->
+    <div id="message-screen" class="overlay">
+      <div class="message-content">
+        <div id="message-lines"></div>
+        <button class="btn-primary" id="btn-continue">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- ===== UPGRADE PICK ===== -->
+    <div id="upgrade-screen" class="overlay">
+      <div class="upgrade-content">
+        <h2 id="wave-complete-title">WAVE COMPLETE</h2>
+        <p id="upgrade-flavor" class="flavor-text"></p>
+        <div id="current-upgrades" class="current-upgrades" style="display:none;"></div>
+        <div id="upgrade-cards" class="upgrade-cards"></div>
+      </div>
+    </div>
+
+    <!-- ===== PAUSE ===== -->
+    <div id="pause-screen" class="overlay">
+      <div class="pause-content">
+        <h2 class="pause-title">PAUSED</h2>
+        <button class="btn-primary" id="btn-resume">RESUME</button>
+        <button class="btn-secondary" id="btn-pause-menu">QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- ===== GAME OVER ===== -->
+    <div id="gameover-screen" class="overlay">
+      <div class="gameover-content">
+        <h2 class="gameover-title">ARENA BREACH</h2>
+        <p id="gameover-reason" class="gameover-reason"></p>
+        <div id="gameover-stats" class="gameover-stats"></div>
+        <button class="btn-primary" id="btn-retry">TRY AGAIN</button>
+        <button class="btn-secondary" id="btn-menu">MAIN MENU</button>
+        <p class="restart-hint">Press R to restart</p>
+      </div>
+    </div>
+
+    <!-- ===== VICTORY ===== -->
+    <div id="victory-screen" class="overlay">
+      <div class="victory-content">
+        <h2 class="victory-title">ARENA SECURED!</h2>
+        <p class="victory-sub">The Not-Bobs have been repelled... for now.</p>
+        <div id="victory-stats" class="victory-stats"></div>
+        <div id="unlock-section" class="unlock-section"></div>
+        <button class="btn-primary" id="btn-play-again">PLAY AGAIN</button>
+        <button class="btn-secondary" id="btn-victory-menu">MAIN MENU</button>
+        <p class="restart-hint">Press R to restart</p>
+      </div>
+    </div>
+
+    <!-- ===== HUD ===== -->
+    <div id="hud" class="hud">
+      <div class="hud-left">
+        <div class="hud-item">
+          <span class="hud-label">HULL</span>
+          <div class="hp-bar-container">
+            <div id="hp-bar" class="hp-bar"></div>
+          </div>
+          <span id="hp-text" class="hud-value"></span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">CORE</span>
+          <div class="hp-bar-container core-bar-container">
+            <div id="core-bar" class="core-bar"></div>
+          </div>
+          <span id="core-text" class="hud-value"></span>
+        </div>
+      </div>
+      <div class="hud-center">
+        <span id="wave-label" class="wave-label">WAVE 1</span>
+        <span id="enemies-left" class="enemies-left"></span>
+      </div>
+      <div class="hud-right">
+        <div class="hud-item">
+          <span class="hud-label">SCRAP</span>
+          <span id="scrap-count" class="hud-value scrap-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label" id="ability-label">ABILITY</span>
+          <div class="ability-bar-container">
+            <div id="ability-bar" class="ability-bar"></div>
+          </div>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">BOOST</span>
+          <div class="ability-bar-container">
+            <div id="boost-bar" class="boost-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DEBUG OVERLAY ===== -->
+    <pre id="debug-overlay" class="debug-overlay"></pre>
+  </div>
+
+  <!-- ===== SCRIPTS (ordered dependencies) ===== -->
+  <script src="src/config.js"></script>
+  <script src="src/engine/rng.js"></script>
+  <script src="src/engine/input.js"></script>
+  <script src="src/engine/stateMachine.js"></script>
+  <script src="src/engine/gameLoop.js"></script>
+  <script src="src/systems/particles.js"></script>
+  <script src="src/systems/collision.js"></script>
+  <script src="src/entities/projectile.js"></script>
+  <script src="src/entities/pickup.js"></script>
+  <script src="src/entities/core.js"></script>
+  <script src="src/entities/enemy.js"></script>
+  <script src="src/entities/player.js"></script>
+  <script src="src/systems/spawner.js"></script>
+  <script src="src/ui/hud.js"></script>
+  <script src="src/ui/menu.js"></script>
+  <script src="src/ui/bobSelect.js"></script>
+  <script src="src/ui/upgradeCards.js"></script>
+  <script src="src/ui/resultScreen.js"></script>
+  <script src="src/ui/messageBox.js"></script>
+  <script src="src/audio/audio.js"></script>
+  <script src="src/debug/overlay.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

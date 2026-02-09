@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sala Arcade - Family Game Portal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0f0f1a;
+  --card:#1a1a2e;
+  --card-hover:#222240;
+  --border:#2a2a4a;
+  --accent:#7c3aed;
+  --accent2:#a855f7;
+  --cyan:#06b6d4;
+  --green:#10b981;
+  --pink:#ec4899;
+  --orange:#f59e0b;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --text:#e2e8f0;
+  --text-dim:#64748b;
+  --text-bright:#f8fafc;
+  --glow-purple:rgba(124,58,237,.3);
+  --glow-cyan:rgba(6,182,212,.3);
+}
+html,body{
+  min-height:100vh;
+  font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* ========== STARS BACKGROUND ========== */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 80% 80%, rgba(255,255,255,.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 90% 15%, rgba(255,255,255,.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 45% 75%, rgba(255,255,255,.2) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 25% 45%, rgba(255,255,255,.6) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 65% 25%, rgba(255,255,255,.4) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 85% 55%, rgba(255,255,255,.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 55% 90%, rgba(255,255,255,.3) 50%, transparent 50%);
+  z-index:0;pointer-events:none;
+}
+
+/* ========== LAYOUT ========== */
+.container{
+  max-width:900px;margin:0 auto;padding:20px 16px 40px;
+  position:relative;z-index:1;
+}
+
+/* ========== HEADER ========== */
+.header{text-align:center;padding:30px 0 20px;}
+.header-icon{
+  font-size:3.5rem;margin-bottom:8px;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.header h1{
+  font-size:clamp(1.8rem,5vw,2.8rem);
+  font-weight:900;letter-spacing:1px;
+  background:linear-gradient(135deg,var(--accent2),var(--cyan),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.header .tagline{
+  color:var(--text-dim);font-size:.95rem;margin-top:6px;
+  letter-spacing:.5px;
+}
+
+/* ========== PLAYER FILTER ========== */
+.filter-bar{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+  margin:20px 0 24px;
+}
+.filter-btn{
+  padding:8px 18px;font-size:.8rem;font-weight:600;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text-dim);border-radius:20px;cursor:pointer;
+  transition:all .2s;font-family:inherit;
+}
+.filter-btn:hover{border-color:var(--accent);color:var(--text);}
+.filter-btn.active{
+  background:var(--accent);border-color:var(--accent);
+  color:white;box-shadow:0 0 15px var(--glow-purple);
+}
+
+/* ========== GAME GRID ========== */
+.game-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;
+}
+
+/* ========== GAME CARD ========== */
+.game-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  transition:all .25s;cursor:pointer;
+  position:relative;
+  text-decoration:none;color:inherit;
+  display:flex;flex-direction:column;
+}
+.game-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--accent);
+  box-shadow:0 8px 30px rgba(0,0,0,.4),0 0 20px var(--glow-purple);
+}
+.game-card:active{transform:translateY(-2px);}
+
+.card-banner{
+  height:100px;display:flex;align-items:center;justify-content:center;
+  font-size:3rem;position:relative;overflow:hidden;
+}
+.card-banner::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:30px;
+  background:linear-gradient(transparent,var(--card));
+}
+
+.card-body{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;}
+.card-title{font-size:1.05rem;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
+.card-desc{font-size:.78rem;color:var(--text-dim);line-height:1.4;flex:1;}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+}
+.card-player{
+  display:flex;align-items:center;gap:6px;
+  font-size:.75rem;font-weight:600;
+}
+.player-dot{
+  width:8px;height:8px;border-radius:50%;
+  display:inline-block;
+}
+.card-tag{
+  font-size:.65rem;font-weight:600;
+  padding:3px 10px;border-radius:10px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* Player colors */
+.color-arliss{background:var(--green);}
+.color-austyn{background:var(--cyan);}
+.color-cash{background:var(--orange);}
+.color-heather{background:var(--pink);}
+.color-el-padre{background:var(--accent);}
+.color-bob{background:var(--red);}
+
+.tag-survival{background:rgba(239,68,68,.15);color:#f87171;}
+.tag-creative{background:rgba(6,182,212,.15);color:#22d3ee;}
+.tag-action{background:rgba(245,158,11,.15);color:#fbbf24;}
+.tag-simulation{background:rgba(16,185,129,.15);color:#34d399;}
+.tag-puzzle{background:rgba(124,58,237,.15);color:#a78bfa;}
+.tag-adventure{background:rgba(236,72,153,.15);color:#f472b6;}
+.tag-flight{background:rgba(59,130,246,.15);color:#60a5fa;}
+
+/* ========== FOOTER ========== */
+.footer{
+  text-align:center;margin-top:40px;padding:20px;
+  color:var(--text-dim);font-size:.75rem;
+  border-top:1px solid var(--border);
+}
+.footer a{color:var(--accent2);text-decoration:none;}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:500px){
+  .game-grid{grid-template-columns:1fr;}
+  .card-banner{height:80px;font-size:2.5rem;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-icon">🎮</div>
+    <h1>SALA ARCADE</h1>
+    <div class="tagline">Family Game Portal</div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="filterGames('all',this)">All Games</button>
+    <button class="filter-btn" data-filter="arliss" onclick="filterGames('arliss',this)">🟢 Arliss</button>
+    <button class="filter-btn" data-filter="austyn" onclick="filterGames('austyn',this)">🔵 Austyn</button>
+    <button class="filter-btn" data-filter="cash" onclick="filterGames('cash',this)">🟠 Cash</button>
+    <button class="filter-btn" data-filter="heather" onclick="filterGames('heather',this)">🩷 Heather</button>
+    <button class="filter-btn" data-filter="el-padre" onclick="filterGames('el-padre',this)">🟣 El Padre</button>
+  </div>
+
+  <div class="game-grid" id="game-grid"></div>
+
+  <div class="footer">
+    Sala Arcade &mdash; Built with love by the family<br>
+    Powered by HTML5, CSS, JavaScript &amp; imagination
+  </div>
+</div>
+
+<script>
+const GAMES = [
+  {
+    title: 'Camp Cretaceous: Protocol Survival',
+    desc: 'Survive on Isla Nublar! Choose your Camp Fam operative, scavenge Main Street, battle dinosaurs with SVG visuals, and activate the emergency beacon before it\'s too late.',
+    emoji: '🦖',
+    banner: 'linear-gradient(135deg, #0a1f10, #1a3a2a)',
+    url: 'arliss/index.html',
+    player: 'Arliss',
+    playerColor: 'color-arliss',
+    tag: 'Survival',
+    tagClass: 'tag-survival',
+  },
+  {
+    title: 'Spin-a-Life: World Edition',
+    desc: 'Create a passport, spin the wheel to find your town, build a house, train at the gym with mini-games, get a job, buy pets and become an astronaut!',
+    emoji: '🌍',
+    banner: 'linear-gradient(135deg, #1a3a5c, #2a5a8c)',
+    url: 'austyn/spin-a-life.html',
+    player: 'Austyn',
+    playerColor: 'color-austyn',
+    tag: 'Simulation',
+    tagClass: 'tag-simulation',
+  },
+  {
+    title: 'Austyn\'s Cursive Studio',
+    desc: 'Learn and practice cursive handwriting with guided letter tracing, different fonts, and a creative free-draw canvas.',
+    emoji: '✍️',
+    banner: 'linear-gradient(135deg, #2a1a3a, #4a2a6a)',
+    url: 'austyn/index.html',
+    player: 'Austyn',
+    playerColor: 'color-austyn',
+    tag: 'Creative',
+    tagClass: 'tag-creative',
+  },
+  {
+    title: 'AVATAR: Dinosaur Adventure',
+    desc: 'Explore a prehistoric world as Austyn\'s custom avatar. Discover dinosaurs, collect items, and survive in this adventure game.',
+    emoji: '🦕',
+    banner: 'linear-gradient(135deg, #0a2a1a, #1a4a3a)',
+    url: 'austyn-avatar/index.html',
+    player: 'Austyn',
+    playerColor: 'color-austyn',
+    tag: 'Adventure',
+    tagClass: 'tag-adventure',
+  },
+  {
+    title: 'Austyn Takes Flight',
+    desc: 'Soar through the skies in this flying game! Dodge obstacles and see how far you can go.',
+    emoji: '✈️',
+    banner: 'linear-gradient(135deg, #1a2a4a, #2a4a7a)',
+    url: 'austyn-avatar/fly.html',
+    player: 'Austyn',
+    playerColor: 'color-austyn',
+    tag: 'Flight',
+    tagClass: 'tag-flight',
+  },
+  {
+    title: 'Cash\'s Dino Arena',
+    desc: 'Command dinosaurs in fast-paced arena combat! Pick your fighter and battle for supremacy.',
+    emoji: '⚔️',
+    banner: 'linear-gradient(135deg, #3a1a0a, #5a2a1a)',
+    url: 'cash/index.html',
+    player: 'Cash',
+    playerColor: 'color-cash',
+    tag: 'Action',
+    tagClass: 'tag-action',
+  },
+  {
+    title: 'Energy Siege: Overload',
+    desc: 'A strategic energy management game. Build defenses, manage power, and survive the siege!',
+    emoji: '⚡',
+    banner: 'linear-gradient(135deg, #2a2a0a, #4a4a1a)',
+    url: 'cash/energy-siege.html',
+    player: 'Cash',
+    playerColor: 'color-cash',
+    tag: 'Action',
+    tagClass: 'tag-action',
+  },
+  {
+    title: 'Bob\'s Arena',
+    desc: 'Enter Bob\'s fighting arena! Battle opponents in this action-packed brawler.',
+    emoji: '🥊',
+    banner: 'linear-gradient(135deg, #3a0a0a, #5a1a1a)',
+    url: 'bobs_arena/index.html',
+    player: 'Cash',
+    playerColor: 'color-cash',
+    tag: 'Action',
+    tagClass: 'tag-action',
+  },
+  {
+    title: 'Country Barrel: Heather\'s Shift',
+    desc: 'Run a country diner! Take orders, cook food, and keep customers happy in this restaurant sim with Food Fu combat.',
+    emoji: '🍽️',
+    banner: 'linear-gradient(135deg, #3a1a2a, #5a2a4a)',
+    url: 'heather/index.html',
+    player: 'Heather',
+    playerColor: 'color-heather',
+    tag: 'Simulation',
+    tagClass: 'tag-simulation',
+  },
+  {
+    title: 'Country Barrel: Heather Takes Flight',
+    desc: 'Heather takes to the skies! A flying adventure game with country charm.',
+    emoji: '🛩️',
+    banner: 'linear-gradient(135deg, #2a1a3a, #4a2a5a)',
+    url: 'heather/fly.html',
+    player: 'Heather',
+    playerColor: 'color-heather',
+    tag: 'Flight',
+    tagClass: 'tag-flight',
+  },
+  {
+    title: 'El Padre\'s Tetris',
+    desc: 'The classic block-stacking puzzle game! Clear lines, rack up points, and see how long Dad can last.',
+    emoji: '🧱',
+    banner: 'linear-gradient(135deg, #1a1a3a, #2a2a5a)',
+    url: 'el-padre/index.html',
+    player: 'El Padre',
+    playerColor: 'color-el-padre',
+    tag: 'Puzzle',
+    tagClass: 'tag-puzzle',
+  },
+];
+
+function renderGames(filter){
+  const grid = document.getElementById('game-grid');
+  const filtered = filter==='all' ? GAMES : GAMES.filter(g=>g.player.toLowerCase().replace(' ','-')===filter || g.playerColor.replace('color-','')===filter);
+  grid.innerHTML = '';
+  filtered.forEach(g=>{
+    const card = document.createElement('a');
+    card.className = 'game-card';
+    card.href = g.url;
+    card.innerHTML = `
+      <div class="card-banner" style="background:${g.banner}">
+        ${g.emoji}
+      </div>
+      <div class="card-body">
+        <div class="card-title">${g.title}</div>
+        <div class="card-desc">${g.desc}</div>
+        <div class="card-footer">
+          <div class="card-player">
+            <span class="player-dot ${g.playerColor}"></span>
+            ${g.player}
+          </div>
+          <div class="card-tag ${g.tagClass}">${g.tag}</div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function filterGames(filter, btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGames(filter);
+}
+
+// Init
+renderGames('all');
+</script>
+</body>
+</html>

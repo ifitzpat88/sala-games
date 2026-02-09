@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Camp Cretaceous: Protocol Survival</title>
+<style>
+/* ============================================================
+   INGEN TABLET OS — VISUAL ENGINE v2.0
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#050a08;
+  --panel:#0a1410;
+  --panel-border:#0f3325;
+  --terminal:#00ff66;
+  --terminal-dim:#00803a;
+  --terminal-glow:rgba(0,255,102,.15);
+  --accent:#00b4d8;
+  --accent-dim:#006d8a;
+  --danger:#ff2244;
+  --danger-dim:#881122;
+  --warn:#f4a261;
+  --success:#00ff66;
+  --text:#b0d8c0;
+  --text-dim:#4a7a5a;
+  --text-bright:#d0ffe0;
+  --gold:#ffd700;
+  --blue:#1a8aff;
+  --scanline:rgba(0,255,102,.03);
+}
+html,body{
+  height:100%;
+  font-family:'Courier New','Lucida Console',monospace;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+}
+
+/* ========== CRT / SCANLINE OVERLAY ========== */
+#crt-overlay{
+  pointer-events:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scanline) 2px,
+    var(--scanline) 4px
+  );
+}
+
+/* ========== LAYOUT ========== */
+#game-container{
+  max-width:850px;margin:0 auto;min-height:100vh;
+  display:flex;flex-direction:column;
+  border-left:1px solid var(--panel-border);
+  border-right:1px solid var(--panel-border);
+  background:var(--panel);
+  position:relative;
+}
+.screen{display:none;flex-direction:column;flex:1;animation:fadeIn .4s ease;}
+.screen.active{display:flex;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ========== PANIC SHAKE ========== */
+@keyframes screenShake{
+  0%{transform:translate(0,0)}
+  10%{transform:translate(-3px,2px)}
+  20%{transform:translate(4px,-2px)}
+  30%{transform:translate(-2px,3px)}
+  40%{transform:translate(3px,-1px)}
+  50%{transform:translate(-1px,2px)}
+  60%{transform:translate(2px,-3px)}
+  70%{transform:translate(-4px,1px)}
+  80%{transform:translate(1px,-2px)}
+  90%{transform:translate(-2px,3px)}
+  100%{transform:translate(0,0)}
+}
+.panic-shake{animation:screenShake .15s infinite;}
+
+@keyframes glitchText{
+  0%{text-shadow:2px 0 var(--danger),0 0 transparent}
+  25%{text-shadow:-2px 0 var(--terminal),0 0 transparent}
+  50%{text-shadow:1px 1px var(--accent),0 0 transparent}
+  75%{text-shadow:-1px -1px var(--danger),0 0 transparent}
+  100%{text-shadow:0 0 transparent}
+}
+.panic-glitch .msg{animation:glitchText .3s infinite alternate;}
+.panic-glitch .hud-val{animation:glitchText .2s infinite alternate;}
+
+/* ========== TITLE SCREEN ========== */
+#title-screen{justify-content:center;align-items:center;text-align:center;gap:16px;padding:24px;}
+.boot-text{
+  font-size:.7rem;color:var(--terminal-dim);
+  text-align:left;max-width:500px;line-height:1.6;
+  padding:16px;border:1px solid var(--panel-border);
+  background:rgba(0,255,102,.02);
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.boot-text .cursor{animation:blink 1s infinite;}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+#title-screen h1{
+  font-size:clamp(1.2rem,4vw,1.8rem);
+  font-weight:700;letter-spacing:3px;
+  color:var(--terminal);
+  text-shadow:0 0 20px rgba(0,255,102,.4),0 0 40px rgba(0,255,102,.2);
+}
+#title-screen .subtitle{color:var(--text-dim);font-size:.75rem;max-width:450px;letter-spacing:1px;}
+.start-btn{
+  padding:14px 48px;font-size:.9rem;font-weight:700;
+  font-family:inherit;
+  border:1px solid var(--terminal);background:transparent;
+  color:var(--terminal);border-radius:2px;cursor:pointer;
+  transition:all .2s;text-transform:uppercase;letter-spacing:3px;
+  text-shadow:0 0 10px rgba(0,255,102,.5);
+}
+.start-btn:hover,.start-btn:active{background:rgba(0,255,102,.1);box-shadow:0 0 20px rgba(0,255,102,.3);}
+
+/* ========== CHARACTER SELECT ========== */
+#char-screen{gap:12px;padding:16px;}
+#char-screen h2{text-align:center;color:var(--terminal);font-size:1rem;letter-spacing:2px;text-transform:uppercase;}
+.char-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.char-card{
+  background:var(--bg);border:1px solid var(--panel-border);
+  border-radius:2px;padding:12px;cursor:pointer;
+  transition:all .2s;text-align:center;
+  position:relative;overflow:hidden;
+}
+.char-card::before{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,255,102,.05),transparent);
+  transition:left .4s;
+}
+.char-card:hover::before{left:100%;}
+.char-card:hover,.char-card:active{border-color:var(--terminal);box-shadow:0 0 10px rgba(0,255,102,.2);}
+.char-card .emoji{font-size:1.8rem;}
+.char-card .name{font-weight:700;color:var(--terminal);margin:4px 0;font-size:.85rem;}
+.char-card .perk{font-size:.65rem;color:var(--text-dim);}
+
+/* ========== TABS ========== */
+.tab-bar{
+  display:flex;border-bottom:1px solid var(--panel-border);
+  background:var(--bg);user-select:none;
+}
+.tab-btn{
+  flex:1;padding:8px 4px;text-align:center;
+  font-size:.65rem;font-family:inherit;
+  color:var(--text-dim);background:transparent;
+  border:none;border-bottom:2px solid transparent;
+  cursor:pointer;text-transform:uppercase;letter-spacing:1px;
+  transition:all .2s;
+}
+.tab-btn:hover{color:var(--terminal);}
+.tab-btn.active{color:var(--terminal);border-bottom-color:var(--terminal);background:rgba(0,255,102,.03);}
+.tab-content{display:none;flex:1;overflow-y:auto;}
+.tab-content.active{display:flex;flex-direction:column;}
+
+/* ========== HUD ========== */
+.hud{
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;
+  padding:8px 10px;background:var(--bg);
+  border-bottom:1px solid var(--panel-border);
+  position:sticky;top:0;z-index:10;
+}
+.hud-item{text-align:center;}
+.hud-label{font-size:.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);}
+.hud-val{font-size:.9rem;font-weight:700;}
+.hud-val.health{color:var(--danger);}
+.hud-val.day{color:var(--warn);}
+.hud-val.danger{color:var(--gold);}
+.hud-val.panic{color:var(--accent);}
+.hud-char{
+  grid-column:1/-1;text-align:center;
+  font-size:.6rem;color:var(--terminal-dim);
+  border-top:1px solid var(--panel-border);
+  padding-top:3px;margin-top:2px;
+}
+.bar-track{height:4px;background:#0a0a0a;border-radius:1px;margin-top:2px;overflow:hidden;border:1px solid #1a1a1a;}
+.bar-fill{height:100%;transition:width .4s ease;}
+.bar-fill.hp{background:linear-gradient(90deg,var(--danger),#ff6b6b);}
+.bar-fill.dng{background:linear-gradient(90deg,var(--warn),var(--danger));}
+.bar-fill.pnc{background:linear-gradient(90deg,var(--accent),#ff00ff);}
+
+/* ========== VIEWPORT / MONITOR ========== */
+.viewport{
+  height:200px;background:#020804;
+  border-bottom:1px solid var(--panel-border);
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.viewport::after{
+  content:'INGEN BIOTRACK v4.2';
+  position:absolute;top:6px;right:8px;
+  font-size:.5rem;color:var(--terminal-dim);
+  letter-spacing:1px;
+}
+.viewport-scene{width:100%;height:100%;position:relative;}
+.viewport svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+
+/* ========== MAP VIEW ========== */
+.map-container{padding:12px;}
+.map-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  max-width:350px;margin:0 auto;
+}
+.map-cell{
+  aspect-ratio:1;border:1px solid var(--panel-border);
+  background:var(--bg);border-radius:2px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:.55rem;color:var(--text-dim);
+  text-align:center;padding:4px;
+  position:relative;transition:all .3s;cursor:default;
+}
+.map-cell.current{border-color:var(--terminal);box-shadow:0 0 8px rgba(0,255,102,.3);}
+.map-cell.completed{border-color:var(--success);opacity:.6;}
+.map-cell.locked{opacity:.3;}
+.map-cell .cell-icon{font-size:1.2rem;margin-bottom:2px;}
+.map-cell .cell-name{line-height:1.1;}
+.player-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--terminal);
+  box-shadow:0 0 6px var(--terminal);
+  animation:pulseDot 1.5s infinite;
+  position:absolute;bottom:3px;right:3px;
+}
+@keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* ========== FIELD GUIDE ========== */
+.guide-container{padding:12px;}
+.guide-header{
+  font-size:.7rem;color:var(--terminal);text-transform:uppercase;
+  letter-spacing:2px;margin-bottom:8px;text-align:center;
+}
+.guide-progress{
+  text-align:center;font-size:.6rem;color:var(--text-dim);margin-bottom:12px;
+}
+.guide-grid{display:flex;flex-direction:column;gap:6px;}
+.guide-entry{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg);border:1px solid var(--panel-border);
+  border-radius:2px;padding:10px;
+  transition:all .3s;
+}
+.guide-entry.unlocked{border-color:var(--terminal-dim);}
+.guide-entry.locked{opacity:.4;filter:grayscale(1);}
+.guide-entry .ge-icon{width:50px;height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.guide-entry .ge-info{flex:1;}
+.guide-entry .ge-name{font-size:.8rem;font-weight:700;color:var(--terminal);}
+.guide-entry .ge-stats{font-size:.6rem;color:var(--text-dim);margin-top:2px;}
+.guide-entry.locked .ge-name{color:var(--text-dim);}
+.guide-entry.locked .ge-icon{filter:brightness(0);}
+
+/* ========== NARRATIVE LOG ========== */
+.narrative{
+  flex:1;overflow-y:auto;padding:8px 12px;
+  display:flex;flex-direction:column;gap:6px;
+  scroll-behavior:smooth;min-height:120px;
+}
+.msg{
+  padding:8px 12px;border-radius:2px;
+  font-size:.75rem;line-height:1.5;
+  animation:msgIn .3s ease;max-width:95%;
+}
+@keyframes msgIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.msg.system{background:rgba(0,255,102,.05);border-left:2px solid var(--terminal);color:var(--text);}
+.msg.danger{background:rgba(255,34,68,.08);border-left:2px solid var(--danger);color:#ff8888;}
+.msg.success{background:rgba(0,255,102,.05);border-left:2px solid var(--success);color:#88ffaa;}
+.msg.loot{background:rgba(255,215,0,.05);border-left:2px solid var(--gold);color:var(--gold);}
+.msg.story{background:rgba(255,255,255,.02);border-left:2px solid var(--text-dim);color:var(--text);}
+.msg.encounter{background:rgba(255,34,68,.06);border-left:2px solid var(--warn);color:var(--warn);}
+
+/* ========== ACTION BUTTONS ========== */
+.actions{
+  padding:10px;display:flex;flex-direction:column;gap:6px;
+  border-top:1px solid var(--panel-border);background:var(--bg);
+}
+.action-row{display:flex;gap:6px;flex-wrap:wrap;}
+.act-btn{
+  flex:1;min-width:100px;
+  padding:11px 6px;font-size:.72rem;font-weight:700;
+  font-family:inherit;
+  border:1px solid var(--panel-border);background:var(--bg);
+  color:var(--text);border-radius:2px;cursor:pointer;
+  transition:all .15s;text-align:center;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.act-btn:hover,.act-btn:active{border-color:var(--terminal);color:var(--terminal);background:rgba(0,255,102,.03);}
+.act-btn.danger-btn{border-color:var(--danger-dim);color:var(--danger);}
+.act-btn.danger-btn:hover{background:rgba(255,34,68,.05);border-color:var(--danger);}
+.act-btn.mission-btn{border-color:var(--accent-dim);color:var(--accent);}
+.act-btn.mission-btn:hover{background:rgba(0,180,216,.05);border-color:var(--accent);}
+.act-btn.warn-btn{border-color:#804a20;color:var(--warn);}
+.act-btn.warn-btn:hover{background:rgba(244,162,97,.05);}
+.act-btn:disabled{opacity:.25;cursor:not-allowed;border-color:var(--panel-border)!important;color:var(--text-dim)!important;}
+
+/* ========== INVENTORY ========== */
+.inv-toggle{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 12px;cursor:pointer;
+  background:var(--bg);border-top:1px solid var(--panel-border);
+  font-size:.65rem;color:var(--text-dim);
+  user-select:none;text-transform:uppercase;letter-spacing:1px;
+}
+.inv-toggle:hover{color:var(--terminal);}
+.inv-panel{
+  display:none;padding:8px 12px;
+  background:var(--bg);border-top:1px solid var(--panel-border);
+  max-height:160px;overflow-y:auto;
+}
+.inv-panel.open{display:block;}
+.inv-grid{display:flex;flex-wrap:wrap;gap:4px;}
+.inv-item{
+  padding:3px 8px;font-size:.7rem;
+  background:var(--panel);border:1px solid var(--panel-border);
+  border-radius:2px;white-space:nowrap;
+}
+.inv-empty{font-size:.7rem;color:var(--text-dim);font-style:italic;}
+
+/* ========== QTE OVERLAY ========== */
+#qte-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(5,10,8,.92);z-index:1000;
+  flex-direction:column;align-items:center;justify-content:center;
+}
+#qte-overlay.active{display:flex;}
+.qte-title{
+  font-size:1rem;color:var(--danger);text-transform:uppercase;
+  letter-spacing:4px;margin-bottom:16px;
+  animation:glitchText .3s infinite alternate;
+}
+.qte-timer{
+  width:80%;max-width:400px;height:6px;
+  background:#1a0a0a;border:1px solid var(--danger-dim);
+  border-radius:2px;margin-bottom:20px;overflow:hidden;
+}
+.qte-timer-fill{height:100%;background:var(--danger);transition:width linear;}
+#qte-btn{
+  padding:20px 40px;font-size:1.1rem;font-weight:700;
+  font-family:inherit;
+  border:2px solid var(--terminal);
+  background:rgba(0,255,102,.05);
+  color:var(--terminal);border-radius:4px;
+  cursor:pointer;text-transform:uppercase;
+  letter-spacing:2px;position:absolute;
+  text-shadow:0 0 10px rgba(0,255,102,.5);
+  box-shadow:0 0 20px rgba(0,255,102,.2);
+  transition:transform .1s;
+}
+#qte-btn:hover{transform:scale(1.05);}
+#qte-btn:active{transform:scale(.95);}
+.qte-result{
+  font-size:1.2rem;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  margin-top:20px;
+}
+
+/* ========== END SCREEN ========== */
+#end-screen{justify-content:center;align-items:center;text-align:center;gap:16px;padding:24px;}
+#end-screen h2{font-size:1.4rem;letter-spacing:3px;}
+#end-screen .stats{color:var(--text-dim);font-size:.75rem;line-height:2;}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--panel-border);border-radius:2px;}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:500px){
+  .char-grid{grid-template-columns:1fr;}
+  .hud{grid-template-columns:1fr 1fr;gap:3px;}
+  .hud-item:nth-child(n+3){border-top:1px solid var(--panel-border);padding-top:3px;}
+  .act-btn{min-width:80px;padding:10px 4px;font-size:.68rem;}
+  .viewport{height:160px;}
+  .map-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+<div id="crt-overlay"></div>
+
+<div id="game-container">
+  <!-- ===== TITLE SCREEN ===== -->
+  <div id="title-screen" class="screen active">
+    <div class="boot-text" id="boot-text"></div>
+    <h1>CAMP CRETACEOUS<br>PROTOCOL SURVIVAL</h1>
+    <p class="subtitle">INGEN BIOTRACK EMERGENCY TERMINAL // ISLA NUBLAR</p>
+    <button class="start-btn" id="start-btn" style="display:none" onclick="Audio.click();showScreen('char-screen')">INITIALIZE PROTOCOL</button>
+  </div>
+
+  <!-- ===== CHARACTER SELECT ===== -->
+  <div id="char-screen" class="screen">
+    <h2>// Select Operative</h2>
+    <div class="char-grid" id="char-grid"></div>
+  </div>
+
+  <!-- ===== MAIN GAME ===== -->
+  <div id="game-screen" class="screen">
+    <div class="hud" id="hud"></div>
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="viewport-tab" onclick="Audio.click();switchTab(this)">Monitor</button>
+      <button class="tab-btn" data-tab="map-tab" onclick="Audio.click();switchTab(this)">Map</button>
+      <button class="tab-btn" data-tab="guide-tab" onclick="Audio.click();switchTab(this)">Field Guide</button>
+    </div>
+    <div class="tab-content active" id="viewport-tab">
+      <div class="viewport" id="viewport">
+        <div class="viewport-scene" id="viewport-scene"></div>
+      </div>
+    </div>
+    <div class="tab-content" id="map-tab">
+      <div class="map-container" id="map-container"></div>
+    </div>
+    <div class="tab-content" id="guide-tab">
+      <div class="guide-container" id="guide-container"></div>
+    </div>
+    <div class="narrative" id="narrative"></div>
+    <div class="inv-toggle" onclick="Audio.click();toggleInventory()">
+      <span>INVENTORY [<span id="inv-count">0</span>]</span>
+      <span id="inv-arrow">+</span>
+    </div>
+    <div class="inv-panel" id="inv-panel">
+      <div class="inv-grid" id="inv-grid"></div>
+    </div>
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <!-- ===== END SCREEN ===== -->
+  <div id="end-screen" class="screen">
+    <div id="end-icon" style="font-size:3rem;"></div>
+    <h2 id="end-title"></h2>
+    <div class="stats" id="end-stats"></div>
+    <button class="start-btn" onclick="location.reload()">RESTART PROTOCOL</button>
+  </div>
+</div>
+
+<!-- ===== QTE OVERLAY ===== -->
+<div id="qte-overlay">
+  <div class="qte-title" id="qte-title">ADRENALINE EVENT</div>
+  <div class="qte-timer"><div class="qte-timer-fill" id="qte-timer-fill"></div></div>
+  <button id="qte-btn">DODGE</button>
+  <div class="qte-result" id="qte-result"></div>
+</div>
+
+<script>
+// ============================================================
+//  CAMP CRETACEOUS: PROTOCOL SURVIVAL — Phase 2
+//  InGen Visual Engine / Audio / QTE / Panic / Field Guide
+// ============================================================
+
+// ==================== WEB AUDIO ENGINE ====================
+const Audio = (function(){
+  let ctx = null;
+  function getCtx(){
+    if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, dur, type, vol){
+    try{
+      const c=getCtx(), o=c.createOscillator(), g=c.createGain();
+      o.type=type||'square';o.frequency.value=freq;
+      g.gain.value=vol||.08;
+      o.connect(g);g.connect(c.destination);
+      o.start();g.gain.exponentialRampToValueAtTime(.001,c.currentTime+dur);
+      o.stop(c.currentTime+dur);
+    }catch(e){}
+  }
+  return{
+    click:()=>tone(1200,.06,'square',.05),
+    beep:()=>tone(880,.1,'square',.06),
+    loot:()=>{tone(660,.08,'sine',.06);setTimeout(()=>tone(880,.12,'sine',.06),100);},
+    hit:()=>tone(120,.2,'sawtooth',.1),
+    alarm:()=>{
+      try{
+        const c=getCtx(),o=c.createOscillator(),g=c.createGain();
+        o.type='sawtooth';o.frequency.value=150;
+        o.frequency.linearRampToValueAtTime(80,c.currentTime+.6);
+        g.gain.value=.1;
+        o.connect(g);g.connect(c.destination);
+        o.start();g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.8);
+        o.stop(c.currentTime+.8);
+      }catch(e){}
+    },
+    siren:()=>{
+      try{
+        const c=getCtx(),o=c.createOscillator(),g=c.createGain();
+        o.type='sine';g.gain.value=.07;
+        o.connect(g);g.connect(c.destination);
+        o.start();
+        const now=c.currentTime;
+        for(let i=0;i<6;i++){
+          o.frequency.setValueAtTime(200,now+i*.2);
+          o.frequency.linearRampToValueAtTime(400,now+i*.2+.1);
+          o.frequency.linearRampToValueAtTime(200,now+i*.2+.2);
+        }
+        g.gain.exponentialRampToValueAtTime(.001,now+1.2);
+        o.stop(now+1.3);
+      }catch(e){}
+    },
+    win:()=>{tone(523,.15,'sine',.08);setTimeout(()=>tone(659,.15,'sine',.08),150);setTimeout(()=>tone(784,.3,'sine',.08),300);},
+    fail:()=>{tone(200,.3,'sawtooth',.08);setTimeout(()=>tone(120,.5,'sawtooth',.08),200);},
+    qteAppear:()=>tone(1500,.05,'square',.07),
+    qteSuccess:()=>{tone(800,.1,'sine',.08);setTimeout(()=>tone(1200,.15,'sine',.08),100);},
+    qteFail:()=>tone(100,.4,'sawtooth',.1),
+  };
+})();
+
+// ==================== SVG DINOSAUR GENERATOR ====================
+const DinoSVG = {
+  compy:`<svg viewBox="0 0 120 80" width="100" height="65">
+    <g fill="none" stroke="#44dd44" stroke-width="1.5">
+      <path d="M20,55 L25,40 L30,35 L38,32 L42,34 L40,38 L35,40 L32,50 L28,58 L20,60Z" fill="#0a2a0a"/>
+      <circle cx="36" cy="33" r="1.5" fill="#ff4444"/>
+      <path d="M28,58 L25,68 M32,56 L30,68"/>
+    </g>
+    <g fill="none" stroke="#44dd44" stroke-width="1.5" transform="translate(30,5)">
+      <path d="M20,55 L25,40 L30,35 L38,32 L42,34 L40,38 L35,40 L32,50 L28,58 L20,60Z" fill="#0a2a0a"/>
+      <circle cx="36" cy="33" r="1.5" fill="#ff4444"/>
+      <path d="M28,58 L25,68 M32,56 L30,68"/>
+    </g>
+    <g fill="none" stroke="#44dd44" stroke-width="1.5" transform="translate(55,8)">
+      <path d="M20,55 L25,40 L30,35 L38,32 L42,34 L40,38 L35,40 L32,50 L28,58 L20,60Z" fill="#0a2a0a"/>
+      <circle cx="36" cy="33" r="1.5" fill="#ff4444"/>
+      <path d="M28,58 L25,68 M32,56 L30,68"/>
+    </g>
+    <text x="60" y="14" fill="#44dd44" font-size="7" text-anchor="middle" font-family="monospace">COMPY PACK</text>
+  </svg>`,
+
+  parasaurolophus:`<svg viewBox="0 0 140 90" width="120" height="75">
+    <g fill="none" stroke="#22aaff" stroke-width="1.5">
+      <path d="M30,70 L35,50 L45,35 L55,28 L65,22 L68,15 L72,22 L70,28 L75,30 L80,35 L90,40 L100,42 L110,45 L115,50 L108,55 L95,52 L80,55 L70,58 L60,65 L50,72 L30,75Z" fill="#0a1a2a"/>
+      <circle cx="68" cy="26" r="2" fill="#22aaff"/>
+      <path d="M50,72 L45,85 M55,70 L52,85 M90,52 L88,68 M95,50 L94,68"/>
+    </g>
+    <text x="70" y="12" fill="#22aaff" font-size="6" text-anchor="middle" font-family="monospace">PARASAUROLOPHUS</text>
+  </svg>`,
+
+  pteranodon:`<svg viewBox="0 0 160 80" width="130" height="65">
+    <g fill="none" stroke="#aa66ff" stroke-width="1.5">
+      <path d="M80,35 L60,20 L30,12 L15,15 L30,18 L55,25 L70,32" fill="#1a0a2a"/>
+      <path d="M80,35 L100,20 L130,12 L145,15 L130,18 L105,25 L90,32" fill="#1a0a2a"/>
+      <path d="M75,30 L78,25 L82,22 L88,24 L90,30 L86,38 L80,42 L74,38Z" fill="#1a0a2a"/>
+      <circle cx="82" cy="28" r="1.5" fill="#ff4444"/>
+      <path d="M82,22 L78,14 L75,22"/>
+      <path d="M80,42 L78,50 L82,50"/>
+    </g>
+    <text x="80" y="8" fill="#aa66ff" font-size="7" text-anchor="middle" font-family="monospace">PTERANODON</text>
+  </svg>`,
+
+  toro:`<svg viewBox="0 0 160 100" width="140" height="85">
+    <g fill="none" stroke="#ff3333" stroke-width="2">
+      <path d="M35,75 L30,55 L35,40 L45,30 L55,25 L65,22 L75,20 L85,22 L95,28 L100,35 L108,30 L115,28 L118,32 L110,38 L105,42 L110,50 L115,60 L110,70 L100,75 L85,72 L70,70 L55,72 L40,78Z" fill="#2a0a0a"/>
+      <circle cx="72" cy="28" r="2.5" fill="#ff0000"/>
+      <circle cx="62" cy="28" r="2.5" fill="#ff0000"/>
+      <path d="M55,25 L48,15 L52,22" stroke-width="2.5"/>
+      <path d="M85,22 L92,12 L88,20" stroke-width="2.5"/>
+      <path d="M55,72 L50,90 M60,70 L58,90 M95,72 L92,90 M100,70 L100,90"/>
+      <path d="M70,70 L68,78 L72,82 L76,78 L74,70" fill="#2a0a0a"/>
+    </g>
+    <text x="80" y="10" fill="#ff3333" font-size="7" text-anchor="middle" font-family="monospace">TORO [CARNOTAURUS]</text>
+    <line x1="40" y1="45" x2="50" y2="42" stroke="#ff3333" stroke-width="1" opacity=".5"/>
+    <line x1="95" y1="50" x2="105" y2="48" stroke="#ff3333" stroke-width="1" opacity=".5"/>
+  </svg>`,
+
+  baryonyx:`<svg viewBox="0 0 160 90" width="135" height="75">
+    <g fill="none" stroke="#33ccaa" stroke-width="1.5">
+      <path d="M25,60 L30,45 L40,35 L55,28 L70,25 L85,24 L95,26 L105,30 L115,38 L120,48 L118,55 L110,58 L100,56 L90,55 L80,56 L65,60 L50,65 L35,68Z" fill="#0a2a1a"/>
+      <circle cx="60" cy="30" r="2" fill="#ffaa00"/>
+      <path d="M70,25 L72,20 L78,18 L80,22 L76,25"/>
+      <path d="M115,38 L125,32 L130,35 L125,40 L118,42" fill="#0a2a1a"/>
+      <path d="M50,65 L46,80 M55,63 L53,80 M95,56 L92,72 M100,54 L100,72"/>
+    </g>
+    <g fill="none" stroke="#33ccaa" stroke-width="1" opacity=".5" transform="translate(8,6)">
+      <path d="M25,60 L30,45 L40,35 L55,28 L70,25 L85,24 L95,26 L105,30 L115,38 L120,48 L118,55"/>
+    </g>
+    <text x="80" y="14" fill="#33ccaa" font-size="6" text-anchor="middle" font-family="monospace">BARYONYX TRIO</text>
+  </svg>`,
+
+  indominus:`<svg viewBox="0 0 180 110" width="160" height="95">
+    <g fill="none" stroke-width="2">
+      <path d="M30,80 L25,55 L30,38 L42,25 L58,18 L70,15 L82,14 L95,15 L108,18 L120,25 L128,20 L140,16 L148,18 L152,24 L145,30 L135,32 L125,38 L130,48 L140,58 L145,68 L140,78 L128,82 L110,80 L90,78 L70,80 L50,84 L35,85Z"
+        fill="#1a0a1a" stroke="#ff00ff"/>
+      <circle cx="65" cy="24" r="3" fill="#ff0000" stroke="#ff0000">
+        <animate attributeName="r" values="3;4;3" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="80" cy="22" r="3" fill="#ff0000" stroke="#ff0000">
+        <animate attributeName="r" values="3;4;3" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <path d="M58,18 L50,6 L56,14" stroke="#ff00ff" stroke-width="2.5"/>
+      <path d="M108,18 L116,6 L110,14" stroke="#ff00ff" stroke-width="2.5"/>
+      <path d="M90,78 L85,100 M95,76 L93,100 M120,80 L118,98 M125,78 L126,98" stroke="#ff00ff"/>
+      <path d="M42,25 L38,30 L44,28 M48,20 L45,24 L50,22" stroke="#ff00ff" stroke-width="1"/>
+      <path d="M120,25 L124,30 L120,28 M115,20 L118,24 L114,22" stroke="#ff00ff" stroke-width="1"/>
+      <path d="M80,80 L75,88 L80,92 L85,88 L80,80" fill="#1a0a1a" stroke="#ff00ff"/>
+      <line x1="75" y1="88" x2="72" y2="90" stroke="#ff00ff" stroke-width="1"/>
+      <line x1="85" y1="88" x2="88" y2="90" stroke="#ff00ff" stroke-width="1"/>
+    </g>
+    <text x="90" y="9" fill="#ff00ff" font-size="7" text-anchor="middle" font-family="monospace">
+      <tspan>INDOMINUS REX</tspan>
+      <animate attributeName="opacity" values="1;.3;1" dur="1.5s" repeatCount="indefinite"/>
+    </text>
+    <rect x="2" y="2" width="176" height="106" fill="none" stroke="#ff00ff" stroke-width=".5" opacity=".3" stroke-dasharray="4,4">
+      <animate attributeName="stroke-dashoffset" from="0" to="8" dur="1s" repeatCount="indefinite"/>
+    </rect>
+  </svg>`,
+
+  bumpy:`<svg viewBox="0 0 160 90" width="130" height="72">
+    <g fill="none" stroke="#22bbaa" stroke-width="1.5">
+      <path d="M30,65 L35,50 L42,42 L55,38 L70,36 L85,35 L100,36 L115,40 L125,48 L130,58 L125,68 L110,72 L90,73 L70,72 L50,70 L35,68Z" fill="#0a2a20"/>
+      <path d="M55,38 L52,32 L58,30 L62,34" fill="#0a2a20"/>
+      <path d="M70,36 L68,28 L74,26 L76,32" fill="#0a2a20"/>
+      <path d="M85,35 L84,27 L90,25 L91,31" fill="#0a2a20"/>
+      <path d="M100,36 L100,28 L106,27 L106,33" fill="#0a2a20"/>
+      <path d="M115,40 L116,33 L120,32 L120,38" fill="#0a2a20"/>
+      <circle cx="42" cy="45" r="2" fill="#22bbaa"/>
+      <path d="M35,50 L28,48 L25,52 L30,54"/>
+      <path d="M50,70 L46,82 M55,70 L53,82 M105,72 L103,84 M110,70 L110,84"/>
+      <path d="M120,68 L130,65 L138,68 L135,72 L125,72" fill="#0a2a20"/>
+    </g>
+    <text x="80" y="20" fill="#22bbaa" font-size="7" text-anchor="middle" font-family="monospace">BUMPY [ANKYLOSAURUS]</text>
+  </svg>`,
+
+  // Scene backgrounds
+  mainstreet:`<svg viewBox="0 0 400 200" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+    <rect width="400" height="200" fill="#020804"/>
+    <g stroke="#0f3325" stroke-width=".5" fill="none">
+      <rect x="20" y="60" width="60" height="80" rx="2"/>
+      <rect x="25" y="65" width="20" height="25"/>
+      <rect x="55" y="65" width="20" height="25"/>
+      <rect x="100" y="40" width="80" height="100" rx="2"/>
+      <rect x="110" y="50" width="25" height="30"/>
+      <rect x="145" y="50" width="25" height="30"/>
+      <rect x="130" y="100" width="20" height="40"/>
+      <path d="M100,40 L140,20 L180,40"/>
+      <rect x="220" y="55" width="70" height="85" rx="2"/>
+      <rect x="230" y="62" width="15" height="20"/>
+      <rect x="255" y="62" width="15" height="20"/>
+      <rect x="310" y="70" width="50" height="70" rx="2"/>
+      <rect x="315" y="75" width="15" height="20"/>
+      <rect x="340" y="75" width="15" height="20"/>
+    </g>
+    <line x1="0" y1="140" x2="400" y2="140" stroke="#0f3325" stroke-width="1"/>
+    <text x="140" y="135" fill="#0a3a1a" font-size="8" font-family="monospace">MAIN STREET</text>
+    <g fill="#00ff66" opacity=".3">
+      <circle cx="50" cy="155" r="1"><animate attributeName="opacity" values=".3;.8;.3" dur="3s" repeatCount="indefinite"/></circle>
+      <circle cx="200" cy="148" r="1"><animate attributeName="opacity" values=".3;.8;.3" dur="2.5s" repeatCount="indefinite"/></circle>
+      <circle cx="340" cy="160" r="1"><animate attributeName="opacity" values=".3;.8;.3" dur="4s" repeatCount="indefinite"/></circle>
+    </g>
+  </svg>`,
+
+  jungle:`<svg viewBox="0 0 400 200" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+    <rect width="400" height="200" fill="#020804"/>
+    <g stroke="#0a3a0a" fill="none" stroke-width="1.5">
+      <path d="M50,180 L55,120 L40,80 L50,60 L60,80 L70,60 L65,80 L80,120 L75,180"/>
+      <path d="M150,180 L155,100 L140,60 L155,30 L165,60 L175,40 L170,65 L185,100 L180,180"/>
+      <path d="M280,180 L285,110 L270,70 L285,45 L295,70 L305,55 L298,75 L310,110 L305,180"/>
+      <path d="M350,180 L352,130 L345,100 L352,85 L358,100 L362,90 L360,105 L365,130 L362,180"/>
+    </g>
+    <g fill="#0a2a0a" opacity=".5">
+      <ellipse cx="60" cy="70" rx="30" ry="20"/>
+      <ellipse cx="160" cy="40" rx="35" ry="25"/>
+      <ellipse cx="290" cy="55" rx="30" ry="22"/>
+      <ellipse cx="355" cy="90" rx="20" ry="15"/>
+    </g>
+    <line x1="0" y1="180" x2="400" y2="180" stroke="#0a3a0a" stroke-width="1"/>
+  </svg>`,
+};
+
+// Item SVG icons (small)
+const ItemSVG = {
+  pizza:`<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12,2 L3,20 L21,20Z" fill="#cc8800" stroke="#ffaa00" stroke-width="1"/><circle cx="10" cy="14" r="2" fill="#cc2200"/><circle cx="14" cy="12" r="1.5" fill="#cc2200"/></svg>`,
+  flashlight:`<svg viewBox="0 0 24 24" width="20" height="20"><rect x="8" y="6" width="8" height="14" rx="1" fill="#888" stroke="#aaa" stroke-width="1"/><rect x="7" y="3" width="10" height="4" rx="1" fill="#ff0" stroke="#cc0" stroke-width="1"/></svg>`,
+  walkietalkie:`<svg viewBox="0 0 24 24" width="20" height="20"><rect x="7" y="6" width="10" height="16" rx="2" fill="#333" stroke="#666" stroke-width="1"/><rect x="11" y="2" width="2" height="6" fill="#666"/><circle cx="12" cy="12" r="3" fill="none" stroke="#0f0" stroke-width="1"/></svg>`,
+};
+
+// ==================== DATA ====================
+
+const CHARACTERS = [
+  {id:'darius',  name:'Darius',   emoji:'&#x1F9E2;', perk:'Dino Knowledge',  desc:'Reads dinosaur behavior clues', stat:{hp:90,  lootBonus:0, escapeBonus:0, stealthBonus:0, knowledgeBonus:3}},
+  {id:'brooklynn',name:'Brooklynn',emoji:'&#x1F4F1;',perk:'Better Loot',     desc:'Supply packs contain extra items',   stat:{hp:85,  lootBonus:2, escapeBonus:0, stealthBonus:0, knowledgeBonus:0}},
+  {id:'kenji',   name:'Kenji',    emoji:'&#x1F60E;', perk:'VIP Keys',        desc:'Can access locked VIP areas',        stat:{hp:85,  lootBonus:0, escapeBonus:0, stealthBonus:0, knowledgeBonus:0, vip:true}},
+  {id:'yaz',     name:'Yaz',      emoji:'&#x1F3C3;', perk:'Speed',           desc:'Higher chance to outrun threats',    stat:{hp:80,  lootBonus:0, escapeBonus:25,stealthBonus:0, knowledgeBonus:0}},
+  {id:'sammy',   name:'Sammy',    emoji:'&#x1F33B;', perk:'Tough & Friendly',desc:'Starts with more health',            stat:{hp:120, lootBonus:0, escapeBonus:0, stealthBonus:0, knowledgeBonus:0}},
+  {id:'ben',     name:'Ben',      emoji:'&#x1F98E;', perk:'Stealth',         desc:'Better at hiding from dinosaurs',    stat:{hp:80,  lootBonus:0, escapeBonus:0, stealthBonus:25,knowledgeBonus:0}},
+];
+
+const ITEMS = [
+  {name:'Pizza Slice',       emoji:'🍕', type:'food',   healVal:15},
+  {name:'Granola Bar',       emoji:'🥜', type:'food',   healVal:8},
+  {name:'Burger',            emoji:'🍔', type:'food',   healVal:20},
+  {name:'Water Bottle',      emoji:'💧', type:'food',   healVal:10},
+  {name:'Soda',              emoji:'🥤', type:'food',   healVal:5},
+  {name:'Steak',             emoji:'🥩', type:'food',   healVal:25},
+  {name:'Flashlight',        emoji:'🔦', type:'tool',   useVal:'light'},
+  {name:'Flare Gun',         emoji:'🔫', type:'weapon', useVal:'scare', power:40},
+  {name:'Flare',             emoji:'🎆', type:'weapon', useVal:'scare', power:25},
+  {name:'Tranq Dart',        emoji:'💉', type:'weapon', useVal:'tranq', power:50},
+  {name:'Bandage',           emoji:'🩹', type:'medical',healVal:20},
+  {name:'Med Kit',           emoji:'🏥', type:'medical',healVal:40},
+  {name:'Smoke Bomb',        emoji:'💨', type:'weapon', useVal:'escape',power:35},
+  {name:'Taser',             emoji:'⚡', type:'weapon', useVal:'stun',  power:30},
+  {name:'Rope',              emoji:'🪢', type:'tool',   useVal:'climb'},
+  {name:'Radio Parts',       emoji:'📻', type:'quest',  useVal:'radio'},
+  {name:'Binoculars',        emoji:'🔭', type:'tool',   useVal:'scout'},
+  {name:'Candy Bar',         emoji:'🍫', type:'food',   healVal:6},
+  {name:'Jerky',             emoji:'🥓', type:'food',   healVal:12},
+  {name:'Battery Pack',      emoji:'🔋', type:'tool',   useVal:'power'},
+  {name:'Night-Vision Goggles',emoji:'🥽',type:'tool',  useVal:'night'},
+  {name:'Camp Fam Hoodie',   emoji:'🧥', type:'armor',  armorVal:10},
+  {name:'Dino Repellent',    emoji:'🧴', type:'weapon', useVal:'repel', power:30},
+];
+
+const COMMON_ITEMS = ITEMS.filter(i=>i.type==='food'||i.name==='Bandage'||i.name==='Flashlight'||i.name==='Flare'||i.name==='Candy Bar');
+const RARE_ITEMS = ITEMS.filter(i=>!COMMON_ITEMS.includes(i));
+
+const DINOS = [
+  {name:'Compy Pack',     svg:'compy',     emoji:'🦎', danger:1, hpDmg:5,  stealItem:true,  panicAdd:5,  flavor:[
+    'Tiny claws skitter across the floor behind you...',
+    'A chorus of high-pitched chirps echoes from the shadows...',
+    'Something small knocks over a can nearby...',
+  ]},
+  {name:'Parasaurolophus',svg:'parasaurolophus',emoji:'🦕', danger:1, hpDmg:0,  stealItem:false, panicAdd:2, flavor:[
+    'A low, horn-like call reverberates through the trees...',
+    'A massive herbivore lumbers past, ignoring you...',
+    'You spot a herd drinking at a stream...',
+  ]},
+  {name:'Bumpy',          svg:'bumpy',     emoji:'🛡️', danger:1, hpDmg:8,  stealItem:false, panicAdd:3, flavor:[
+    'Heavy footsteps thud nearby — an armored shape emerges...',
+    'A club-like tail swings and smashes a bench to splinters...',
+    'You see an ankylosaurus rooting through debris...',
+  ]},
+  {name:'Pteranodon',     svg:'pteranodon',emoji:'🦅', danger:2, hpDmg:15, stealItem:true,  panicAdd:12, flavor:[
+    'A shadow sweeps over you from above...',
+    'Leathery wings snap the air — something is circling...',
+    'A shriek from the sky freezes your blood...',
+  ]},
+  {name:'Toro',           svg:'toro',      emoji:'🦖', danger:3, hpDmg:30, stealItem:false, panicAdd:25, flavor:[
+    'The ground shakes with heavy footsteps...',
+    'A guttural roar splits the silence...',
+    'You see claw marks gouged into the wall ahead...',
+  ]},
+  {name:'Baryonyx Trio',  svg:'baryonyx',  emoji:'🐊', danger:3, hpDmg:25, stealItem:false, panicAdd:20, flavor:[
+    'Water splashes in the darkness ahead...',
+    'Three pairs of eyes reflect your light...',
+    'Hissing echoes from the drainage tunnel...',
+  ]},
+  {name:'Indominus Rex',  svg:'indominus', emoji:'👹', danger:5, hpDmg:50, stealItem:false, panicAdd:40, qte:true, flavor:[
+    'Everything goes silent. Too silent...',
+    'The trees ahead snap like matchsticks...',
+    'An invisible force shakes the ground beneath you...',
+  ]},
+];
+
+const SHOP_AREAS = [
+  'the Jurassic Traders gift shop',
+  'a wrecked snack bar',
+  'an overturned supply cart',
+  'the back office of a restaurant',
+  'a broken vending machine',
+  'the lost-and-found bin',
+  'a locked supply closet',
+  'an abandoned med station',
+];
+
+const MAP_ZONES = [
+  {id:'mainstreet', name:'Main Street',      emoji:'🏪', col:0, row:0},
+  {id:'gyrosphere', name:'Gyrosphere Valley', emoji:'🔮', col:1, row:0},
+  {id:'genetics',   name:'Genetics Lab',     emoji:'🧬', col:2, row:0},
+  {id:'paddock',    name:'T-Rex Paddock',    emoji:'🦴', col:3, row:0},
+  {id:'river',      name:'Jungle River',     emoji:'🌊', col:0, row:1},
+  {id:'aviary',     name:'Aviary',           emoji:'🦅', col:1, row:1},
+  {id:'tunnels',    name:'Tunnels',          emoji:'🕳️', col:2, row:1},
+  {id:'dock',       name:'The Dock',         emoji:'🚢', col:3, row:1},
+  {id:'camp',       name:'Camp Ruins',       emoji:'⛺', col:0, row:2},
+  {id:'volcano',    name:'Mt. Sibo',         emoji:'🌋', col:1, row:2},
+  {id:'beacon',     name:'Beacon Tower',     emoji:'📡', col:2, row:2},
+  {id:'helipad',    name:'Helipad',          emoji:'🚁', col:3, row:2},
+];
+
+const MISSIONS = [
+  {id:0, name:'Gyrosphere Valley', zone:'gyrosphere', emoji:'🔮', dangerMod:0,
+   desc:'Retrieve the auxiliary radio antenna from a crashed gyrosphere.',
+   narrative:[
+     'You push through the tall grass toward Gyrosphere Valley.',
+     'Shattered gyrospheres litter the field like glass eggs.',
+     'You spot the antenna lodged in a wrecked sphere across the clearing.',
+   ], reward:'Radio Parts'},
+  {id:1, name:'The Genetics Lab', zone:'genetics', emoji:'🧬', dangerMod:1,
+   desc:'Find the access codes stored in the lab computers.',
+   narrative:[
+     'The lab doors creak open. Emergency lights flicker red.',
+     'Embryo tanks line the walls — some are cracked, leaking fluid.',
+     'A terminal still has power. You start downloading the codes.',
+   ], reward:'Battery Pack'},
+  {id:2, name:'The Dock', zone:'dock', emoji:'🚢', dangerMod:1,
+   desc:'Check if any boats at the main dock are operational.',
+   narrative:[
+     'Salt air hits your face as the dock comes into view.',
+     'Most boats are capsized or sunk. One looks salvageable.',
+     'You find tools in a dockside shed and start repairs.',
+   ], reward:'Rope'},
+  {id:3, name:'The Underground Tunnels', zone:'tunnels', emoji:'🕳️', dangerMod:2,
+   desc:'Navigate the tunnels to reach the emergency beacon housing.',
+   narrative:[
+     'The tunnel entrance is half-collapsed. You squeeze through.',
+     'Pipes hiss steam. Something drips in the dark ahead.',
+     'You follow emergency markings painted on the tunnel walls.',
+   ], reward:'Tranq Dart'},
+  {id:4, name:'The Emergency Beacon', zone:'beacon', emoji:'📡', dangerMod:3,
+   desc:'Activate the beacon and call for rescue.',
+   narrative:[
+     'The beacon tower looms against the grey sky.',
+     'The control panel is dead. You wire in your collected parts.',
+     'A red light blinks to green. Signal broadcasting...',
+   ], reward:null, isFinal:true},
+];
+
+// ==================== STATE ====================
+
+let G = {
+  char:null, hp:100, maxHp:100,
+  day:1, danger:0, panic:0,
+  inventory:[], missionsComplete:[],
+  phase:'hub',
+  currentMission:null, missionStep:0,
+  currentZone:'mainstreet',
+  encounterDino:null, encounterContext:null,
+  itemsFoundToday:0,
+  totalKills:0, totalItems:0, totalEncounters:0,
+  armorBonus:0, hasNightVision:false,
+  fieldGuide:{}, // dinoName -> {seen:true, encounters:N}
+  qteActive:false,
+};
+
+// ==================== UTILS ====================
+
+function rng(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function pick(arr){return arr[rng(0,arr.length-1)];}
+function chance(pct){return Math.random()*100<pct;}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// ==================== BOOT SEQUENCE ====================
+
+(function bootSequence(){
+  const lines = [
+    'INGEN SYSTEMS v4.2.1 — BIOTRACK TERMINAL',
+    'Initializing secure connection...',
+    'WARNING: Park network OFFLINE',
+    'WARNING: Perimeter fences DISABLED',
+    'WARNING: Asset containment BREACH detected',
+    'Loading survival protocol...',
+    'GPS signal: LOST',
+    'Emergency beacon: INACTIVE',
+    'Scanning for Camp Fam operatives...',
+    '> OPERATIVES DETECTED. AWAITING INPUT.',
+  ];
+  const el = document.getElementById('boot-text');
+  let i = 0;
+  function type(){
+    if(i < lines.length){
+      const color = lines[i].startsWith('WARNING') ? 'var(--danger)' : 'var(--terminal-dim)';
+      el.innerHTML += `<div style="color:${color}">${lines[i]}</div>`;
+      i++;
+      Audio.beep();
+      setTimeout(type, 200 + rng(50,200));
+    } else {
+      el.innerHTML += '<div class="cursor">_</div>';
+      document.getElementById('start-btn').style.display = 'inline-block';
+    }
+  }
+  setTimeout(type, 500);
+})();
+
+// ==================== SCREENS ====================
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function switchTab(btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).classList.add('active');
+  if(btn.dataset.tab==='map-tab') renderMap();
+  if(btn.dataset.tab==='guide-tab') renderFieldGuide();
+}
+
+// ==================== CHARACTER SELECT ====================
+
+(function buildCharGrid(){
+  const grid = document.getElementById('char-grid');
+  CHARACTERS.forEach(c=>{
+    const card = document.createElement('div');
+    card.className = 'char-card';
+    card.innerHTML = `<div class="emoji">${c.emoji}</div><div class="name">${c.name}</div><div class="perk">${c.perk}</div>`;
+    card.onclick = ()=>{Audio.click();selectCharacter(c);};
+    grid.appendChild(card);
+  });
+})();
+
+function selectCharacter(c){
+  G.char = c;
+  G.hp = c.stat.hp;
+  G.maxHp = c.stat.hp;
+  showScreen('game-screen');
+  renderHUD();
+  renderInventory();
+  renderViewport('mainstreet');
+  renderMap();
+  addMsg('system','&gt; OPERATIVE: '+c.name.toUpperCase()+' // STATUS: ACTIVE');
+  addMsg('system','&gt; LOCATION: MAIN STREET // ISLA NUBLAR');
+  addMsg('story','Signal lost. GPS offline. You are alone on Isla Nublar.');
+  addMsg('story','The monorail is wrecked. Main Street stretches ahead — overgrown, silent, and dark.');
+  showHubActions();
+}
+
+// ==================== HUD ====================
+
+function renderHUD(){
+  const hud = document.getElementById('hud');
+  const hpPct = Math.round((G.hp/G.maxHp)*100);
+  const dngPct = Math.min(G.danger,100);
+  const pncPct = Math.min(G.panic,100);
+  hud.innerHTML = `
+    <div class="hud-item">
+      <div class="hud-label">Health</div>
+      <div class="hud-val health">${G.hp}/${G.maxHp}</div>
+      <div class="bar-track"><div class="bar-fill hp" style="width:${hpPct}%"></div></div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Day</div>
+      <div class="hud-val day">${G.day}</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Danger</div>
+      <div class="hud-val danger">${dngPct}%</div>
+      <div class="bar-track"><div class="bar-fill dng" style="width:${dngPct}%"></div></div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Panic</div>
+      <div class="hud-val panic">${pncPct}%</div>
+      <div class="bar-track"><div class="bar-fill pnc" style="width:${pncPct}%"></div></div>
+    </div>
+    <div class="hud-char">${G.char.emoji} ${G.char.name} — ${G.char.perk} // Zone: ${G.currentZone.toUpperCase()}</div>
+  `;
+  // Panic effects
+  const gc = document.getElementById('game-container');
+  if(G.panic > 80){
+    gc.classList.add('panic-shake','panic-glitch');
+  } else {
+    gc.classList.remove('panic-shake','panic-glitch');
+  }
+}
+
+// ==================== VIEWPORT ====================
+
+function renderViewport(scene, dinoSvg){
+  const vp = document.getElementById('viewport-scene');
+  if(dinoSvg && DinoSVG[dinoSvg]){
+    vp.innerHTML = DinoSVG[dinoSvg];
+  } else if(scene === 'mainstreet'){
+    vp.innerHTML = DinoSVG.mainstreet;
+  } else {
+    vp.innerHTML = DinoSVG.jungle;
+  }
+}
+
+// ==================== MAP ====================
+
+function renderMap(){
+  const container = document.getElementById('map-container');
+  const missionZones = MISSIONS.filter(m=>G.missionsComplete.includes(m.id)).map(m=>m.zone);
+  const nextMission = MISSIONS[G.missionsComplete.length];
+  const nextZone = nextMission ? nextMission.zone : null;
+
+  let html = '<div class="map-grid">';
+  MAP_ZONES.forEach(z=>{
+    const isCurrent = z.id === G.currentZone;
+    const isCompleted = missionZones.includes(z.id);
+    const isNext = z.id === nextZone;
+    const isMain = z.id === 'mainstreet';
+    let cls = 'map-cell';
+    if(isCurrent) cls += ' current';
+    else if(isCompleted) cls += ' completed';
+    else if(!isMain && !isNext && !isCompleted) cls += ' locked';
+
+    html += `<div class="${cls}">
+      <div class="cell-icon">${z.emoji}</div>
+      <div class="cell-name">${z.name}</div>
+      ${isCurrent ? '<div class="player-dot"></div>' : ''}
+      ${isCompleted ? '<div style="position:absolute;top:2px;right:4px;font-size:.6rem;color:var(--success);">&#10003;</div>' : ''}
+    </div>`;
+  });
+  html += '</div>';
+  html += `<div style="text-align:center;font-size:.6rem;color:var(--text-dim);margin-top:8px;">MISSIONS: ${G.missionsComplete.length}/${MISSIONS.length}</div>`;
+  container.innerHTML = html;
+}
+
+// ==================== FIELD GUIDE ====================
+
+function discoverDino(name){
+  if(!G.fieldGuide[name]) G.fieldGuide[name] = {seen:true, encounters:0};
+  G.fieldGuide[name].encounters++;
+}
+
+function renderFieldGuide(){
+  const container = document.getElementById('guide-container');
+  const total = DINOS.length;
+  const discovered = Object.keys(G.fieldGuide).length;
+  const pct = Math.round((discovered/total)*100);
+
+  let html = `<div class="guide-header">// InGen Field Database</div>`;
+  html += `<div class="guide-progress">SPECIES CATALOGED: ${discovered}/${total} (${pct}%)</div>`;
+  html += '<div class="guide-grid">';
+
+  DINOS.forEach(d=>{
+    const entry = G.fieldGuide[d.name];
+    const unlocked = !!entry;
+    html += `<div class="guide-entry ${unlocked?'unlocked':'locked'}">
+      <div class="ge-icon">${unlocked && DinoSVG[d.svg] ? `<svg viewBox="0 0 60 40" width="50" height="35"><g transform="scale(.35)">${DinoSVG[d.svg].replace(/<svg[^>]*>|<\/svg>/g,'')}</g></svg>` : '<div style="font-size:1.5rem;">❓</div>'}</div>
+      <div class="ge-info">
+        <div class="ge-name">${unlocked ? d.name : '[ENCRYPTED]'}</div>
+        <div class="ge-stats">${unlocked ? `Danger: ${'⚠️'.repeat(d.danger)} | Encounters: ${entry.encounters}` : 'DATA LOCKED — Survive an encounter to decrypt.'}</div>
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ==================== INVENTORY ====================
+
+function renderInventory(){
+  const grid = document.getElementById('inv-grid');
+  const count = document.getElementById('inv-count');
+  count.textContent = G.inventory.length;
+  if(G.inventory.length===0){
+    grid.innerHTML = '<div class="inv-empty">// EMPTY</div>';
+    return;
+  }
+  grid.innerHTML = G.inventory.map(it=>`<div class="inv-item">${it.emoji} ${it.name}</div>`).join('');
+  checkPassives();
+}
+
+function toggleInventory(){
+  const panel = document.getElementById('inv-panel');
+  const arrow = document.getElementById('inv-arrow');
+  panel.classList.toggle('open');
+  arrow.textContent = panel.classList.contains('open') ? '-' : '+';
+}
+
+function addItem(item){G.inventory.push({...item});G.totalItems++;renderInventory();}
+function removeItem(index){G.inventory.splice(index,1);renderInventory();}
+function removeItemByName(name){const i=G.inventory.findIndex(x=>x.name===name);if(i!==-1)removeItem(i);}
+function hasItem(name){return G.inventory.some(i=>i.name===name);}
+
+// ==================== NARRATIVE ====================
+
+function addMsg(type, text){
+  const nar = document.getElementById('narrative');
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+  div.innerHTML = text;
+  nar.appendChild(div);
+  requestAnimationFrame(()=>nar.scrollTop = nar.scrollHeight);
+}
+
+// ==================== ACTIONS ====================
+
+function setActions(buttons){
+  const act = document.getElementById('actions');
+  act.innerHTML = '';
+  const chunks = [];
+  for(let i=0;i<buttons.length;i+=3) chunks.push(buttons.slice(i,i+3));
+  chunks.forEach(row=>{
+    const rd = document.createElement('div');
+    rd.className = 'action-row';
+    row.forEach(b=>{
+      const btn = document.createElement('button');
+      btn.className = `act-btn ${b.cls||''}`;
+      btn.innerHTML = b.label;
+      btn.disabled = !!b.disabled;
+      btn.onclick = ()=>{Audio.click();b.action();};
+      rd.appendChild(btn);
+    });
+    act.appendChild(rd);
+  });
+}
+
+// ==================== DAMAGE / HEAL / PANIC ====================
+
+function takeDamage(amt){
+  const reduced = Math.max(1, amt - G.armorBonus);
+  G.hp = clamp(G.hp - reduced, 0, G.maxHp);
+  Audio.hit();
+  renderHUD();
+  if(G.hp <= 0) gameOver(false);
+}
+
+function heal(amt){G.hp = clamp(G.hp + amt, 0, G.maxHp);renderHUD();}
+
+function addPanic(amt){
+  G.panic = clamp(G.panic + amt, 0, 100);
+  renderHUD();
+  if(G.panic > 60) Audio.alarm();
+}
+
+function reducePanic(amt){G.panic = clamp(G.panic - amt, 0, 100);renderHUD();}
+
+function raiseDanger(amt){G.danger = clamp(G.danger + amt, 0, 100);renderHUD();}
+
+// ==================== LOOT ====================
+
+function rollLoot(count, rareChance){
+  const extra = G.char.stat.lootBonus||0;
+  const total = count + extra;
+  const items = [];
+  for(let i=0;i<total;i++){
+    items.push({...(chance(rareChance)?pick(RARE_ITEMS):pick(COMMON_ITEMS))});
+  }
+  return items;
+}
+
+function supplyDrop(){
+  Audio.loot();
+  addMsg('loot','&#x1F4E6; SUPPLY DROP — Camp Fam Supply Pack received.');
+  const loot = rollLoot(3, 25);
+  loot.forEach(item=>{addItem(item);addMsg('loot',`  + ${item.emoji} ${item.name}`);});
+}
+
+// ==================== HUB ACTIONS ====================
+
+function showHubActions(){
+  G.phase = 'hub';
+  G.currentZone = 'mainstreet';
+  renderViewport('mainstreet');
+  renderHUD();
+  const canMission = G.missionsComplete.length < MISSIONS.length;
+  const hasUsable = G.inventory.some(i=>i.type==='food'||i.type==='medical');
+  const btns = [
+    {label:'🔍 Scavenge', action:doScavenge},
+    {label:'🛏️ Rest', action:doRest, cls:'warn-btn'},
+    {label:'🗺️ Mission', action:showMissionSelect, cls:'mission-btn', disabled:!canMission},
+  ];
+  if(hasUsable) btns.push({label:'💊 Use Item', action:showUseItemMenu});
+  setActions(btns);
+}
+
+// ==================== SCAVENGING ====================
+
+function doScavenge(){
+  G.phase = 'scavenging';
+  G.itemsFoundToday++;
+  const area = pick(SHOP_AREAS);
+  let vipBonus = '';
+  if(G.char.stat.vip && chance(30)){
+    vipBonus = ' VIP wristband accepted — locked case opened!';
+  }
+  addMsg('story',`You creep into ${area}.${vipBonus}`);
+  raiseDanger(rng(3,8));
+
+  const encounterChance = 15 + G.danger * 0.4;
+  if(chance(encounterChance)){
+    triggerEncounter('scavenge');
+    return;
+  }
+
+  Audio.loot();
+  const rareChance = (G.char.stat.vip && vipBonus) ? 60 : 15;
+  const loot = rollLoot(rng(1,2), rareChance);
+  loot.forEach(item=>{addItem(item);addMsg('loot',`  + ${item.emoji} ${item.name}`);});
+
+  if(G.char.stat.knowledgeBonus > 0 && chance(40)){
+    addMsg('system','&#x1F9E0; ' + pick([
+      'Claw marks on the walls — something big passed through recently.',
+      'Droppings near the entrance. A carnivore has been here.',
+      'Nesting material in the corner. Best not to linger.',
+      'You read a faded park map — supplies behind the counter.',
+    ]));
+  }
+  showHubActions();
+}
+
+// ==================== REST ====================
+
+function doRest(){
+  addMsg('story','You barricade the doors and try to sleep...');
+  const nightEncounter = 10 + G.danger * 0.3;
+  if(chance(nightEncounter)){
+    addMsg('danger','&#x1F4A5; Something crashes against the barricade!');
+    triggerEncounter('night');
+    return;
+  }
+  G.day++;
+  const restHeal = 15;
+  heal(restHeal);
+  reducePanic(20);
+  G.danger = clamp(G.danger - 5, 0, 100);
+  G.itemsFoundToday = 0;
+  addMsg('success',`&#x2600;&#xFE0F; Day ${G.day}. You survived the night. (+${restHeal} HP, -20 Panic)`);
+  renderHUD();
+  supplyDrop();
+  showHubActions();
+}
+
+// ==================== USE ITEM ====================
+
+function showUseItemMenu(){
+  const usable = G.inventory.map((item,i)=>({item,i})).filter(({item})=>item.type==='food'||item.type==='medical');
+  if(!usable.length){addMsg('system','Nothing usable.');showHubActions();return;}
+  const btns = usable.slice(0,6).map(({item,i})=>({
+    label:`${item.emoji} ${item.name} (+${item.healVal})`,
+    action:()=>{
+      heal(item.healVal);
+      addMsg('success',`Used ${item.emoji} ${item.name}. +${item.healVal} HP`);
+      removeItem(i);
+      showHubActions();
+    }
+  }));
+  btns.push({label:'&#x2190; Back', action:showHubActions, cls:'danger-btn'});
+  setActions(btns);
+}
+
+// ==================== MISSION SELECT ====================
+
+function showMissionSelect(){
+  const nextIdx = G.missionsComplete.length;
+  addMsg('system','&#x1F5FA;&#xFE0F; MISSION MAP — Select destination:');
+  const btns = MISSIONS.map((m,i)=>{
+    const done = G.missionsComplete.includes(m.id);
+    const locked = i > nextIdx;
+    let label = `${m.emoji} ${m.name}`;
+    if(done) label += ' ✓';
+    if(locked) label += ' &#x1F512;';
+    return {label, action:()=>startMission(m), cls:'mission-btn', disabled:done||locked};
+  });
+  btns.push({label:'&#x2190; Back', action:()=>{addMsg('story','Staying at Main Street.');showHubActions();}, cls:'danger-btn'});
+  setActions(btns);
+}
+
+// ==================== MISSIONS ====================
+
+function startMission(mission){
+  G.phase = 'mission';
+  G.currentMission = mission;
+  G.missionStep = 0;
+  G.currentZone = mission.zone || 'mainstreet';
+  raiseDanger(5 + mission.dangerMod * 5);
+  renderViewport('jungle');
+  renderHUD();
+  addMsg('story',`━━━ MISSION: ${mission.emoji} ${mission.name} ━━━`);
+  addMsg('story', mission.desc);
+  advanceMissionStep();
+}
+
+function advanceMissionStep(){
+  const m = G.currentMission;
+  if(G.missionStep < m.narrative.length){
+    addMsg('story', m.narrative[G.missionStep]);
+    G.missionStep++;
+    const encounterChance = 25 + m.dangerMod * 15 + G.danger * 0.3;
+    if(chance(encounterChance)){
+      triggerEncounter('mission');
+      return;
+    }
+    setActions([
+      {label:'Continue ▸', action:advanceMissionStep, cls:'mission-btn'},
+      {label:'Retreat', action:()=>{addMsg('danger','You flee back to Main Street.');raiseDanger(3);addPanic(5);showHubActions();}, cls:'danger-btn'},
+    ]);
+  } else {
+    completeMission();
+  }
+}
+
+function completeMission(){
+  const m = G.currentMission;
+  G.missionsComplete.push(m.id);
+  if(m.isFinal){gameOver(true);return;}
+  Audio.win();
+  addMsg('success',`&#x2705; MISSION COMPLETE: ${m.name}`);
+  if(m.reward){
+    const rewardItem = ITEMS.find(i=>i.name===m.reward);
+    if(rewardItem){addItem(rewardItem);addMsg('loot',`  Reward: ${rewardItem.emoji} ${rewardItem.name}`);}
+  }
+  addMsg('system',`Missions: ${G.missionsComplete.length}/${MISSIONS.length}`);
+  G.currentMission = null;
+  showHubActions();
+}
+
+// ==================== ENCOUNTERS ====================
+
+function triggerEncounter(context){
+  G.totalEncounters++;
+  G.encounterContext = context;
+
+  let pool;
+  if(G.danger<25) pool=DINOS.filter(d=>d.danger<=2);
+  else if(G.danger<60) pool=DINOS.filter(d=>d.danger<=3);
+  else pool=DINOS;
+  if(G.day<3) pool=pool.filter(d=>d.name!=='Indominus Rex');
+
+  const dino = pick(pool);
+  G.encounterDino = dino;
+  G.phase = context==='mission' ? 'missionEncounter' : 'encounter';
+
+  // Discover dino for field guide
+  discoverDino(dino.name);
+
+  // Audio
+  if(dino.danger >= 3) Audio.siren();
+  else Audio.alarm();
+
+  // Show dino in viewport
+  renderViewport(null, dino.svg);
+
+  addMsg('encounter', pick(dino.flavor));
+
+  // Panic
+  addPanic(dino.panicAdd);
+
+  // Darius bonus
+  if(G.char.stat.knowledgeBonus > 0 && chance(50 + G.char.stat.knowledgeBonus * 15)){
+    addMsg('system',`&#x1F9E0; You recognize it — <strong>${dino.emoji} ${dino.name}</strong>. Danger level: ${'⚠️'.repeat(dino.danger)}`);
+  }
+
+  // QTE for high-danger dinos
+  if(dino.qte || (dino.danger >= 4 && chance(70))){
+    startQTE(dino);
+    return;
+  }
+
+  showEncounterActions();
+}
+
+function showEncounterActions(){
+  const weapons = G.inventory.map((it,i)=>({it,i})).filter(({it})=>it.type==='weapon');
+  const btns = [
+    {label:'&#x1F3C3; RUN', action:()=>resolveEncounter('run'), cls:'warn-btn'},
+    {label:'&#x1FAE5; HIDE', action:()=>resolveEncounter('hide')},
+  ];
+  if(weapons.length > 0){
+    btns.push({label:`&#x2694;&#xFE0F; USE ITEM (${weapons.length})`, action:()=>showEncounterItems(weapons)});
+  }
+  setActions(btns);
+}
+
+function showEncounterItems(weapons){
+  const btns = weapons.slice(0,5).map(({it,i})=>({
+    label:`${it.emoji} ${it.name}`,
+    action:()=>resolveEncounter('item', i),
+  }));
+  btns.push({label:'&#x2190; Back', action:showEncounterActions});
+  setActions(btns);
+}
+
+function resolveEncounter(action, itemIdx){
+  const dino = G.encounterDino;
+
+  if(action==='run'){
+    const total = 50 + (G.char.stat.escapeBonus||0) - dino.danger*8;
+    if(chance(total)){
+      addMsg('success','You sprint away! The sound fades behind you.');
+    } else {
+      const dmg = Math.ceil(dino.hpDmg * .6);
+      addMsg('danger',`The ${dino.emoji} ${dino.name} clips you as you flee! (-${dmg} HP)`);
+      takeDamage(dmg);
+      if(G.hp<=0) return;
+      if(dino.stealItem && G.inventory.length>0 && chance(50)){
+        const stolen = pick(G.inventory);
+        addMsg('danger',`It snatched your ${stolen.emoji} ${stolen.name}!`);
+        removeItemByName(stolen.name);
+      }
+    }
+  }
+  else if(action==='hide'){
+    const total = 45 + (G.char.stat.stealthBonus||0) - dino.danger*6;
+    if(chance(total)){
+      addMsg('success','You press flat and hold your breath... It passes.');
+    } else {
+      addMsg('danger',`The ${dino.emoji} ${dino.name} finds you! (-${dino.hpDmg} HP)`);
+      takeDamage(dino.hpDmg);
+      if(G.hp<=0) return;
+    }
+  }
+  else if(action==='item'){
+    const item = G.inventory[itemIdx];
+    if(!item){addMsg('system','Item gone.');afterEncounter();return;}
+    const power = item.power||0;
+    const success = power + rng(0,30) > dino.danger * 12;
+    removeItem(itemIdx);
+    if(success){
+      addMsg('success',`You use ${item.emoji} ${item.name} — the ${dino.name} recoils and retreats!`);
+      G.totalKills++;
+    } else {
+      const dmg = Math.ceil(dino.hpDmg*.5);
+      addMsg('danger',`The ${item.emoji} ${item.name} wasn't enough! (-${dmg} HP)`);
+      takeDamage(dmg);
+      if(G.hp<=0) return;
+    }
+  }
+  afterEncounter();
+}
+
+function afterEncounter(){
+  G.encounterDino = null;
+  if(G.phase==='missionEncounter'){
+    G.phase = 'mission';
+    renderViewport('jungle');
+    addMsg('story','You catch your breath and press on...');
+    advanceMissionStep();
+  } else {
+    G.phase = 'hub';
+    showHubActions();
+  }
+}
+
+// ==================== QTE (ADRENALINE EVENTS) ====================
+
+const QTE_PROMPTS = [
+  'DODGE LEFT','DODGE RIGHT','HOLD BREATH','JUMP','ROLL','DUCK',
+  'GRAB BRANCH','STAY STILL','SPRINT','CLIMB','SLIDE'
+];
+
+let qteTimer = null;
+let qteTimeout = null;
+
+function startQTE(dino){
+  G.qteActive = true;
+  const overlay = document.getElementById('qte-overlay');
+  const title = document.getElementById('qte-title');
+  const btn = document.getElementById('qte-btn');
+  const result = document.getElementById('qte-result');
+  const timerFill = document.getElementById('qte-timer-fill');
+
+  overlay.classList.add('active');
+  title.textContent = `⚠️ ${dino.name.toUpperCase()} ATTACK ⚠️`;
+  result.textContent = '';
+  result.style.color = '';
+
+  Audio.siren();
+
+  // Random prompt
+  const prompt = pick(QTE_PROMPTS);
+  btn.textContent = prompt;
+  btn.style.display = 'block';
+
+  // Random position
+  const maxX = window.innerWidth - 200;
+  const maxY = window.innerHeight - 80;
+  btn.style.left = rng(20, Math.max(40,maxX)) + 'px';
+  btn.style.top = rng(60, Math.max(100,maxY)) + 'px';
+
+  // Timer (2.5 seconds)
+  const duration = 2500;
+  timerFill.style.transition = 'none';
+  timerFill.style.width = '100%';
+  requestAnimationFrame(()=>{
+    timerFill.style.transition = `width ${duration}ms linear`;
+    timerFill.style.width = '0%';
+  });
+
+  Audio.qteAppear();
+
+  // Success handler
+  const onSuccess = ()=>{
+    clearTimeout(qteTimeout);
+    btn.style.display = 'none';
+    result.textContent = '// EVADED';
+    result.style.color = 'var(--success)';
+    Audio.qteSuccess();
+    addMsg('success',`ADRENALINE SURGE — You ${prompt.toLowerCase()} just in time!`);
+    setTimeout(()=>endQTE(true, dino), 1000);
+  };
+
+  btn.onclick = onSuccess;
+
+  // Fail timeout
+  qteTimeout = setTimeout(()=>{
+    btn.style.display = 'none';
+    result.textContent = '// FAILED';
+    result.style.color = 'var(--danger)';
+    Audio.qteFail();
+    const dmg = dino.hpDmg;
+    addMsg('danger',`Too slow! The ${dino.emoji} ${dino.name} strikes! (-${dmg} HP)`);
+    takeDamage(dmg);
+    setTimeout(()=>endQTE(false, dino), 1000);
+  }, duration);
+}
+
+function endQTE(success, dino){
+  G.qteActive = false;
+  document.getElementById('qte-overlay').classList.remove('active');
+  if(G.hp <= 0) return;
+  // After QTE, still give encounter choice if they failed (reduced options)
+  if(!success){
+    addPanic(15);
+    showEncounterActions();
+  } else {
+    addPanic(-5);
+    afterEncounter();
+  }
+}
+
+// ==================== PASSIVES ====================
+
+function checkPassives(){
+  G.armorBonus = 0;
+  G.hasNightVision = false;
+  G.inventory.forEach(item=>{
+    if(item.type==='armor') G.armorBonus += item.armorVal||0;
+    if(item.useVal==='night') G.hasNightVision = true;
+  });
+}
+
+// ==================== GAME OVER ====================
+
+function gameOver(won){
+  showScreen('end-screen');
+  const icon = document.getElementById('end-icon');
+  const title = document.getElementById('end-title');
+  const stats = document.getElementById('end-stats');
+  const discovered = Object.keys(G.fieldGuide).length;
+
+  if(won){
+    Audio.win();
+    icon.textContent = '🚁';
+    title.textContent = 'RESCUE CONFIRMED';
+    title.style.color = 'var(--success)';
+    stats.innerHTML = `
+      > Beacon signal acquired by passing vessel.<br>
+      > Helicopter inbound. ETA: 12 minutes.<br>
+      > <strong>${G.char.name}</strong> is going home.<br><br>
+      Days Survived: <strong>${G.day}</strong><br>
+      Missions Completed: <strong>${G.missionsComplete.length}/${MISSIONS.length}</strong><br>
+      Encounters: <strong>${G.totalEncounters}</strong><br>
+      Threats Neutralized: <strong>${G.totalKills}</strong><br>
+      Items Found: <strong>${G.totalItems}</strong><br>
+      Species Cataloged: <strong>${discovered}/${DINOS.length}</strong><br>
+      Final Health: <strong>${G.hp}/${G.maxHp}</strong><br>
+      Peak Panic: <strong>${G.panic}%</strong>
+    `;
+  } else {
+    Audio.fail();
+    icon.textContent = '💀';
+    title.textContent = 'PROTOCOL FAILED';
+    title.style.color = 'var(--danger)';
+    stats.innerHTML = `
+      > Signal lost.<br>
+      > Operative status: UNRECOVERABLE.<br><br>
+      <strong>${G.char.name}</strong> — Lost on Isla Nublar.<br><br>
+      Days Survived: <strong>${G.day}</strong><br>
+      Missions Completed: <strong>${G.missionsComplete.length}/${MISSIONS.length}</strong><br>
+      Encounters: <strong>${G.totalEncounters}</strong><br>
+      Species Cataloged: <strong>${discovered}/${DINOS.length}</strong><br>
+      Items Found: <strong>${G.totalItems}</strong>
+    `;
+  }
+}
+</script>
+</body>
+</html>

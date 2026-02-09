@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash's Dino Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & BASE ========== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --neon:#39ff14;--cyan:#00e5ff;--magenta:#ff00e5;--orange:#ff6600;--red:#ff2244;
+  --bg:#0a0a12;--bg2:#12121e;--bg3:#1a1a2e;--panel:#16162a;--panelBorder:#2a2a44;
+  --text:#e0e0e0;--textDim:#8888aa;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden;min-height:100vh}
+h1,h2,h3{font-family:'Orbitron',sans-serif;text-transform:uppercase}
+button{font-family:'Rajdhani',sans-serif;cursor:pointer;border:none;outline:none;transition:all .2s}
+button:active{transform:scale(.95)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--neon);border-radius:3px}
+
+/* ========== PARTICLES BACKGROUND ========== */
+#particles-bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+.particle{position:absolute;border-radius:50%;animation:floatUp linear infinite;opacity:0}
+@keyframes floatUp{
+  0%{opacity:0;transform:translateY(100vh) scale(0)}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{opacity:0;transform:translateY(-10vh) scale(1)}
+}
+
+/* ========== HEADER ========== */
+.header{position:relative;z-index:10;text-align:center;padding:20px 16px 10px;
+  background:linear-gradient(180deg,rgba(10,10,18,.95),rgba(10,10,18,.7))}
+.header h1{font-size:clamp(1.6rem,5vw,3rem);letter-spacing:4px;
+  background:linear-gradient(90deg,var(--neon),var(--cyan),var(--neon));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;text-shadow:none;
+  animation:titleGlow 3s ease-in-out infinite alternate;filter:drop-shadow(0 0 20px rgba(57,255,20,.3))}
+@keyframes titleGlow{0%{filter:drop-shadow(0 0 10px rgba(57,255,20,.3))}100%{filter:drop-shadow(0 0 30px rgba(0,229,255,.5))}}
+.header .subtitle{font-family:'Press Start 2P',monospace;font-size:clamp(.45rem,1.5vw,.7rem);color:var(--cyan);
+  margin-top:6px;letter-spacing:2px;opacity:.8}
+
+/* ========== HUD BAR ========== */
+.hud{display:flex;justify-content:center;gap:24px;padding:8px 16px;
+  background:rgba(22,22,42,.8);border-bottom:1px solid var(--panelBorder);position:relative;z-index:10;flex-wrap:wrap}
+.hud-item{display:flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;color:var(--textDim)}
+.hud-item .val{color:var(--neon);font-family:'Orbitron',sans-serif;font-size:.9rem;min-width:30px;text-align:right}
+.hud-item .label{font-size:.65rem;text-transform:uppercase;letter-spacing:1px}
+
+/* ========== NAVIGATION ========== */
+.nav{display:flex;justify-content:center;gap:4px;padding:12px 16px 0;position:relative;z-index:10;flex-wrap:wrap}
+.nav-btn{padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:clamp(.55rem,1.5vw,.75rem);
+  font-weight:700;text-transform:uppercase;letter-spacing:2px;
+  background:var(--panel);color:var(--textDim);border:1px solid var(--panelBorder);
+  border-bottom:none;border-radius:8px 8px 0 0;transition:all .3s;position:relative;overflow:hidden}
+.nav-btn:hover{color:var(--text);background:var(--bg3);border-color:var(--cyan)}
+.nav-btn.active{color:var(--neon);background:var(--bg3);border-color:var(--neon);
+  box-shadow:0 0 15px rgba(57,255,20,.2),inset 0 0 15px rgba(57,255,20,.05)}
+.nav-btn.active::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:60%;height:2px;background:var(--neon);box-shadow:0 0 10px var(--neon);animation:navPulse 2s ease-in-out infinite}
+@keyframes navPulse{0%,100%{opacity:.5;width:40%}50%{opacity:1;width:70%}}
+
+/* ========== SECTIONS ========== */
+.content{position:relative;z-index:10;max-width:1200px;margin:0 auto;padding:16px}
+.section{display:none;animation:fadeSlide .4s ease}
+.section.active{display:block}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.panel{background:var(--panel);border:1px solid var(--panelBorder);border-radius:12px;padding:20px;margin-bottom:16px;
+  position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:.3}
+.panel-title{font-size:1.1rem;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-title .icon{font-size:1.3rem}
+
+/* ========== STAT BARS ========== */
+.stat-row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.stat-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;width:70px;color:var(--textDim);text-align:right}
+.stat-bar-bg{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:7px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.08)}
+.stat-bar-fill{height:100%;border-radius:7px;transition:width 1s cubic-bezier(.4,0,.2,1);position:relative;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.stat-bar-fill.atk{background:linear-gradient(90deg,#ff2244,#ff6644)}
+.stat-bar-fill.def{background:linear-gradient(90deg,#2266ff,#44aaff)}
+.stat-bar-fill.spd{background:linear-gradient(90deg,#ffcc00,#ffee44)}
+.stat-bar-fill.siz{background:linear-gradient(90deg,#aa44ff,#dd88ff)}
+.stat-bar-fill.hp{background:linear-gradient(90deg,var(--neon),#66ff66)}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:.7rem;width:30px;color:var(--text)}
+
+/* ========== BATTLE SECTION ========== */
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:10px 0}
+.dino-card{background:var(--bg2);border:2px solid var(--panelBorder);border-radius:10px;padding:10px;
+  text-align:center;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.dino-card:hover{border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,229,255,.15)}
+.dino-card.selected{border-color:var(--neon);box-shadow:0 0 20px rgba(57,255,20,.3);background:rgba(57,255,20,.05)}
+.dino-card .emoji{font-size:2rem;display:block;margin-bottom:4px}
+.dino-card .name{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;color:var(--text)}
+.dino-card .type{font-size:.6rem;color:var(--textDim);text-transform:uppercase}
+
+.battle-arena{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin:16px 0}
+.fighter-panel{text-align:center}
+.fighter-panel .fighter-emoji{font-size:4rem;display:block;margin:8px 0;transition:transform .3s}
+.fighter-panel .fighter-name{font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--neon)}
+.fighter-panel .hp-bar-bg{width:100%;height:20px;background:rgba(255,255,255,.08);border-radius:10px;overflow:hidden;margin:8px 0;border:1px solid rgba(255,255,255,.1)}
+.fighter-panel .hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--neon));border-radius:10px;transition:width .5s ease;position:relative}
+.fighter-panel .hp-text{font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--textDim)}
+.vs-badge{font-family:'Press Start 2P',monospace;font-size:1.2rem;color:var(--magenta);
+  text-shadow:0 0 20px var(--magenta);animation:vsPulse 1.5s ease-in-out infinite}
+@keyframes vsPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+
+.battle-btn{display:block;margin:16px auto;padding:14px 48px;font-family:'Orbitron',sans-serif;font-size:1rem;
+  font-weight:900;text-transform:uppercase;letter-spacing:3px;color:#000;
+  background:linear-gradient(135deg,var(--neon),var(--cyan));border-radius:50px;
+  box-shadow:0 0 30px rgba(57,255,20,.3);transition:all .3s}
+.battle-btn:hover{box-shadow:0 0 50px rgba(57,255,20,.5);transform:scale(1.05)}
+.battle-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+.battle-log{max-height:200px;overflow-y:auto;padding:10px;background:rgba(0,0,0,.3);border-radius:8px;
+  font-family:'Press Start 2P',monospace;font-size:.5rem;line-height:2}
+.battle-log p{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.battle-log .crit{color:var(--red)}
+.battle-log .heal{color:var(--neon)}
+.battle-log .info{color:var(--cyan)}
+.battle-log .winner{color:var(--neon);font-size:.6rem;text-shadow:0 0 10px var(--neon)}
+
+/* ========== BUILDER SECTION ========== */
+.builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.builder-grid{grid-template-columns:1fr}}
+.builder-options{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.opt-btn{padding:6px 14px;font-size:.75rem;font-weight:600;background:var(--bg2);color:var(--textDim);
+  border:1px solid var(--panelBorder);border-radius:20px;transition:all .2s}
+.opt-btn:hover{border-color:var(--cyan);color:var(--text)}
+.opt-btn.chosen{background:rgba(57,255,20,.1);border-color:var(--neon);color:var(--neon)}
+.color-btn{width:32px;height:32px;border-radius:50%;border:2px solid var(--panelBorder);transition:all .2s}
+.color-btn:hover{transform:scale(1.15)}
+.color-btn.chosen{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.3)}
+
+.dino-preview{width:100%;aspect-ratio:1;max-width:280px;margin:0 auto;position:relative;
+  background:radial-gradient(circle,rgba(57,255,20,.05),transparent);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.dino-preview .preview-body{font-size:6rem;transition:all .5s;filter:drop-shadow(0 0 20px rgba(57,255,20,.3))}
+
+.name-input{width:100%;padding:10px 16px;font-family:'Orbitron',sans-serif;font-size:.85rem;
+  background:var(--bg2);color:var(--neon);border:1px solid var(--panelBorder);border-radius:8px;
+  text-align:center;letter-spacing:2px}
+.name-input:focus{border-color:var(--neon);box-shadow:0 0 15px rgba(57,255,20,.2);outline:none}
+.name-input::placeholder{color:var(--textDim);opacity:.5}
+
+.save-btn{display:block;width:100%;padding:12px;font-family:'Orbitron',sans-serif;font-size:.85rem;
+  font-weight:700;color:#000;background:linear-gradient(135deg,var(--cyan),var(--neon));border-radius:8px;
+  margin-top:12px;letter-spacing:2px}
+
+/* ========== RUNNER GAME ========== */
+.game-container{position:relative;width:100%;max-width:800px;margin:0 auto}
+#runner-canvas{width:100%;background:var(--bg2);border:2px solid var(--panelBorder);border-radius:12px;display:block;
+  image-rendering:pixelated;cursor:pointer}
+.game-hud{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+.game-score{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--neon)}
+.game-hi{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--textDim)}
+.game-over-overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;background:rgba(0,0,0,.7);border-radius:12px;z-index:5}
+.game-over-overlay.show{display:flex}
+.game-over-text{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--red);margin-bottom:8px}
+.game-over-score{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--neon);margin-bottom:16px}
+.restart-btn{padding:10px 30px;font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;
+  color:#000;background:var(--neon);border-radius:8px}
+.start-prompt{font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--cyan);text-align:center;margin-top:8px;
+  animation:blink 1.5s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ========== FACT GENERATOR ========== */
+.slot-machine{text-align:center;padding:20px}
+.slot-display{width:100%;min-height:120px;background:var(--bg2);border:2px solid var(--panelBorder);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;padding:24px;margin:20px 0;position:relative;overflow:hidden}
+.slot-display .fact-text{font-size:1.1rem;font-weight:600;line-height:1.6;color:var(--text);transition:opacity .3s}
+.slot-display.spinning .fact-text{animation:slotSpin .1s linear infinite}
+@keyframes slotSpin{0%{transform:translateY(-100%);opacity:0}50%{transform:translateY(0);opacity:1}100%{transform:translateY(100%);opacity:0}}
+.slot-display .fact-emoji{font-size:3rem;display:block;margin-bottom:12px}
+.spin-btn{padding:16px 48px;font-family:'Press Start 2P',monospace;font-size:.7rem;color:#000;
+  background:linear-gradient(135deg,var(--orange),var(--red));border-radius:50px;
+  box-shadow:0 0 30px rgba(255,102,0,.3);transition:all .3s;letter-spacing:1px}
+.spin-btn:hover{box-shadow:0 0 50px rgba(255,102,0,.5);transform:scale(1.05)}
+.spin-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.fact-counter{font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--textDim);margin-top:12px}
+
+/* ========== VICTORY PARTICLES ========== */
+.victory-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100}
+.confetti{position:absolute;width:8px;height:8px;opacity:0;animation:confettiFall 2s ease-in forwards}
+@keyframes confettiFall{
+  0%{opacity:1;transform:translateY(0) rotate(0deg) scale(1)}
+  100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0)}
+}
+
+/* ========== BATTLE HISTORY ========== */
+.history-entry{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+  background:rgba(255,255,255,.02);border-radius:6px;margin:4px 0;font-size:.8rem}
+.history-entry .fighters{color:var(--textDim)}
+.history-entry .winner-name{color:var(--neon);font-weight:700}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:600px){
+  .battle-arena{grid-template-columns:1fr;gap:8px;text-align:center}
+  .fighter-panel .fighter-emoji{font-size:3rem}
+  .roster{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+  .nav-btn{padding:8px 12px;font-size:.5rem;letter-spacing:1px}
+  .hud{gap:12px}
+}
+
+/* ========== SCREEN SHAKE ========== */
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-4px)}20%,40%,60%,80%{transform:translateX(4px)}}
+.shake{animation:shake .4s ease}
+
+/* ========== DAMAGE FLASH ========== */
+@keyframes damageFlash{0%,100%{filter:brightness(1)}50%{filter:brightness(3) hue-rotate(180deg)}}
+.damage{animation:damageFlash .3s ease}
+
+/* ========== GLOW TEXT ========== */
+.glow{text-shadow:0 0 10px var(--neon),0 0 20px var(--neon),0 0 40px var(--neon)}
+
+/* ========== CUSTOM SCROLLBAR for panels ========== */
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--panelBorder);border-radius:2px}
+
+/* ========== SAVED DINOS LIST ========== */
+.saved-dino{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.02);
+  border-radius:8px;margin:4px 0;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.saved-dino:hover{border-color:var(--cyan);background:rgba(0,229,255,.05)}
+.saved-dino .sd-emoji{font-size:1.5rem}
+.saved-dino .sd-name{font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--neon)}
+.saved-dino .sd-info{font-size:.65rem;color:var(--textDim)}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND PARTICLES -->
+<div id="particles-bg"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Cash's Dino Arena</h1>
+  <div class="subtitle">// ULTIMATE DINOSAUR BATTLE SYSTEM //</div>
+</div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-item"><span class="label">Battles Won</span><span class="val" id="hud-wins">0</span></div>
+  <div class="hud-item"><span class="label">Dinos Created</span><span class="val" id="hud-created">0</span></div>
+  <div class="hud-item"><span class="label">Runner Best</span><span class="val" id="hud-hiscore">0</span></div>
+  <div class="hud-item"><span class="label">Facts Found</span><span class="val" id="hud-facts">0</span></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" data-tab="battle">Battle</button>
+  <button class="nav-btn" data-tab="builder">Builder</button>
+  <button class="nav-btn" data-tab="runner">Runner</button>
+  <button class="nav-btn" data-tab="facts">Facts</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ====== BATTLE SECTION ====== -->
+<div class="section active" id="sec-battle">
+  <div class="panel">
+    <div class="panel-title"><span class="icon">&#9876;</span> Choose Fighter 1</div>
+    <div class="roster" id="roster1"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title"><span class="icon">&#9876;</span> Choose Fighter 2</div>
+    <div class="roster" id="roster2"></div>
+  </div>
+
+  <!-- STATS COMPARISON -->
+  <div class="panel" id="stats-panel" style="display:none">
+    <div class="panel-title"><span class="icon">&#128202;</span> Stats Comparison</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div id="stats1"></div>
+      <div id="stats2"></div>
+    </div>
+  </div>
+
+  <!-- ARENA -->
+  <div class="panel" id="arena-panel" style="display:none">
+    <div class="panel-title"><span class="icon">&#127942;</span> Battle Arena</div>
+    <div class="battle-arena" id="battle-arena"></div>
+    <div class="battle-log" id="battle-log"></div>
+  </div>
+
+  <button class="battle-btn" id="battle-btn" disabled>SELECT 2 FIGHTERS</button>
+
+  <!-- BATTLE HISTORY -->
+  <div class="panel">
+    <div class="panel-title"><span class="icon">&#128220;</span> Battle History</div>
+    <div id="battle-history"><p style="color:var(--textDim);font-size:.8rem;">No battles yet. Pick your fighters!</p></div>
+  </div>
+</div>
+
+<!-- ====== BUILDER SECTION ====== -->
+<div class="section" id="sec-builder">
+  <div class="builder-grid">
+    <div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#129516;</span> Body Type</div>
+        <div class="builder-options" id="opt-body">
+          <button class="opt-btn" data-val="bipedal">Bipedal</button>
+          <button class="opt-btn" data-val="quadruped">Quadruped</button>
+          <button class="opt-btn" data-val="flying">Flying</button>
+          <button class="opt-btn" data-val="aquatic">Aquatic</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#128207;</span> Size</div>
+        <div class="builder-options" id="opt-size">
+          <button class="opt-btn" data-val="small">Small</button>
+          <button class="opt-btn" data-val="medium">Medium</button>
+          <button class="opt-btn" data-val="large">Large</button>
+          <button class="opt-btn" data-val="colossal">Colossal</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#127830;</span> Diet</div>
+        <div class="builder-options" id="opt-diet">
+          <button class="opt-btn" data-val="carnivore">Carnivore</button>
+          <button class="opt-btn" data-val="herbivore">Herbivore</button>
+          <button class="opt-btn" data-val="omnivore">Omnivore</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#9889;</span> Special Ability</div>
+        <div class="builder-options" id="opt-ability">
+          <button class="opt-btn" data-val="armor">Armor Plates</button>
+          <button class="opt-btn" data-val="speed">Speed Boost</button>
+          <button class="opt-btn" data-val="venom">Venomous</button>
+          <button class="opt-btn" data-val="camo">Camouflage</button>
+          <button class="opt-btn" data-val="fire">Fire Breath</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#127912;</span> Color Scheme</div>
+        <div class="builder-options" id="opt-color">
+          <button class="color-btn" data-val="green" style="background:linear-gradient(135deg,#2d5a1e,#5cb338)"></button>
+          <button class="color-btn" data-val="red" style="background:linear-gradient(135deg,#8b1a1a,#ff4444)"></button>
+          <button class="color-btn" data-val="blue" style="background:linear-gradient(135deg,#1a3a8b,#4488ff)"></button>
+          <button class="color-btn" data-val="purple" style="background:linear-gradient(135deg,#5a1a8b,#bb44ff)"></button>
+          <button class="color-btn" data-val="gold" style="background:linear-gradient(135deg,#8b6914,#ffd700)"></button>
+          <button class="color-btn" data-val="shadow" style="background:linear-gradient(135deg,#1a1a1a,#444)"></button>
+          <button class="color-btn" data-val="lava" style="background:linear-gradient(135deg,#8b2200,#ff6600)"></button>
+          <button class="color-btn" data-val="ice" style="background:linear-gradient(135deg,#1a6a8b,#88eeff)"></button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel" style="text-align:center">
+        <div class="panel-title" style="justify-content:center"><span class="icon">&#128171;</span> Preview</div>
+        <div class="dino-preview"><div class="preview-body" id="preview-body">&#129430;</div></div>
+        <input type="text" class="name-input" id="dino-name" placeholder="NAME YOUR DINO..." maxlength="20">
+        <div id="builder-stats" style="margin-top:12px"></div>
+        <button class="save-btn" id="save-dino-btn">SAVE TO ROSTER</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#128190;</span> Saved Custom Dinos</div>
+        <div id="saved-dinos-list"><p style="color:var(--textDim);font-size:.8rem;">No custom dinos yet. Build one!</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== RUNNER SECTION ====== -->
+<div class="section" id="sec-runner">
+  <div class="panel">
+    <div class="panel-title"><span class="icon">&#127939;</span> Dino Runner</div>
+    <div class="game-container">
+      <div class="game-hud">
+        <div class="game-score">SCORE: <span id="run-score">0</span></div>
+        <div class="game-hi">HI: <span id="run-hi">0</span></div>
+      </div>
+      <div style="position:relative">
+        <canvas id="runner-canvas" width="800" height="250"></canvas>
+        <div class="game-over-overlay" id="game-over">
+          <div class="game-over-text">GAME OVER</div>
+          <div class="game-over-score" id="game-over-score">SCORE: 0</div>
+          <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
+        </div>
+      </div>
+      <div class="start-prompt" id="start-prompt">PRESS SPACE OR TAP TO START</div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== FACTS SECTION ====== -->
+<div class="section" id="sec-facts">
+  <div class="panel">
+    <div class="panel-title"><span class="icon">&#129429;</span> Dino Fact Generator</div>
+    <div class="slot-machine">
+      <div class="slot-display" id="slot-display">
+        <div>
+          <span class="fact-emoji">&#129430;</span>
+          <span class="fact-text" id="fact-text">Press the button to discover an awesome dinosaur fact!</span>
+        </div>
+      </div>
+      <button class="spin-btn" id="spin-btn">GENERATE FACT</button>
+      <div class="fact-counter">Facts discovered: <span id="facts-count">0</span> / <span id="facts-total">30</span></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- VICTORY PARTICLES CONTAINER -->
+<div class="victory-container" id="victory-container"></div>
+
+<script>
+/* ================================================================
+   CASH'S DINO ARENA - Complete Game System
+   ================================================================ */
+
+// ============ GLOBAL STATE ============
+const state = {
+  battlesWon: 0,
+  dinosCreated: 0,
+  runnerHi: 0,
+  factsFound: 0,
+  battleHistory: [],
+  customDinos: [],
+  discoveredFacts: new Set(),
+  selected1: null,
+  selected2: null
+};
+
+// ============ DINOSAUR DATABASE ============
+const DINOS = [
+  {id:'trex',name:'T-Rex',emoji:'\u{1F996}',type:'Carnivore',atk:95,def:70,spd:60,siz:90,desc:'The king of dinosaurs'},
+  {id:'raptor',name:'Velociraptor',emoji:'\u{1F996}',type:'Carnivore',atk:80,def:40,spd:95,siz:30,desc:'Fast and cunning hunter'},
+  {id:'trike',name:'Triceratops',emoji:'\u{1F995}',type:'Herbivore',atk:65,def:95,spd:40,siz:80,desc:'Three-horned tank'},
+  {id:'stego',name:'Stegosaurus',emoji:'\u{1F995}',type:'Herbivore',atk:50,def:90,spd:35,siz:75,desc:'Spiked tail warrior'},
+  {id:'spino',name:'Spinosaurus',emoji:'\u{1F996}',type:'Carnivore',atk:90,def:65,spd:55,siz:95,desc:'Massive sail-backed predator'},
+  {id:'ankylo',name:'Ankylosaurus',emoji:'\u{1F995}',type:'Herbivore',atk:55,def:99,spd:25,siz:70,desc:'Living fortress'},
+  {id:'ptero',name:'Pteranodon',emoji:'\u{1F985}',type:'Carnivore',atk:60,def:30,spd:99,siz:40,desc:'Terror of the skies'},
+  {id:'bronto',name:'Brontosaurus',emoji:'\u{1F995}',type:'Herbivore',atk:40,def:80,spd:20,siz:99,desc:'Gentle giant'},
+  {id:'allo',name:'Allosaurus',emoji:'\u{1F996}',type:'Carnivore',atk:85,def:55,spd:70,siz:75,desc:'Jurassic apex predator'},
+  {id:'diloph',name:'Dilophosaurus',emoji:'\u{1F996}',type:'Carnivore',atk:70,def:35,spd:80,siz:45,desc:'Venomous crested hunter'},
+  {id:'carno',name:'Carnotaurus',emoji:'\u{1F996}',type:'Carnivore',atk:75,def:50,spd:85,siz:60,desc:'Horned speed demon'},
+  {id:'giga',name:'Giganotosaurus',emoji:'\u{1F996}',type:'Carnivore',atk:92,def:60,spd:50,siz:92,desc:'Bigger than T-Rex'},
+  {id:'pach',name:'Pachycephalosaurus',emoji:'\u{1F995}',type:'Herbivore',atk:70,def:65,spd:65,siz:40,desc:'Bone-headed brawler'},
+  {id:'para',name:'Parasaurolophus',emoji:'\u{1F995}',type:'Herbivore',atk:35,def:50,spd:70,siz:65,desc:'Trumpeting sprinter'},
+  {id:'mosa',name:'Mosasaurus',emoji:'\u{1F40A}',type:'Carnivore',atk:88,def:75,spd:65,siz:88,desc:'Ocean apex predator'},
+  {id:'theri',name:'Therizinosaurus',emoji:'\u{1F996}',type:'Herbivore',atk:78,def:55,spd:45,siz:70,desc:'Giant claw slasher'}
+];
+
+// ============ DINOSAUR FACTS ============
+const FACTS = [
+  "The T-Rex could bite with a force of 12,800 pounds - enough to crush a car!",
+  "Velociraptors were actually only about the size of a turkey, not human-sized like in movies.",
+  "The longest dinosaur ever discovered, Supersaurus, was over 100 feet long!",
+  "Some dinosaurs had feathers! Many raptors were covered in colorful plumage.",
+  "The Stegosaurus had a brain the size of a walnut, despite being 30 feet long.",
+  "Dinosaurs lived on Earth for about 165 million years. Humans have only been here for ~300,000 years.",
+  "The Pachycephalosaurus had a skull roof 10 inches thick for head-butting battles.",
+  "Triceratops horns could grow over 3 feet long - longer than a baseball bat!",
+  "The Spinosaurus is the largest known carnivorous dinosaur, even bigger than T-Rex!",
+  "Ankylosaurs had a tail club that could shatter bone on impact.",
+  "Pteranodons had wingspans of up to 23 feet - wider than most cars are long!",
+  "The Argentinosaurus weighed about 100 tons - as much as 15 African elephants!",
+  "Some dinosaurs could run up to 45 mph. Usain Bolt's top speed is only 28 mph.",
+  "The first dinosaur bone discovered was found in 1677 and was thought to be from a giant human.",
+  "Dinosaur fossils have been found on every continent, including Antarctica!",
+  "The Mosasaurus wasn't actually a dinosaur - it was a giant marine reptile.",
+  "T-Rex had the best sense of smell of any dinosaur, with huge olfactory bulbs in its brain.",
+  "Some sauropods swallowed stones (gastroliths) to help grind up food in their stomachs.",
+  "The Microraptor had four wings and could glide between trees!",
+  "Dinosaur eggs could be as large as basketballs (Titanosaur eggs).",
+  "The Quetzalcoatlus had a wingspan of 36 feet - the size of a small airplane!",
+  "Birds are living dinosaurs! They evolved from small theropod dinosaurs.",
+  "The Therizinosaurus had claws over 3 feet long - the longest of any animal ever!",
+  "Some dinosaurs lived to be over 100 years old, based on bone ring analysis.",
+  "The Giganotosaurus could grow to 43 feet long and weighed 8 tons.",
+  "Parasaurolophus used its crest like a trumpet to communicate with its herd.",
+  "The asteroid that killed the dinosaurs created a crater 93 miles wide in Mexico.",
+  "Dilophosaurus didn't actually spit venom - that was invented for Jurassic Park.",
+  "The Brontosaurus was once considered fake but was officially recognized again in 2015!",
+  "T-Rex arms were actually incredibly strong despite being short - each could bench press 400 pounds!",
+  "Dreadnoughtus may be the largest land animal ever - it weighed 65 tons and was 85 feet long.",
+  "Some dinosaurs had over 1,000 teeth! Hadrosaurs had dental batteries with hundreds of teeth in rows."
+];
+
+// ============ UTILITY FUNCTIONS ============
+function $(s){return document.querySelector(s)}
+function $$(s){return document.querySelectorAll(s)}
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v))}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function updateHUD(){
+  $('#hud-wins').textContent = state.battlesWon;
+  $('#hud-created').textContent = state.dinosCreated;
+  $('#hud-hiscore').textContent = state.runnerHi;
+  $('#hud-facts').textContent = state.factsFound;
+}
+
+// ============ BACKGROUND PARTICLES ============
+function initParticles(){
+  const c = $('#particles-bg');
+  const colors = ['var(--neon)','var(--cyan)','var(--magenta)','rgba(255,255,255,.3)'];
+  for(let i=0;i<40;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const s = rand(2,5);
+    p.style.cssText = `width:${s}px;height:${s}px;left:${rand(0,100)}%;
+      background:${colors[rand(0,colors.length-1)]};
+      animation-duration:${rand(8,20)}s;animation-delay:${rand(0,15)}s;`;
+    c.appendChild(p);
+  }
+}
+
+// ============ NAVIGATION ============
+function initNav(){
+  $$('.nav-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      $$('.nav-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      $$('.section').forEach(s=>s.classList.remove('active'));
+      $(`#sec-${btn.dataset.tab}`).classList.add('active');
+      if(btn.dataset.tab==='runner') initRunnerIfNeeded();
+    });
+  });
+}
+
+// ============ VICTORY PARTICLES ============
+function spawnVictoryParticles(){
+  const c = $('#victory-container');
+  c.innerHTML = '';
+  const colors = ['#39ff14','#00e5ff','#ff00e5','#ffcc00','#ff4444','#ffffff','#ff6600'];
+  for(let i=0;i<80;i++){
+    const p = document.createElement('div');
+    p.className = 'confetti';
+    const s = rand(4,12);
+    const shapes = ['50%','0','30%'];
+    p.style.cssText = `width:${s}px;height:${s}px;left:${rand(10,90)}%;top:${rand(-10,30)}%;
+      background:${colors[rand(0,colors.length-1)]};border-radius:${shapes[rand(0,2)]};
+      animation-delay:${rand(0,500)}ms;animation-duration:${rand(1500,3000)}ms;`;
+    c.appendChild(p);
+  }
+  setTimeout(()=>c.innerHTML='',3500);
+}
+
+// ================================================================
+// BATTLE SYSTEM
+// ================================================================
+function buildRoster(containerId, slot){
+  const container = $(containerId);
+  const allDinos = [...DINOS, ...state.customDinos];
+  container.innerHTML = allDinos.map(d=>`
+    <div class="dino-card" data-id="${d.id}" data-slot="${slot}">
+      <span class="emoji">${d.emoji}</span>
+      <div class="name">${d.name}</div>
+      <div class="type">${d.type}</div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.dino-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      container.querySelectorAll('.dino-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      const allDinos2 = [...DINOS, ...state.customDinos];
+      const dino = allDinos2.find(d=>d.id===card.dataset.id);
+      if(slot===1) state.selected1 = dino;
+      else state.selected2 = dino;
+      updateBattleUI();
+    });
+  });
+}
+
+function renderStats(containerId, dino){
+  if(!dino){$(containerId).innerHTML='';return;}
+  $(containerId).innerHTML = `
+    <div style="text-align:center;margin-bottom:8px">
+      <span style="font-size:2rem">${dino.emoji}</span>
+      <div style="font-family:'Orbitron';font-size:.8rem;color:var(--neon)">${dino.name}</div>
+    </div>
+    <div class="stat-row"><span class="stat-label">ATK</span><div class="stat-bar-bg"><div class="stat-bar-fill atk" style="width:${dino.atk}%"></div></div><span class="stat-val">${dino.atk}</span></div>
+    <div class="stat-row"><span class="stat-label">DEF</span><div class="stat-bar-bg"><div class="stat-bar-fill def" style="width:${dino.def}%"></div></div><span class="stat-val">${dino.def}</span></div>
+    <div class="stat-row"><span class="stat-label">SPD</span><div class="stat-bar-bg"><div class="stat-bar-fill spd" style="width:${dino.spd}%"></div></div><span class="stat-val">${dino.spd}</span></div>
+    <div class="stat-row"><span class="stat-label">SIZE</span><div class="stat-bar-bg"><div class="stat-bar-fill siz" style="width:${dino.siz}%"></div></div><span class="stat-val">${dino.siz}</span></div>
+  `;
+}
+
+function updateBattleUI(){
+  const btn = $('#battle-btn');
+  if(state.selected1 && state.selected2){
+    if(state.selected1.id === state.selected2.id){
+      btn.textContent = 'PICK 2 DIFFERENT FIGHTERS';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'BATTLE!';
+      btn.disabled = false;
+    }
+    $('#stats-panel').style.display = 'block';
+    renderStats('#stats1', state.selected1);
+    renderStats('#stats2', state.selected2);
+  } else {
+    btn.textContent = state.selected1 || state.selected2 ? 'SELECT 1 MORE FIGHTER' : 'SELECT 2 FIGHTERS';
+    btn.disabled = true;
+    $('#stats-panel').style.display = state.selected1 || state.selected2 ? 'block' : 'none';
+    renderStats('#stats1', state.selected1);
+    renderStats('#stats2', state.selected2);
+  }
+}
+
+async function runBattle(){
+  const d1 = {...state.selected1};
+  const d2 = {...state.selected2};
+  const maxHp1 = 100 + d1.def + d1.siz;
+  const maxHp2 = 100 + d2.def + d2.siz;
+  let hp1 = maxHp1, hp2 = maxHp2;
+
+  const btn = $('#battle-btn');
+  btn.disabled = true;
+  btn.textContent = 'FIGHTING...';
+
+  $('#arena-panel').style.display = 'block';
+  const arena = $('#battle-arena');
+  arena.innerHTML = `
+    <div class="fighter-panel" id="fp1">
+      <div class="fighter-name">${d1.name}</div>
+      <span class="fighter-emoji" id="fe1">${d1.emoji}</span>
+      <div class="hp-bar-bg"><div class="hp-bar-fill" id="hp1" style="width:100%"></div></div>
+      <div class="hp-text"><span id="hpv1">${hp1}</span> / ${maxHp1}</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="fighter-panel" id="fp2">
+      <div class="fighter-name">${d2.name}</div>
+      <span class="fighter-emoji" id="fe2">${d2.emoji}</span>
+      <div class="hp-bar-bg"><div class="hp-bar-fill" id="hp2" style="width:100%"></div></div>
+      <div class="hp-text"><span id="hpv2">${hp2}</span> / ${maxHp2}</div>
+    </div>
+  `;
+
+  const log = $('#battle-log');
+  log.innerHTML = '<p class="info">>>> BATTLE START! <<<</p>';
+
+  const attacks = [
+    ['bites','slashes','charges at','headbutts','tail-whips','stomps on','claws at','rams into','lunges at','snaps at'],
+    ['Critical hit!','Devastating blow!','Direct impact!','Glancing blow.','Powerful strike!','Bone-crushing attack!','Precise hit!']
+  ];
+
+  const specials = [
+    '{name} unleashes a FURY ATTACK!','{name} enters RAGE MODE!',
+    '{name} uses PRIMAL ROAR! Attack boosted!','{name} performs a DEVASTATING COMBO!',
+    '{name} activates DINO INSTINCT!'
+  ];
+
+  let turn = 0;
+  while(hp1>0 && hp2>0){
+    turn++;
+    const first = d1.spd + rand(-10,10) >= d2.spd + rand(-10,10);
+    const attacker = first ? d1 : d2;
+    const defender = first ? d2 : d1;
+    const atkHp = first ? 'hp1' : 'hp2';
+    const defHp = first ? 'hp2' : 'hp1';
+    const atkEmoji = first ? 'fe1' : 'fe2';
+    const defEmoji = first ? 'fe2' : 'fe1';
+
+    // Attacker hits
+    let baseDmg = attacker.atk - (defender.def * 0.3) + rand(-10,15);
+    let isCrit = Math.random() < 0.2;
+    let isSpecial = Math.random() < 0.1 && turn > 2;
+    if(isCrit) baseDmg = Math.floor(baseDmg * 1.8);
+    if(isSpecial) baseDmg = Math.floor(baseDmg * 1.5);
+    baseDmg = Math.max(5, Math.floor(baseDmg));
+
+    const atkWord = attacks[0][rand(0,attacks[0].length-1)];
+    const atkDesc = attacks[1][rand(0,attacks[1].length-1)];
+
+    if(isSpecial){
+      const sp = specials[rand(0,specials.length-1)].replace('{name}',attacker.name);
+      log.innerHTML += `<p class="crit">>>> ${sp} <<<</p>`;
+    }
+
+    let msg = `${attacker.name} ${atkWord} ${defender.name} for ${baseDmg} damage! ${atkDesc}`;
+    log.innerHTML += `<p class="${isCrit?'crit':''}">${isCrit?'CRITICAL! ':''}${msg}</p>`;
+
+    if(first){hp2 = Math.max(0, hp2 - baseDmg)} else {hp1 = Math.max(0, hp1 - baseDmg)}
+
+    // Update HP bars
+    $(`#hp1`).style.width = (hp1/maxHp1*100)+'%';
+    $(`#hp2`).style.width = (hp2/maxHp2*100)+'%';
+    $(`#hpv1`).textContent = hp1;
+    $(`#hpv2`).textContent = hp2;
+
+    // Shake effect
+    const defPanel = first ? '#fp2' : '#fp1';
+    $(defPanel).classList.add('shake');
+    $(`#${defEmoji}`).classList.add('damage');
+    setTimeout(()=>{$(defPanel).classList.remove('shake');$(`#${defEmoji}`).classList.remove('damage')},400);
+
+    log.scrollTop = log.scrollHeight;
+    await sleep(700);
+
+    if(hp1<=0 || hp2<=0) break;
+
+    // Defender counter-attacks
+    let baseDmg2 = defender.atk - (attacker.def * 0.3) + rand(-10,15);
+    let isCrit2 = Math.random() < 0.2;
+    if(isCrit2) baseDmg2 = Math.floor(baseDmg2 * 1.8);
+    baseDmg2 = Math.max(5, Math.floor(baseDmg2));
+
+    const atkWord2 = attacks[0][rand(0,attacks[0].length-1)];
+    const atkDesc2 = attacks[1][rand(0,attacks[1].length-1)];
+    let msg2 = `${defender.name} ${atkWord2} ${attacker.name} for ${baseDmg2} damage! ${atkDesc2}`;
+    log.innerHTML += `<p class="${isCrit2?'crit':''}">${isCrit2?'CRITICAL! ':''}${msg2}</p>`;
+
+    if(first){hp1 = Math.max(0, hp1 - baseDmg2)} else {hp2 = Math.max(0, hp2 - baseDmg2)}
+
+    $(`#hp1`).style.width = (hp1/maxHp1*100)+'%';
+    $(`#hp2`).style.width = (hp2/maxHp2*100)+'%';
+    $(`#hpv1`).textContent = hp1;
+    $(`#hpv2`).textContent = hp2;
+
+    const atkPanel = first ? '#fp1' : '#fp2';
+    $(atkPanel).classList.add('shake');
+    $(`#${atkEmoji}`).classList.add('damage');
+    setTimeout(()=>{$(atkPanel).classList.remove('shake');$(`#${atkEmoji}`).classList.remove('damage')},400);
+
+    log.scrollTop = log.scrollHeight;
+    await sleep(700);
+  }
+
+  // Winner
+  const winner = hp1 > 0 ? d1 : d2;
+  const loser = hp1 > 0 ? d2 : d1;
+  log.innerHTML += `<p class="winner">>>> ${winner.name.toUpperCase()} WINS THE BATTLE! <<<</p>`;
+  log.scrollTop = log.scrollHeight;
+
+  spawnVictoryParticles();
+  state.battlesWon++;
+  state.battleHistory.unshift({winner:winner.name,loser:loser.name,turns:turn});
+  updateBattleHistory();
+  updateHUD();
+
+  btn.textContent = 'BATTLE!';
+  btn.disabled = false;
+}
+
+function updateBattleHistory(){
+  const c = $('#battle-history');
+  if(state.battleHistory.length === 0){
+    c.innerHTML = '<p style="color:var(--textDim);font-size:.8rem;">No battles yet. Pick your fighters!</p>';
+    return;
+  }
+  c.innerHTML = state.battleHistory.slice(0,10).map(h=>`
+    <div class="history-entry">
+      <span class="fighters">${h.winner} vs ${h.loser} (${h.turns} turns)</span>
+      <span class="winner-name">${h.winner} WINS</span>
+    </div>
+  `).join('');
+}
+
+function initBattle(){
+  buildRoster('#roster1',1);
+  buildRoster('#roster2',2);
+  $('#battle-btn').addEventListener('click',()=>{
+    if(state.selected1 && state.selected2 && state.selected1.id !== state.selected2.id) runBattle();
+  });
+}
+
+// ================================================================
+// DINO BUILDER
+// ================================================================
+const builderState = {body:null,size:null,diet:null,ability:null,color:null};
+
+const bodyEmojis = {bipedal:'\u{1F996}',quadruped:'\u{1F995}',flying:'\u{1F985}',aquatic:'\u{1F40A}'};
+const colorFilters = {
+  green:'hue-rotate(0deg)',red:'hue-rotate(-120deg) saturate(1.5)',blue:'hue-rotate(180deg)',
+  purple:'hue-rotate(240deg) saturate(1.3)',gold:'hue-rotate(40deg) saturate(2) brightness(1.2)',
+  shadow:'saturate(0) brightness(0.6)',lava:'hue-rotate(-60deg) saturate(2) brightness(1.1)',
+  ice:'hue-rotate(160deg) saturate(0.8) brightness(1.3)'
+};
+const sizeScales = {small:0.6,medium:1,large:1.4,colossal:1.8};
+
+function calcBuilderStats(){
+  let atk=50,def=50,spd=50,siz=50;
+  if(builderState.body==='bipedal'){atk+=15;spd+=10}
+  if(builderState.body==='quadruped'){def+=20;siz+=10}
+  if(builderState.body==='flying'){spd+=25;def-=10;siz-=10}
+  if(builderState.body==='aquatic'){atk+=10;def+=10;siz+=10}
+  if(builderState.size==='small'){spd+=20;siz-=20;atk-=5}
+  if(builderState.size==='medium'){/* balanced */}
+  if(builderState.size==='large'){siz+=20;atk+=10;spd-=10}
+  if(builderState.size==='colossal'){siz+=40;atk+=15;def+=10;spd-=25}
+  if(builderState.diet==='carnivore'){atk+=15;spd+=5}
+  if(builderState.diet==='herbivore'){def+=15;siz+=5}
+  if(builderState.diet==='omnivore'){atk+=5;def+=5;spd+=5;siz+=5}
+  if(builderState.ability==='armor'){def+=25;spd-=5}
+  if(builderState.ability==='speed'){spd+=25;def-=5}
+  if(builderState.ability==='venom'){atk+=20}
+  if(builderState.ability==='camo'){spd+=10;def+=10}
+  if(builderState.ability==='fire'){atk+=30;def-=10}
+  return {atk:clamp(atk,10,99),def:clamp(def,10,99),spd:clamp(spd,10,99),siz:clamp(siz,10,99)};
+}
+
+function updateBuilderPreview(){
+  const body = $('#preview-body');
+  const emoji = bodyEmojis[builderState.body] || '\u{1F996}';
+  body.textContent = emoji;
+  const scale = sizeScales[builderState.size] || 1;
+  const filter = colorFilters[builderState.color] || 'none';
+  body.style.transform = `scale(${scale})`;
+  body.style.filter = `${filter} drop-shadow(0 0 20px rgba(57,255,20,.3))`;
+
+  const stats = calcBuilderStats();
+  const sc = '#builder-stats';
+  $(sc).innerHTML = `
+    <div class="stat-row"><span class="stat-label">ATK</span><div class="stat-bar-bg"><div class="stat-bar-fill atk" style="width:${stats.atk}%"></div></div><span class="stat-val">${stats.atk}</span></div>
+    <div class="stat-row"><span class="stat-label">DEF</span><div class="stat-bar-bg"><div class="stat-bar-fill def" style="width:${stats.def}%"></div></div><span class="stat-val">${stats.def}</span></div>
+    <div class="stat-row"><span class="stat-label">SPD</span><div class="stat-bar-bg"><div class="stat-bar-fill spd" style="width:${stats.spd}%"></div></div><span class="stat-val">${stats.spd}</span></div>
+    <div class="stat-row"><span class="stat-label">SIZE</span><div class="stat-bar-bg"><div class="stat-bar-fill siz" style="width:${stats.siz}%"></div></div><span class="stat-val">${stats.siz}</span></div>
+  `;
+}
+
+function initBuilder(){
+  const groups = ['body','size','diet','ability','color'];
+  groups.forEach(g=>{
+    const container = $(`#opt-${g}`);
+    container.querySelectorAll(g==='color'?'.color-btn':'.opt-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        container.querySelectorAll(g==='color'?'.color-btn':'.opt-btn').forEach(b=>b.classList.remove('chosen'));
+        btn.classList.add('chosen');
+        builderState[g] = btn.dataset.val;
+        updateBuilderPreview();
+      });
+    });
+  });
+
+  $('#save-dino-btn').addEventListener('click',()=>{
+    const name = $('#dino-name').value.trim();
+    if(!name){$('#dino-name').style.borderColor='var(--red)';setTimeout(()=>$('#dino-name').style.borderColor='',1000);return;}
+    if(!builderState.body||!builderState.size||!builderState.diet||!builderState.ability||!builderState.color){return;}
+
+    const stats = calcBuilderStats();
+    const emoji = bodyEmojis[builderState.body];
+    const dino = {
+      id:'custom_'+Date.now(),
+      name: name,
+      emoji: emoji,
+      type: builderState.diet.charAt(0).toUpperCase()+builderState.diet.slice(1),
+      atk: stats.atk,
+      def: stats.def,
+      spd: stats.spd,
+      siz: stats.siz,
+      desc: `Custom ${builderState.size} ${builderState.body} ${builderState.diet} with ${builderState.ability}`,
+      custom: true,
+      colorFilter: colorFilters[builderState.color]
+    };
+
+    state.customDinos.push(dino);
+    state.dinosCreated++;
+    updateHUD();
+    updateSavedDinos();
+    // Rebuild rosters
+    buildRoster('#roster1',1);
+    buildRoster('#roster2',2);
+    state.selected1 = null;
+    state.selected2 = null;
+    updateBattleUI();
+    // Reset form
+    $('#dino-name').value = '';
+    $$('.opt-btn.chosen,.color-btn.chosen').forEach(b=>b.classList.remove('chosen'));
+    Object.keys(builderState).forEach(k=>builderState[k]=null);
+    updateBuilderPreview();
+    spawnVictoryParticles();
+  });
+
+  updateBuilderPreview();
+}
+
+function updateSavedDinos(){
+  const c = $('#saved-dinos-list');
+  if(state.customDinos.length === 0){
+    c.innerHTML = '<p style="color:var(--textDim);font-size:.8rem;">No custom dinos yet. Build one!</p>';
+    return;
+  }
+  c.innerHTML = state.customDinos.map(d=>`
+    <div class="saved-dino">
+      <span class="sd-emoji">${d.emoji}</span>
+      <div>
+        <div class="sd-name">${d.name}</div>
+        <div class="sd-info">ATK:${d.atk} DEF:${d.def} SPD:${d.spd} SIZ:${d.siz}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ================================================================
+// DINO RUNNER GAME
+// ================================================================
+let runnerInited = false;
+let gameRunning = false;
+let gameOver = false;
+let gameStarted = false;
+
+const GAME = {
+  canvas: null, ctx: null,
+  W: 800, H: 250,
+  dino: {x:60,y:0,vy:0,w:30,h:36,grounded:true,ducking:false},
+  gravity: 0.65,
+  jumpForce: -13,
+  ground: 210,
+  obstacles: [],
+  clouds: [],
+  score: 0,
+  hiScore: 0,
+  speed: 5,
+  frameCount: 0,
+  spawnTimer: 0,
+  groundOffset: 0
+};
+
+function initRunnerIfNeeded(){
+  if(runnerInited) return;
+  runnerInited = true;
+  GAME.canvas = $('#runner-canvas');
+  GAME.ctx = GAME.canvas.getContext('2d');
+  GAME.canvas.width = GAME.W;
+  GAME.canvas.height = GAME.H;
+  GAME.dino.y = GAME.ground - GAME.dino.h;
+
+  // Seed some clouds
+  for(let i=0;i<4;i++){
+    GAME.clouds.push({x:rand(0,GAME.W),y:rand(20,80),w:rand(40,80),speed:rand(1,2)*0.3});
+  }
+
+  // Input
+  const jump = ()=>{
+    if(gameOver){restartGame();return;}
+    if(!gameStarted){startGame();return;}
+    if(GAME.dino.grounded){
+      GAME.dino.vy = GAME.jumpForce;
+      GAME.dino.grounded = false;
+    }
+  };
+
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space' && $('#sec-runner').classList.contains('active')){e.preventDefault();jump();}
+  });
+  GAME.canvas.addEventListener('click',jump);
+  GAME.canvas.addEventListener('touchstart',e=>{e.preventDefault();jump();},{passive:false});
+  $('#restart-btn').addEventListener('click',restartGame);
+
+  drawIdle();
+}
+
+function startGame(){
+  gameStarted = true;
+  gameRunning = true;
+  gameOver = false;
+  GAME.score = 0;
+  GAME.speed = 5;
+  GAME.frameCount = 0;
+  GAME.spawnTimer = 0;
+  GAME.obstacles = [];
+  GAME.dino.y = GAME.ground - GAME.dino.h;
+  GAME.dino.vy = 0;
+  GAME.dino.grounded = true;
+  $('#start-prompt').style.display = 'none';
+  $('#game-over').classList.remove('show');
+  requestAnimationFrame(gameLoop);
+}
+
+function restartGame(){
+  gameOver = false;
+  $('#game-over').classList.remove('show');
+  startGame();
+}
+
+function gameLoop(ts){
+  if(!gameRunning) return;
+  GAME.frameCount++;
+  update();
+  draw();
+  if(!gameOver) requestAnimationFrame(gameLoop);
+}
+
+function update(){
+  // Dino physics
+  if(!GAME.dino.grounded){
+    GAME.dino.vy += GAME.gravity;
+    GAME.dino.y += GAME.dino.vy;
+    if(GAME.dino.y >= GAME.ground - GAME.dino.h){
+      GAME.dino.y = GAME.ground - GAME.dino.h;
+      GAME.dino.vy = 0;
+      GAME.dino.grounded = true;
+    }
+  }
+
+  // Speed increases
+  GAME.speed = 5 + GAME.score * 0.003;
+  if(GAME.speed > 15) GAME.speed = 15;
+
+  // Spawn obstacles
+  GAME.spawnTimer++;
+  const minGap = Math.max(50, 100 - GAME.score * 0.05);
+  if(GAME.spawnTimer > minGap + rand(0,60)){
+    GAME.spawnTimer = 0;
+    const type = Math.random();
+    if(type < 0.55){
+      // Cactus
+      const h = rand(25,50);
+      GAME.obstacles.push({x:GAME.W+20,y:GAME.ground-h,w:16,h:h,type:'cactus'});
+    } else if(type < 0.8){
+      // Rock
+      GAME.obstacles.push({x:GAME.W+20,y:GAME.ground-18,w:24,h:18,type:'rock'});
+    } else {
+      // Pterodactyl
+      const py = rand(GAME.ground - 90, GAME.ground - 50);
+      GAME.obstacles.push({x:GAME.W+20,y:py,w:30,h:20,type:'ptero',wingFrame:0});
+    }
+  }
+
+  // Move obstacles
+  for(let i=GAME.obstacles.length-1;i>=0;i--){
+    const o = GAME.obstacles[i];
+    o.x -= GAME.speed;
+    if(o.type==='ptero') o.wingFrame = (o.wingFrame||0)+0.08;
+    if(o.x + o.w < 0) GAME.obstacles.splice(i,1);
+  }
+
+  // Move clouds
+  GAME.clouds.forEach(c=>{
+    c.x -= c.speed;
+    if(c.x + c.w < 0){c.x = GAME.W + rand(20,100);c.y=rand(20,80);}
+  });
+
+  // Ground scroll
+  GAME.groundOffset = (GAME.groundOffset + GAME.speed) % 20;
+
+  // Collision
+  const dx = GAME.dino.x, dy = GAME.dino.y, dw = GAME.dino.w - 8, dh = GAME.dino.h - 4;
+  for(const o of GAME.obstacles){
+    const ox = o.x + 3, oy = o.y + 3, ow = o.w - 6, oh = o.h - 6;
+    if(dx + dw > ox && dx + 4 < ox + ow && dy + dh > oy && dy + 4 < oy + oh){
+      endGame();
+      return;
+    }
+  }
+
+  // Score
+  GAME.score++;
+  $('#run-score').textContent = Math.floor(GAME.score / 5);
+}
+
+function endGame(){
+  gameOver = true;
+  gameRunning = false;
+  const finalScore = Math.floor(GAME.score / 5);
+  if(finalScore > GAME.hiScore){
+    GAME.hiScore = finalScore;
+    state.runnerHi = finalScore;
+    updateHUD();
+  }
+  $('#run-hi').textContent = GAME.hiScore;
+  $('#game-over-score').textContent = 'SCORE: ' + finalScore;
+  $('#game-over').classList.add('show');
+}
+
+function draw(){
+  const ctx = GAME.ctx;
+  const W = GAME.W, H = GAME.H;
+
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#0a0a18');
+  grad.addColorStop(1,'#16162a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  for(let i=0;i<30;i++){
+    const sx = (i*137+GAME.frameCount*0.05*(i%3+1))%W;
+    const sy = (i*73)%100;
+    ctx.fillRect(sx,sy,1,1);
+  }
+
+  // Moon
+  ctx.fillStyle = 'rgba(255,255,200,0.15)';
+  ctx.beginPath();
+  ctx.arc(650,50,30,0,Math.PI*2);
+  ctx.fill();
+
+  // Clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  GAME.clouds.forEach(c=>{
+    ctx.beginPath();
+    ctx.ellipse(c.x+c.w/2, c.y, c.w/2, 10, 0, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Ground
+  ctx.fillStyle = '#1a2a18';
+  ctx.fillRect(0,GAME.ground,W,H-GAME.ground);
+  ctx.strokeStyle = 'rgba(57,255,20,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0,GAME.ground);
+  ctx.lineTo(W,GAME.ground);
+  ctx.stroke();
+
+  // Ground detail dashes
+  ctx.strokeStyle = 'rgba(57,255,20,0.1)';
+  for(let x = -GAME.groundOffset; x < W; x += 20){
+    ctx.beginPath();
+    ctx.moveTo(x, GAME.ground + 8);
+    ctx.lineTo(x + 8, GAME.ground + 8);
+    ctx.stroke();
+  }
+
+  // Draw obstacles
+  GAME.obstacles.forEach(o=>{
+    if(o.type==='cactus'){
+      ctx.fillStyle = '#2a8a2a';
+      ctx.fillRect(o.x+4, o.y, 8, o.h);
+      ctx.fillRect(o.x, o.y+8, 16, 6);
+      // Spines
+      ctx.fillStyle = '#3aff3a';
+      ctx.fillRect(o.x+2, o.y+2, 2, 2);
+      ctx.fillRect(o.x+12, o.y+6, 2, 2);
+    } else if(o.type==='rock'){
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y+o.h);
+      ctx.lineTo(o.x+o.w/2, o.y);
+      ctx.lineTo(o.x+o.w, o.y+o.h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#777';
+      ctx.beginPath();
+      ctx.moveTo(o.x+o.w/2, o.y);
+      ctx.lineTo(o.x+o.w, o.y+o.h);
+      ctx.lineTo(o.x+o.w/2+4, o.y+o.h);
+      ctx.closePath();
+      ctx.fill();
+    } else if(o.type==='ptero'){
+      ctx.fillStyle = '#884488';
+      // Body
+      ctx.fillRect(o.x+8, o.y+8, 14, 8);
+      // Head
+      ctx.fillRect(o.x+22, o.y+6, 8, 6);
+      // Beak
+      ctx.fillStyle = '#cc8844';
+      ctx.fillRect(o.x+28, o.y+8, 5, 3);
+      // Wings
+      ctx.fillStyle = '#aa55aa';
+      const wingY = Math.sin(o.wingFrame) * 6;
+      ctx.beginPath();
+      ctx.moveTo(o.x+10, o.y+8);
+      ctx.lineTo(o.x, o.y + wingY);
+      ctx.lineTo(o.x+18, o.y+10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(o.x+10, o.y+16);
+      ctx.lineTo(o.x, o.y+20 - wingY);
+      ctx.lineTo(o.x+18, o.y+14);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+
+  // Draw dino
+  const d = GAME.dino;
+  const legFrame = Math.floor(GAME.frameCount / 5) % 2;
+
+  // Body
+  ctx.fillStyle = '#39ff14';
+  ctx.fillRect(d.x+4, d.y+6, 20, 18);
+  // Head
+  ctx.fillRect(d.x+18, d.y, 14, 14);
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(d.x+26, d.y+3, 4, 4);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(d.x+28, d.y+4, 2, 2);
+  // Mouth
+  ctx.fillStyle = '#1a5a0a';
+  ctx.fillRect(d.x+28, d.y+9, 6, 2);
+  // Tail
+  ctx.fillStyle = '#2acc0e';
+  ctx.fillRect(d.x-4, d.y+8, 10, 8);
+  ctx.fillRect(d.x-10, d.y+10, 8, 5);
+  // Legs
+  ctx.fillStyle = '#2acc0e';
+  if(d.grounded){
+    if(legFrame===0){
+      ctx.fillRect(d.x+6, d.y+24, 5, 12);
+      ctx.fillRect(d.x+16, d.y+24, 5, 8);
+    } else {
+      ctx.fillRect(d.x+6, d.y+24, 5, 8);
+      ctx.fillRect(d.x+16, d.y+24, 5, 12);
+    }
+  } else {
+    ctx.fillRect(d.x+6, d.y+24, 5, 8);
+    ctx.fillRect(d.x+16, d.y+24, 5, 8);
+  }
+  // Arms
+  ctx.fillStyle = '#22aa08';
+  ctx.fillRect(d.x+20, d.y+14, 3, 6);
+
+  // Glow effect on dino
+  ctx.shadowColor = '#39ff14';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = 'rgba(57,255,20,0.05)';
+  ctx.fillRect(d.x-5,d.y-5,d.w+10,d.h+10);
+  ctx.shadowBlur = 0;
+
+  // Score display on canvas
+  ctx.fillStyle = '#39ff14';
+  ctx.font = '14px "Press Start 2P", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(Math.floor(GAME.score/5).toString().padStart(5,'0'), W-20, 30);
+}
+
+function drawIdle(){
+  const ctx = GAME.ctx;
+  const W = GAME.W, H = GAME.H;
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#0a0a18');
+  grad.addColorStop(1,'#16162a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#1a2a18';
+  ctx.fillRect(0,GAME.ground,W,H-GAME.ground);
+  ctx.strokeStyle = 'rgba(57,255,20,0.3)';
+  ctx.beginPath();ctx.moveTo(0,GAME.ground);ctx.lineTo(W,GAME.ground);ctx.stroke();
+  // Static dino
+  const d = GAME.dino;
+  ctx.fillStyle = '#39ff14';
+  ctx.fillRect(d.x+4, d.y+6, 20, 18);
+  ctx.fillRect(d.x+18, d.y, 14, 14);
+  ctx.fillStyle = '#fff';ctx.fillRect(d.x+26, d.y+3, 4, 4);
+  ctx.fillStyle = '#000';ctx.fillRect(d.x+28, d.y+4, 2, 2);
+  ctx.fillStyle = '#1a5a0a';ctx.fillRect(d.x+28, d.y+9, 6, 2);
+  ctx.fillStyle = '#2acc0e';
+  ctx.fillRect(d.x-4, d.y+8, 10, 8);
+  ctx.fillRect(d.x-10, d.y+10, 8, 5);
+  ctx.fillRect(d.x+6, d.y+24, 5, 12);
+  ctx.fillRect(d.x+16, d.y+24, 5, 12);
+  ctx.fillStyle = '#22aa08';ctx.fillRect(d.x+20, d.y+14, 3, 6);
+  // Prompt text
+  ctx.fillStyle = 'rgba(0,229,255,0.8)';
+  ctx.font = '12px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PRESS SPACE OR TAP TO RUN', W/2, H/2 - 20);
+}
+
+// ================================================================
+// FACT GENERATOR
+// ================================================================
+function initFacts(){
+  const emojis = ['\u{1F996}','\u{1F995}','\u{1F985}','\u{1F40A}','\u{1F9B4}','\u{1F30B}','\u{1F30D}','\u{2604}'];
+  let spinning = false;
+
+  $('#spin-btn').addEventListener('click', async ()=>{
+    if(spinning) return;
+    spinning = true;
+    const btn = $('#spin-btn');
+    const display = $('#slot-display');
+    const textEl = $('#fact-text');
+    btn.disabled = true;
+    display.classList.add('spinning');
+
+    // Spinning effect
+    let spins = 0;
+    const spinInterval = setInterval(()=>{
+      textEl.textContent = FACTS[rand(0,FACTS.length-1)].substring(0,50)+'...';
+      spins++;
+    },80);
+
+    await sleep(1500);
+    clearInterval(spinInterval);
+    display.classList.remove('spinning');
+
+    // Pick a fact (prefer undiscovered ones)
+    let idx;
+    const undiscovered = FACTS.map((_,i)=>i).filter(i=>!state.discoveredFacts.has(i));
+    if(undiscovered.length > 0){
+      idx = undiscovered[rand(0,undiscovered.length-1)];
+    } else {
+      idx = rand(0,FACTS.length-1);
+    }
+
+    state.discoveredFacts.add(idx);
+    state.factsFound = state.discoveredFacts.size;
+    updateHUD();
+
+    // Reveal
+    textEl.style.opacity = 0;
+    await sleep(200);
+    textEl.innerHTML = `<span class="fact-emoji">${emojis[rand(0,emojis.length-1)]}</span>${FACTS[idx]}`;
+    textEl.style.opacity = 1;
+
+    $('#facts-count').textContent = state.factsFound;
+
+    spinning = false;
+    btn.disabled = false;
+  });
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function init(){
+  initParticles();
+  initNav();
+  initBattle();
+  initBuilder();
+  initFacts();
+  updateHUD();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

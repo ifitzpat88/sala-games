@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Austyn's Cursive Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Pacifico&family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --parchment: #fdf6e3;
+  --parchment-dark: #f5e6c8;
+  --ink-blue: #1a3a5c;
+  --ink-black: #1c1c1e;
+  --gold: #c8a951;
+  --gold-light: #e8d48b;
+  --gold-glow: #f0d97020;
+  --warm-brown: #5c3d2e;
+  --cream: #fffdf7;
+  --rose: #c2727280;
+  --shadow: 0 4px 24px rgba(92, 61, 46, 0.12);
+  --shadow-lg: 0 8px 40px rgba(92, 61, 46, 0.18);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Lora', Georgia, serif;
+  background: var(--parchment);
+  color: var(--ink-black);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== BACKGROUND TEXTURE ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(200, 169, 81, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(200, 169, 81, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(92, 61, 46, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes quillFloat {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes inkDrop {
+  0% { transform: scale(0); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes gentlePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 169, 81, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(200, 169, 81, 0); }
+}
+
+.animate-in {
+  opacity: 0;
+  animation: fadeInUp 0.8s ease forwards;
+}
+
+.animate-in:nth-child(1) { animation-delay: 0.1s; }
+.animate-in:nth-child(2) { animation-delay: 0.25s; }
+.animate-in:nth-child(3) { animation-delay: 0.4s; }
+.animate-in:nth-child(4) { animation-delay: 0.55s; }
+
+/* ===== HEADER ===== */
+header {
+  text-align: center;
+  padding: 2.5rem 1rem 2rem;
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 1s ease;
+}
+
+header .quill-icon {
+  font-size: 2.8rem;
+  display: inline-block;
+  animation: quillFloat 3s ease-in-out infinite;
+  margin-bottom: 0.3rem;
+}
+
+header h1 {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(2.8rem, 7vw, 4.5rem);
+  color: var(--ink-blue);
+  text-shadow: 1px 2px 4px rgba(26, 58, 92, 0.15);
+  line-height: 1.2;
+}
+
+header h1 .gold-accent {
+  background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+header .subtitle {
+  font-family: 'Dancing Script', cursive;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+  color: var(--warm-brown);
+  margin-top: 0.4rem;
+  opacity: 0.8;
+}
+
+.divider {
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 1.5rem auto;
+}
+
+/* ===== NAV TABS ===== */
+nav.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0 1rem 1.5rem;
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+nav.tabs button {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.55rem 1.4rem;
+  border: 2px solid var(--gold);
+  background: transparent;
+  color: var(--warm-brown);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+nav.tabs button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+nav.tabs button:hover::before,
+nav.tabs button.active::before {
+  opacity: 1;
+}
+
+nav.tabs button:hover,
+nav.tabs button.active {
+  color: #fff;
+  border-color: var(--gold);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 169, 81, 0.3);
+}
+
+/* ===== SECTIONS ===== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+section {
+  display: none;
+}
+
+section.active {
+  display: block;
+  opacity: 1;
+  animation: fadeInUp 0.5s ease;
+}
+
+/* ===== CARD STYLE ===== */
+.card {
+  background: var(--cream);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(200, 169, 81, 0.2);
+  padding: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-title {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink-blue);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ===== DRAWING PAD ===== */
+.canvas-wrap {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.06), var(--shadow);
+  padding: 4px;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.canvas-wrap.lined .line-overlay {
+  position: absolute;
+  inset: 4px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#drawingCanvas {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ===== TOOLBAR ===== */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(200, 169, 81, 0.08);
+  border-radius: 12px;
+  padding: 0.4rem 0.7rem;
+}
+
+.toolbar-label {
+  font-family: 'Dancing Script', cursive;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--warm-brown);
+  margin-right: 0.2rem;
+  white-space: nowrap;
+}
+
+/* Color swatches */
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--gold);
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+.color-swatch[data-color="#1a3a5c"] { background: #1a3a5c; }
+.color-swatch[data-color="#1c1c1e"] { background: #1c1c1e; }
+.color-swatch[data-color="#9e1b32"] { background: #9e1b32; }
+.color-swatch[data-color="#5b2e8f"] { background: #5b2e8f; }
+.color-swatch[data-color="#2d6a4f"] { background: #2d6a4f; }
+.color-swatch[data-color="#b8860b"] { background: #b8860b; }
+
+/* Size buttons */
+.size-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: var(--cream);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.size-btn:hover { background: var(--gold-glow); }
+.size-btn.active { background: var(--gold); }
+.size-btn .dot {
+  border-radius: 50%;
+  background: var(--ink-black);
+}
+
+.size-btn[data-size="thin"] .dot { width: 4px; height: 4px; }
+.size-btn[data-size="medium"] .dot { width: 8px; height: 8px; }
+.size-btn[data-size="thick"] .dot { width: 13px; height: 13px; }
+
+/* Action buttons */
+.tool-btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  border: 2px solid var(--gold);
+  background: var(--cream);
+  color: var(--warm-brown);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tool-btn:hover {
+  background: var(--gold);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(200, 169, 81, 0.3);
+}
+
+.tool-btn.active {
+  background: var(--gold);
+  color: #fff;
+}
+
+.tool-btn.danger {
+  border-color: #c2727280;
+}
+
+.tool-btn.danger:hover {
+  background: #c27272;
+  border-color: #c27272;
+}
+
+.tool-btn.primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #fff;
+  border-color: var(--gold);
+}
+
+.tool-btn.primary:hover {
+  box-shadow: 0 4px 16px rgba(200, 169, 81, 0.4);
+}
+
+/* Trace mode controls */
+.trace-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.trace-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--warm-brown);
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on {
+  background: var(--gold);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch.on::after {
+  transform: translateX(20px);
+}
+
+.trace-text-input {
+  font-family: 'Lora', serif;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.8rem;
+  border: 2px solid rgba(200, 169, 81, 0.4);
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--ink-black);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 200px;
+  max-width: 100%;
+}
+
+.trace-text-input:focus {
+  border-color: var(--gold);
+}
+
+.trace-preset-btn {
+  font-family: 'Dancing Script', cursive;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.7rem;
+  border: 1.5px solid rgba(200, 169, 81, 0.4);
+  background: transparent;
+  color: var(--warm-brown);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.trace-preset-btn:hover {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+}
+
+/* ===== ALPHABET REFERENCE ===== */
+.alphabet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.7rem;
+}
+
+.letter-card {
+  background: var(--cream);
+  border: 1.5px solid rgba(200, 169, 81, 0.25);
+  border-radius: 14px;
+  padding: 0.7rem 0.3rem;
+  text-align: center;
+  transition: all 0.3s;
+  cursor: default;
+}
+
+.letter-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(200, 169, 81, 0.2);
+  border-color: var(--gold);
+}
+
+.letter-card .upper {
+  font-family: 'Dancing Script', cursive;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ink-blue);
+  line-height: 1.1;
+}
+
+.letter-card .lower {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--warm-brown);
+  opacity: 0.8;
+}
+
+.letter-card .print {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  color: #999;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ===== FUN FACTS ===== */
+.fact-card {
+  background: linear-gradient(135deg, var(--cream), var(--parchment));
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--gold);
+  box-shadow: var(--shadow);
+  transition: transform 0.3s;
+}
+
+.fact-card:hover {
+  transform: translateX(6px);
+}
+
+.fact-card .fact-number {
+  font-family: 'Great Vibes', cursive;
+  font-size: 2rem;
+  color: var(--gold);
+  float: left;
+  margin-right: 0.8rem;
+  line-height: 1;
+}
+
+.fact-card h3 {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.25rem;
+  color: var(--ink-blue);
+  margin-bottom: 0.4rem;
+}
+
+.fact-card p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #444;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+footer p {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.1rem;
+  color: var(--warm-brown);
+  opacity: 0.6;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .card { padding: 1.2rem; }
+  .toolbar { gap: 0.4rem; }
+  .toolbar-group { padding: 0.3rem 0.5rem; }
+  .alphabet-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 0.5rem; }
+  .letter-card .upper { font-size: 1.6rem; }
+  .letter-card .lower { font-size: 1.2rem; }
+  nav.tabs button { font-size: 0.95rem; padding: 0.45rem 1rem; }
+}
+
+@media (max-width: 480px) {
+  header h1 { font-size: 2.2rem; }
+  .toolbar-group { flex-wrap: wrap; }
+  .trace-text-input { width: 140px; }
+}
+
+/* ===== CANVAS CURSOR FOR ERASER ===== */
+#drawingCanvas.eraser-cursor {
+  cursor: cell;
+}
+
+/* ===== LINES ON CANVAS (ruled paper look) ===== */
+.ruled-lines {
+  position: absolute;
+  inset: 4px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ruled-lines.show {
+  opacity: 1;
+}
+
+/* ===== NOTIFICATION TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--ink-blue);
+  color: #fff;
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.1rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 30px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="quill-icon">&#x1F58B;&#xFE0F;</div>
+  <h1><span class="gold-accent">Austyn's</span> Cursive Studio</h1>
+  <p class="subtitle">Where beautiful handwriting comes to life</p>
+  <div class="divider"></div>
+</header>
+
+<!-- NAV TABS -->
+<nav class="tabs">
+  <button class="active" data-tab="studio">Drawing Studio</button>
+  <button data-tab="alphabet">Alphabet Reference</button>
+  <button data-tab="facts">Fun Facts</button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+  <!-- ====== DRAWING STUDIO ====== -->
+  <section id="studio" class="active animate-in">
+    <div class="card">
+      <div class="card-title">&#9997;&#65039; Drawing Pad</div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-label">Ink:</span>
+          <div class="color-swatch active" data-color="#1a3a5c" title="Classic Blue"></div>
+          <div class="color-swatch" data-color="#1c1c1e" title="Black"></div>
+          <div class="color-swatch" data-color="#9e1b32" title="Red"></div>
+          <div class="color-swatch" data-color="#5b2e8f" title="Purple"></div>
+          <div class="color-swatch" data-color="#2d6a4f" title="Green"></div>
+          <div class="color-swatch" data-color="#b8860b" title="Gold"></div>
+        </div>
+
+        <div class="toolbar-group">
+          <span class="toolbar-label">Size:</span>
+          <button class="size-btn" data-size="thin" title="Thin"><span class="dot"></span></button>
+          <button class="size-btn active" data-size="medium" title="Medium"><span class="dot"></span></button>
+          <button class="size-btn" data-size="thick" title="Thick"><span class="dot"></span></button>
+        </div>
+
+        <div class="toolbar-group">
+          <button class="tool-btn" id="eraserBtn" title="Eraser">&#x1F9F9; Eraser</button>
+          <button class="tool-btn" id="undoBtn" title="Undo">&#x21A9;&#xFE0F; Undo</button>
+          <button class="tool-btn danger" id="clearBtn" title="Clear Canvas">&#x1F5D1;&#xFE0F; Clear</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button class="tool-btn primary" id="saveBtn" title="Save as PNG">&#x1F4BE; Save</button>
+        </div>
+      </div>
+
+      <!-- Trace Mode -->
+      <div class="trace-controls">
+        <label class="trace-toggle" id="traceToggle">
+          <div class="toggle-switch" id="traceSwitch"></div>
+          <span>Trace Mode</span>
+        </label>
+        <input type="text" class="trace-text-input" id="traceInput" placeholder="Type letters to trace..." maxlength="24" disabled>
+        <button class="trace-preset-btn" data-text="Austyn" disabled>Austyn</button>
+        <button class="trace-preset-btn" data-text="abcdefghij" disabled>a-j</button>
+        <button class="trace-preset-btn" data-text="klmnopqrst" disabled>k-t</button>
+        <button class="trace-preset-btn" data-text="uvwxyz" disabled>u-z</button>
+        <button class="trace-preset-btn" data-text="ABCDEFGHIJKLM" disabled>A-M</button>
+        <button class="trace-preset-btn" data-text="NOPQRSTUVWXYZ" disabled>N-Z</button>
+      </div>
+
+      <!-- Canvas -->
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="drawingCanvas" width="1060" height="500"></canvas>
+        <div class="ruled-lines" id="ruledLines"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ALPHABET REFERENCE ====== -->
+  <section id="alphabet" class="animate-in">
+    <div class="card">
+      <div class="card-title">&#x1F524; Cursive Alphabet Reference</div>
+      <p style="font-family: 'Lora', serif; font-size: 0.95rem; color: #666; margin-bottom: 1.2rem;">
+        Hover over each letter to see it larger. Use these as a guide while you practice on the Drawing Pad!
+      </p>
+      <div class="alphabet-grid" id="alphabetGrid"></div>
+    </div>
+  </section>
+
+  <!-- ====== FUN FACTS ====== -->
+  <section id="facts" class="animate-in">
+    <div class="card">
+      <div class="card-title">&#x1F4DC; Fun Facts About Cursive</div>
+
+      <div class="fact-card">
+        <span class="fact-number">1</span>
+        <h3>Cursive Is Really Old!</h3>
+        <p>Cursive writing has been around for thousands of years! The ancient Romans developed a flowing script called "Roman cursive" way back around the 1st century AD. That means people have been connecting their letters for over <strong>2,000 years</strong>. The word "cursive" itself comes from the Latin word <em>cursivus</em>, meaning "running" -- because the letters run into each other!</p>
+      </div>
+
+      <div class="fact-card">
+        <span class="fact-number">2</span>
+        <h3>Your Brain Loves It</h3>
+        <p>Scientists have discovered that writing in cursive activates different parts of your brain than typing or printing! When you write in cursive, areas of your brain connected to <strong>memory, creativity, and language</strong> all light up at once. Studies show that students who take notes in cursive actually remember more than those who type. Your brain treats each cursive word as a single shape, almost like drawing a little picture!</p>
+      </div>
+
+      <div class="fact-card">
+        <span class="fact-number">3</span>
+        <h3>Quill Pens Shaped the Style</h3>
+        <p>The reason cursive letters are connected and slanted is because of <strong>quill pens</strong>! Hundreds of years ago, people wrote with feathers dipped in ink. Lifting the pen meant dripping ink everywhere and dipping again, so writers learned to keep the pen on the paper as much as possible. The slant comes from the natural angle of holding a quill. So cursive was actually invented to be <em>faster and less messy</em>!</p>
+      </div>
+
+      <div class="fact-card">
+        <span class="fact-number">4</span>
+        <h3>Every Signature Is Unique</h3>
+        <p>Your cursive signature is like a <strong>fingerprint</strong> -- no two people sign their name exactly the same way! This is why signatures are used on important documents, checks, and even laws. Handwriting experts called <em>graphologists</em> can actually identify people just from their handwriting. The Declaration of Independence features John Hancock's famously large signature, and the term "John Hancock" is still used today to mean "signature"!</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast"></div>
+
+<!-- FOOTER -->
+<footer>
+  <p>Made with love for Austyn &#x2764;&#xFE0F; Keep writing beautifully!</p>
+</footer>
+
+<script>
+// ===================================================================
+// AUSTYN'S CURSIVE STUDIO - Main Application Script
+// ===================================================================
+
+(function() {
+  'use strict';
+
+  // ===== TAB NAVIGATION =====
+  const tabs = document.querySelectorAll('nav.tabs button');
+  const sections = document.querySelectorAll('section');
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      tabs.forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      sections.forEach(s => {
+        s.classList.remove('active');
+        if (s.id === target) s.classList.add('active');
+      });
+    });
+  });
+
+  // ===== TOAST NOTIFICATIONS =====
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ===== ALPHABET GRID =====
+  const alphabetGrid = document.getElementById('alphabetGrid');
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  for (const letter of letters) {
+    const card = document.createElement('div');
+    card.className = 'letter-card';
+    card.innerHTML = `
+      <div class="upper">${letter}</div>
+      <div class="lower">${letter.toLowerCase()}</div>
+      <div class="print">${letter}</div>
+    `;
+    alphabetGrid.appendChild(card);
+  }
+
+  // ===== DRAWING CANVAS =====
+  const canvas = document.getElementById('drawingCanvas');
+  const ctx = canvas.getContext('2d');
+  const canvasWrap = document.getElementById('canvasWrap');
+
+  // High-DPI canvas scaling
+  let dpr = window.devicePixelRatio || 1;
+  let canvasRect;
+
+  function resizeCanvas() {
+    canvasRect = canvasWrap.getBoundingClientRect();
+    const w = canvasRect.width - 8; // account for padding
+    const h = Math.max(350, Math.min(500, window.innerHeight * 0.5));
+
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Redraw from history
+    redrawAll();
+  }
+
+  // State
+  let isDrawing = false;
+  let currentColor = '#1a3a5c';
+  let currentSize = 'medium';
+  let isEraser = false;
+  let traceMode = false;
+  let traceText = 'Austyn';
+
+  // Stroke history for undo
+  let strokeHistory = []; // each entry: array of points
+  let currentStroke = [];
+  let lastPoint = null;
+  let lastTime = 0;
+
+  const sizeMap = { thin: 1.5, medium: 3, thick: 6 };
+
+  // ===== COLOR SWATCHES =====
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      currentColor = swatch.dataset.color;
+      if (isEraser) toggleEraser(false);
+    });
+  });
+
+  // ===== SIZE BUTTONS =====
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSize = btn.dataset.size;
+    });
+  });
+
+  // ===== ERASER =====
+  const eraserBtn = document.getElementById('eraserBtn');
+
+  function toggleEraser(force) {
+    isEraser = force !== undefined ? force : !isEraser;
+    eraserBtn.classList.toggle('active', isEraser);
+    canvas.classList.toggle('eraser-cursor', isEraser);
+  }
+
+  eraserBtn.addEventListener('click', () => toggleEraser());
+
+  // ===== UNDO =====
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    if (strokeHistory.length === 0) return;
+    strokeHistory.pop();
+    redrawAll();
+    showToast('Undo!');
+  });
+
+  // ===== CLEAR =====
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (strokeHistory.length === 0) return;
+    strokeHistory = [];
+    redrawAll();
+    showToast('Canvas cleared!');
+  });
+
+  // ===== SAVE =====
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    // Create a temporary canvas at the correct display resolution for clean export
+    const exportCanvas = document.createElement('canvas');
+    const displayW = parseInt(canvas.style.width);
+    const displayH = parseInt(canvas.style.height);
+    exportCanvas.width = displayW * 2;
+    exportCanvas.height = displayH * 2;
+    const ectx = exportCanvas.getContext('2d');
+    ectx.setTransform(2, 0, 0, 2, 0, 0);
+
+    // White background
+    ectx.fillStyle = '#ffffff';
+    ectx.fillRect(0, 0, displayW, displayH);
+
+    // Draw trace guides if active
+    if (traceMode) {
+      drawTraceGuides(ectx, displayW, displayH);
+    }
+
+    // Replay strokes
+    for (const stroke of strokeHistory) {
+      drawStroke(ectx, stroke);
+    }
+
+    const link = document.createElement('a');
+    link.download = 'austyn-cursive-art.png';
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+    showToast('Saved as PNG!');
+  });
+
+  // ===== TRACE MODE =====
+  const traceSwitch = document.getElementById('traceSwitch');
+  const traceInput = document.getElementById('traceInput');
+  const tracePresets = document.querySelectorAll('.trace-preset-btn');
+
+  document.getElementById('traceToggle').addEventListener('click', () => {
+    traceMode = !traceMode;
+    traceSwitch.classList.toggle('on', traceMode);
+    traceInput.disabled = !traceMode;
+    tracePresets.forEach(b => b.disabled = !traceMode);
+    redrawAll();
+    showToast(traceMode ? 'Trace mode ON' : 'Trace mode OFF');
+  });
+
+  traceInput.addEventListener('input', () => {
+    traceText = traceInput.value || 'Austyn';
+    redrawAll();
+  });
+
+  tracePresets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      traceText = btn.dataset.text;
+      traceInput.value = traceText;
+      redrawAll();
+    });
+  });
+
+  // ===== DRAW TRACE GUIDES =====
+  function drawTraceGuides(context, w, h) {
+    if (!traceMode || !traceText) return;
+
+    context.save();
+
+    // Draw ruled lines
+    const midY = h * 0.55;
+    const lineSpacing = 40;
+
+    context.strokeStyle = 'rgba(200, 169, 81, 0.15)';
+    context.lineWidth = 1;
+
+    // baseline
+    context.beginPath();
+    context.moveTo(20, midY);
+    context.lineTo(w - 20, midY);
+    context.stroke();
+
+    // top line
+    context.beginPath();
+    context.setLineDash([5, 5]);
+    context.moveTo(20, midY - lineSpacing);
+    context.lineTo(w - 20, midY - lineSpacing);
+    context.stroke();
+
+    // bottom line (descender)
+    context.moveTo(20, midY + lineSpacing * 0.6);
+    context.lineTo(w - 20, midY + lineSpacing * 0.6);
+    context.stroke();
+    context.setLineDash([]);
+
+    // Draw trace text
+    const fontSize = Math.min(72, (w - 80) / (traceText.length * 0.55));
+    context.font = `${fontSize}px 'Dancing Script', cursive`;
+    context.fillStyle = 'rgba(200, 169, 81, 0.18)';
+    context.textAlign = 'center';
+    context.textBaseline = 'alphabetic';
+    context.fillText(traceText, w / 2, midY);
+
+    context.restore();
+  }
+
+  // ===== DRAW A STROKE =====
+  function drawStroke(context, points) {
+    if (points.length < 2) return;
+
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+
+      context.beginPath();
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+
+      if (curr.eraser) {
+        context.globalCompositeOperation = 'destination-out';
+        context.strokeStyle = 'rgba(255,255,255,1)';
+        context.lineWidth = 20;
+      } else {
+        context.globalCompositeOperation = 'source-over';
+        context.strokeStyle = curr.color;
+        context.lineWidth = curr.width;
+      }
+
+      context.moveTo(prev.x, prev.y);
+      context.lineTo(curr.x, curr.y);
+      context.stroke();
+    }
+    context.globalCompositeOperation = 'source-over';
+  }
+
+  // ===== REDRAW ALL =====
+  function redrawAll() {
+    const w = parseInt(canvas.style.width);
+    const h = parseInt(canvas.style.height);
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Trace guides
+    drawTraceGuides(ctx, w, h);
+
+    // Replay strokes
+    for (const stroke of strokeHistory) {
+      drawStroke(ctx, stroke);
+    }
+  }
+
+  // ===== POINTER EVENTS =====
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    if (e.touches && e.touches.length > 0) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+    return { x, y };
+  }
+
+  function getCalligraphyWidth(pos) {
+    const now = performance.now();
+    const base = sizeMap[currentSize];
+
+    if (!lastPoint) {
+      lastPoint = pos;
+      lastTime = now;
+      return base;
+    }
+
+    const dx = pos.x - lastPoint.x;
+    const dy = pos.y - lastPoint.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const dt = Math.max(now - lastTime, 1);
+    const speed = dist / dt; // px per ms
+
+    // Slow = thick, fast = thin (calligraphy effect)
+    const minWidth = base * 0.4;
+    const maxWidth = base * 2.2;
+    const speedFactor = Math.min(speed / 2.5, 1);
+    const width = maxWidth - (maxWidth - minWidth) * speedFactor;
+
+    lastPoint = pos;
+    lastTime = now;
+
+    return Math.max(minWidth, Math.min(maxWidth, width));
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    isDrawing = true;
+    lastPoint = null;
+    lastTime = 0;
+
+    const pos = getPos(e);
+    const w = isEraser ? 20 : getCalligraphyWidth(pos);
+
+    currentStroke = [{
+      x: pos.x,
+      y: pos.y,
+      color: currentColor,
+      width: w,
+      eraser: isEraser
+    }];
+  }
+
+  function moveDraw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+
+    const pos = getPos(e);
+    const w = isEraser ? 20 : getCalligraphyWidth(pos);
+
+    const point = {
+      x: pos.x,
+      y: pos.y,
+      color: currentColor,
+      width: w,
+      eraser: isEraser
+    };
+
+    currentStroke.push(point);
+
+    // Draw the latest segment in real time
+    const prev = currentStroke[currentStroke.length - 2];
+    ctx.beginPath();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(255,255,255,1)';
+      ctx.lineWidth = 20;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = w;
+    }
+
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function endDraw(e) {
+    if (!isDrawing) return;
+    isDrawing = false;
+
+    if (currentStroke.length > 1) {
+      strokeHistory.push([...currentStroke]);
+    }
+    currentStroke = [];
+    lastPoint = null;
+  }
+
+  // Mouse events
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', moveDraw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+
+  // Touch events
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', moveDraw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
+  canvas.addEventListener('touchcancel', endDraw);
+
+  // ===== RESIZE HANDLING =====
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      dpr = window.devicePixelRatio || 1;
+      resizeCanvas();
+    }, 200);
+  });
+
+  // ===== KEYBOARD SHORTCUTS =====
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+Z = undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      if (strokeHistory.length > 0) {
+        strokeHistory.pop();
+        redrawAll();
+        showToast('Undo!');
+      }
+    }
+  });
+
+  // ===== INIT =====
+  resizeCanvas();
+
+})();
+</script>
+</body>
+</html>
