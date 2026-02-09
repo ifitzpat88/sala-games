@@ -152,6 +152,67 @@
     position: fixed; bottom: 60px; right: 20px; z-index: 10;
     color: #aaa; font-size: 12px; text-align: right; pointer-events: none;
   }
+
+  /* Co-op UI */
+  .coop-btns { margin-top: 16px; display: flex; gap: 12px; align-items: center; flex-direction: column; }
+  .coop-btns button {
+    background: rgba(0,255,100,0.1); border: 2px solid #0f8; color: #0f8;
+    padding: 10px 30px; font-size: 16px; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 1px;
+  }
+  .coop-btns button:hover { background: rgba(0,255,100,0.25); transform: scale(1.05); }
+  .join-row { display: flex; gap: 8px; align-items: center; }
+  .join-row input {
+    background: rgba(255,255,255,0.08); border: 2px solid #0f8; color: #fff;
+    padding: 10px 14px; font-size: 16px; border-radius: 8px; width: 140px;
+    text-align: center; letter-spacing: 3px; text-transform: uppercase;
+    font-family: monospace;
+  }
+  .join-row input::placeholder { color: #555; letter-spacing: 1px; font-family: inherit; }
+
+  #lobby-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92); display: none; z-index: 250;
+    justify-content: center; align-items: center; flex-direction: column;
+  }
+  #lobby-overlay.show { display: flex; }
+  #lobby-overlay h2 { color: #0f8; font-size: 32px; margin-bottom: 10px; }
+  #lobby-overlay .room-code {
+    font-size: 48px; color: #fff; letter-spacing: 8px; font-family: monospace;
+    margin: 16px 0; text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  }
+  #lobby-overlay .lobby-status { color: #aaa; font-size: 16px; margin: 10px 0; }
+  #lobby-overlay .lobby-btns { display: flex; gap: 12px; margin-top: 20px; }
+  #lobby-overlay .lobby-btns button {
+    padding: 12px 30px; font-size: 16px; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lobby-start-btn {
+    background: rgba(0,255,100,0.15); border: 2px solid #0f8; color: #0f8;
+  }
+  .lobby-start-btn:hover { background: rgba(0,255,100,0.3); }
+  .lobby-start-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .lobby-cancel-btn {
+    background: rgba(255,68,68,0.15); border: 2px solid #f44; color: #f44;
+  }
+  .lobby-cancel-btn:hover { background: rgba(255,68,68,0.3); }
+
+  #coop-badge {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 10; pointer-events: none; display: none;
+    background: rgba(0,255,100,0.15); border: 1px solid rgba(0,255,100,0.4);
+    border-radius: 6px; padding: 4px 14px; color: #0f8; font-size: 12px;
+    font-weight: bold; letter-spacing: 2px;
+  }
+  #coop-badge.show { display: block; }
+
+  #disconnect-toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 300; display: none; background: rgba(255,68,68,0.9);
+    border-radius: 8px; padding: 12px 24px; color: #fff; font-size: 16px;
+    font-weight: bold;
+  }
+  #disconnect-toast.show { display: block; }
 </style>
 </head>
 <body>
@@ -169,8 +230,28 @@
     Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
   </div>
   <button onclick="startGame()">START GAME</button>
+  <div class="coop-btns">
+    <button onclick="hostGame()">HOST CO-OP</button>
+    <div class="join-row">
+      <input type="text" id="join-code-input" maxlength="6" placeholder="CODE" />
+      <button onclick="joinGame()">JOIN</button>
+    </div>
+  </div>
   <div class="credit">Designed by Cash</div>
 </div>
+
+<div id="lobby-overlay">
+  <h2 id="lobby-title">CO-OP LOBBY</h2>
+  <div class="room-code" id="lobby-room-code"></div>
+  <div class="lobby-status" id="lobby-status">Waiting for player...</div>
+  <div class="lobby-btns">
+    <button class="lobby-start-btn" id="lobby-start-btn" onclick="startCoopGame()" disabled>START</button>
+    <button class="lobby-cancel-btn" onclick="cancelLobby()">CANCEL</button>
+  </div>
+</div>
+
+<div id="coop-badge">CO-OP</div>
+<div id="disconnect-toast">Player 2 disconnected</div>
 
 <div id="hud">
   <div class="hud-panel">
@@ -244,6 +325,7 @@
 
 <canvas id="game"></canvas>
 
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 // ============================================================
 // ENERGY SIEGE: OVERLOAD — Designed by Cash
@@ -404,6 +486,23 @@ let endlessLevel = 0;
 let endlessBossTimer = 0;
 let highScore = parseInt(localStorage.getItem('energySiegeHighScore') || '0');
 
+// ---- Multiplayer State ----
+let isCoop = false, isHost = false, isClient = false;
+let peer = null, conn = null, roomCode = '';
+let player2 = null, drone2 = null, droneAngle2 = 0, droneFireCD2 = 0;
+let remoteInput = { keys: {}, mouseAngle: 0, clicked: false };
+let p2Ready = false, hostReady = false;
+let dashTimer2 = 0, dashCooldown2 = 0, dashDX2 = 0, dashDY2 = 0;
+let playerFireCD2 = 0;
+const COOP_MULT = {
+  enemyCount: 1.5,
+  enemyHp: 1.35,
+  enemyDmg: 1.15,
+  bossHp: 1.5,
+  spawnRate: 0.85
+};
+const NET_SEND_INTERVAL = 3; // host sends state every N frames
+
 // ---- Resize ----
 function resize() {
   W = canvas.width = window.innerWidth;
@@ -507,6 +606,17 @@ function initGame() {
   gamePaused = false; totalKills = 0; upgradePoints = 0; showingUpgrades = false;
   playerUpgrades = { maxHp: 0, speed: 0, damage: 0, droneRate: 0, dashCD: 0, squad: 0 };
   endlessMode = false; endlessTimer = 0; endlessLevel = 0; endlessBossTimer = 0;
+  // Co-op init
+  if (isCoop) {
+    player2 = { x: WORLD_W / 2 + 60, y: WORLD_H / 2, hp: 100, maxHp: 100, angle: 0 };
+    drone2 = { x: player2.x, y: player2.y };
+    droneAngle2 = Math.PI; droneFireCD2 = 0; playerFireCD2 = 0;
+    dashTimer2 = 0; dashCooldown2 = 0; dashDX2 = 0; dashDY2 = 0;
+    remoteInput = { keys: {}, mouseAngle: 0, clicked: false };
+    p2Ready = false; hostReady = false;
+  } else {
+    player2 = null; drone2 = null;
+  }
   document.getElementById('boss-bar').classList.remove('show');
   document.getElementById('endless-timer').classList.remove('show');
   for (let i = 0; i < 30; i++) spawnOrb();
@@ -532,7 +642,7 @@ function spawnOrb() {
 function startWave() {
   wave++;
   const cfg = WAVE_CONFIG[wave - 1];
-  totalWaveEnemies = cfg.count;
+  totalWaveEnemies = isCoop ? Math.ceil(cfg.count * COOP_MULT.enemyCount) : cfg.count;
   enemiesSpawned = 0; spawnTimer = 0; waveKills = 0;
   bossSpawned = false; activeBoss = null;
   wavePhase = 'active';
@@ -580,11 +690,13 @@ function spawnEnemy(forceType) {
   // Scale enemy stats based on player upgrade level (compensate for player power)
   const upgradePower = Object.values(playerUpgrades).reduce((a,b) => a+b, 0);
   const upgradeScale = 1 + upgradePower * 0.04;
-  const hp = Math.floor(baseHp * cfg.hpMult * upgradeScale);
+  const coopHpMult = isCoop ? COOP_MULT.enemyHp : 1;
+  const coopDmgMult = isCoop ? COOP_MULT.enemyDmg : 1;
+  const hp = Math.floor(baseHp * cfg.hpMult * upgradeScale * coopHpMult);
   enemies.push({
     x: pos.x, y: pos.y, size, hp, maxHp: hp,
     speed: ENEMY_BASE_SPEED * cfg.speedMult * (0.85 + Math.random() * 0.3),
-    attackCD: 0, damage: Math.floor((5 + wave) * cfg.dmgMult * upgradeScale),
+    attackCD: 0, damage: Math.floor((5 + wave) * cfg.dmgMult * upgradeScale * coopDmgMult),
     type, isBoss: false, spawnFrame: frameCount, isRaged: false,
     // Laser enemy
     laserCharging: false, laserChargeTimer: 0, laserFiring: false, laserFireTimer: 0, laserCooldown: 0, laserAngle: 0,
@@ -603,7 +715,8 @@ function spawnBoss(bossKey) {
   const pos = getSpawnPos();
   const upgradePower = Object.values(playerUpgrades).reduce((a,b) => a+b, 0);
   const upgradeScale = 1 + upgradePower * 0.05;
-  const hp = Math.floor(def.hp * upgradeScale);
+  const coopBossHpMult = isCoop ? COOP_MULT.bossHp : 1;
+  const hp = Math.floor(def.hp * upgradeScale * coopBossHpMult);
   const boss = {
     x: pos.x, y: pos.y, size: def.size, hp, maxHp: hp,
     speed: def.speed, attackCD: 0, damage: def.dmg,
@@ -650,8 +763,16 @@ function getUpgradeCost(level) {
 }
 
 function applyUpgrades() {
-  player.maxHp = 100 + playerUpgrades.maxHp * 30;
-  player.hp = Math.min(player.hp, player.maxHp);
+  const newMaxHp = 100 + playerUpgrades.maxHp * 30;
+  const hpGain = newMaxHp - player.maxHp;
+  player.maxHp = newMaxHp;
+  if (hpGain > 0) player.hp = Math.min(player.hp + hpGain, player.maxHp);
+  if (isCoop && player2) {
+    const oldMax2 = player2.maxHp;
+    player2.maxHp = newMaxHp;
+    const gain2 = newMaxHp - oldMax2;
+    if (gain2 > 0) player2.hp = Math.min(player2.hp + gain2, player2.maxHp);
+  }
 }
 
 function updateWaveHUD() {
@@ -772,6 +893,22 @@ function moveWithCollision(entity, dx, dy, radius) {
 // ---- Update ----
 function update() {
   if (!gameRunning || gamePaused) return;
+
+  // Client skips simulation entirely — receives state from host
+  if (isClient) {
+    frameCount++;
+    // Send input to host every frame
+    if (conn && conn.open) {
+      conn.send({ type: 'input', input: {
+        keys: { ...keys },
+        mouseAngle: Math.atan2(mouse.y + camera.y - (player2 ? player2.y : player.y), mouse.x + camera.x - (player2 ? player2.x : player.x)),
+        clicked: mouse.clicked
+      }});
+      mouse.clicked = false;
+    }
+    return;
+  }
+
   frameCount++;
 
   worldMouseX = mouse.x + camera.x;
@@ -805,6 +942,44 @@ function update() {
   moveWithCollision(player, pdx, pdy, PLAYER_R);
   player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
 
+  // -- Player 2 movement (HOST-SIDE) --
+  if (isHost && isCoop && player2 && player2.hp > 0) {
+    const p2Speed = PLAYER_SPEED + playerUpgrades.speed * 0.5;
+    const effectiveDashCD2 = DASH_COOLDOWN - playerUpgrades.dashCD * 25;
+    let p2dx = 0, p2dy = 0;
+    if (dashTimer2 > 0) { p2dx = dashDX2; p2dy = dashDY2; dashTimer2--; }
+    else {
+      const rk = remoteInput.keys || {};
+      if (rk['w'] || rk['arrowup']) p2dy -= 1;
+      if (rk['s'] || rk['arrowdown']) p2dy += 1;
+      if (rk['a'] || rk['arrowleft']) p2dx -= 1;
+      if (rk['d'] || rk['arrowright']) p2dx += 1;
+      if (p2dx !== 0 || p2dy !== 0) {
+        const len = Math.hypot(p2dx, p2dy);
+        p2dx = (p2dx / len) * p2Speed;
+        p2dy = (p2dy / len) * p2Speed;
+      }
+      // P2 dash
+      if (rk[' '] && dashCooldown2 <= 0 && dashTimer2 <= 0) {
+        let ddx = 0, ddy = 0;
+        if (rk['w'] || rk['arrowup']) ddy -= 1;
+        if (rk['s'] || rk['arrowdown']) ddy += 1;
+        if (rk['a'] || rk['arrowleft']) ddx -= 1;
+        if (rk['d'] || rk['arrowright']) ddx += 1;
+        if (ddx === 0 && ddy === 0) { ddx = Math.cos(remoteInput.mouseAngle); ddy = Math.sin(remoteInput.mouseAngle); }
+        const dlen = Math.hypot(ddx, ddy);
+        if (dlen > 0) {
+          dashDX2 = (ddx / dlen) * DASH_SPEED; dashDY2 = (ddy / dlen) * DASH_SPEED;
+          dashTimer2 = DASH_DURATION; dashCooldown2 = effectiveDashCD2;
+          spawnParticles(player2.x, player2.y, '#00ff88', 8, 4);
+        }
+      }
+    }
+    if (dashCooldown2 > 0) dashCooldown2--;
+    moveWithCollision(player2, p2dx, p2dy, PLAYER_R);
+    player2.angle = remoteInput.mouseAngle || 0;
+  }
+
   // -- Player shooting (SEMI-AUTO) --
   const effectiveDmg = PLAYER_BULLET_DMG + playerUpgrades.damage * 6;
   if (playerFireCD > 0) playerFireCD--;
@@ -816,6 +991,21 @@ function update() {
     bullets.push({ x: bx, y: by, vx: Math.cos(player.angle) * BULLET_SPEED, vy: Math.sin(player.angle) * BULLET_SPEED,
       life: BULLET_LIFE, owner: 'player', damage: effectiveDmg });
     spawnParticles(bx, by, '#66ccff', 4, 3);
+  }
+
+  // -- Player 2 shooting (HOST-SIDE) --
+  if (isHost && isCoop && player2 && player2.hp > 0) {
+    if (playerFireCD2 > 0) playerFireCD2--;
+    if (remoteInput.clicked && playerFireCD2 <= 0) {
+      remoteInput.clicked = false;
+      playerFireCD2 = PLAYER_FIRE_COOLDOWN;
+      const a2 = remoteInput.mouseAngle || 0;
+      const bx2 = player2.x + Math.cos(a2) * (PLAYER_R + 6);
+      const by2 = player2.y + Math.sin(a2) * (PLAYER_R + 6);
+      bullets.push({ x: bx2, y: by2, vx: Math.cos(a2) * BULLET_SPEED, vy: Math.sin(a2) * BULLET_SPEED,
+        life: BULLET_LIFE, owner: 'player2', damage: effectiveDmg });
+      spawnParticles(bx2, by2, '#44ff88', 4, 3);
+    }
   }
 
   // -- Drone (fire rate improves with upgrades) --
@@ -832,6 +1022,24 @@ function update() {
       const a = Math.atan2(closest.y - drone.y, closest.x - drone.x);
       bullets.push({ x: drone.x, y: drone.y, vx: Math.cos(a) * BULLET_SPEED * 0.8, vy: Math.sin(a) * BULLET_SPEED * 0.8,
         life: 60, owner: 'drone', damage: 8 + playerUpgrades.damage * 2 });
+    }
+  }
+
+  // -- Drone 2 (HOST-SIDE) --
+  if (isHost && isCoop && player2 && player2.hp > 0 && drone2) {
+    droneAngle2 += 0.03;
+    drone2.x = player2.x + Math.cos(droneAngle2) * DRONE_ORBIT;
+    drone2.y = player2.y + Math.sin(droneAngle2) * DRONE_ORBIT;
+    if (droneFireCD2 > 0) droneFireCD2--;
+    if (droneFireCD2 <= 0 && enemies.length > 0) {
+      let closest = null, closestD = Infinity;
+      for (const e of enemies) { const d = dist(drone2, e); if (d < closestD && d < DRONE_RANGE) { closest = e; closestD = d; } }
+      if (closest) {
+        droneFireCD2 = effectiveDroneRate;
+        const a = Math.atan2(closest.y - drone2.y, closest.x - drone2.x);
+        bullets.push({ x: drone2.x, y: drone2.y, vx: Math.cos(a) * BULLET_SPEED * 0.8, vy: Math.sin(a) * BULLET_SPEED * 0.8,
+          life: 60, owner: 'drone2', damage: 8 + playerUpgrades.damage * 2 });
+      }
     }
   }
 
@@ -880,7 +1088,13 @@ function update() {
       // Enemy bullets hit player and buildings
       if (Math.hypot(b.x - player.x, b.y - player.y) < PLAYER_R + BULLET_R) {
         player.hp -= b.damage; spawnParticles(player.x, player.y, '#ff0000', 4, 3);
-        document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+        updateHpDisplay();
+        hit = true;
+      }
+      // Enemy bullets hit P2
+      if (!hit && isCoop && player2 && player2.hp > 0 && Math.hypot(b.x - player2.x, b.y - player2.y) < PLAYER_R + BULLET_R) {
+        player2.hp -= b.damage; spawnParticles(player2.x, player2.y, '#ff0000', 4, 3);
+        updateHpDisplay();
         hit = true;
       }
       if (!hit) for (const bld of buildings) {
@@ -894,7 +1108,7 @@ function update() {
           sm.hp -= b.damage; spawnParticles(b.x, b.y, '#4488ff', 3, 2); hit = true; break;
         }
       }
-    } else {
+    } else if (b.owner === 'player' || b.owner === 'player2' || b.owner === 'drone' || b.owner === 'drone2' || b.owner === 'turret') {
       // Friendly bullets hit enemies
       for (let j = enemies.length - 1; j >= 0; j--) {
         const e = enemies[j];
@@ -922,9 +1136,11 @@ function update() {
     if (m.armed) {
       const dp = Math.hypot(m.x - player.x, m.y - player.y);
       const dd = Math.hypot(m.x - drone.x, m.y - drone.y);
-      if (dp < MINE_RADIUS || dd < MINE_RADIUS) {
+      const dp2 = (isCoop && player2 && player2.hp > 0) ? Math.hypot(m.x - player2.x, m.y - player2.y) : Infinity;
+      if (dp < MINE_RADIUS || dd < MINE_RADIUS || dp2 < MINE_RADIUS) {
         // Explode
-        if (dp < MINE_RADIUS) { player.hp -= m.damage; document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp)); }
+        if (dp < MINE_RADIUS) { player.hp -= m.damage; updateHpDisplay(); }
+        if (dp2 < MINE_RADIUS && player2) { player2.hp -= m.damage; updateHpDisplay(); }
         spawnParticles(m.x, m.y, '#ff4400', 15, 6);
         spawnParticles(m.x, m.y, '#ffaa00', 10, 4);
         // Damage buildings nearby
@@ -946,7 +1162,16 @@ function update() {
     if (!sw.hitPlayer && Math.abs(pd - sw.radius) < 18) {
       player.hp -= sw.damage; sw.hitPlayer = true;
       spawnParticles(player.x, player.y, '#aa44ff', 8, 4);
-      document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+      updateHpDisplay();
+    }
+    // Damage P2
+    if (isCoop && player2 && player2.hp > 0) {
+      const pd2 = Math.hypot(sw.x - player2.x, sw.y - player2.y);
+      if (!sw.hitPlayer2 && Math.abs(pd2 - sw.radius) < 18) {
+        player2.hp -= sw.damage; sw.hitPlayer2 = true;
+        spawnParticles(player2.x, player2.y, '#aa44ff', 8, 4);
+        updateHpDisplay();
+      }
     }
     // Damage spacemen
     for (const s of spacemen) {
@@ -972,6 +1197,11 @@ function update() {
     let target = { x: player.x, y: player.y };
     let targetD = dist(e, player);
     let targetBuilding = null;
+    // Also consider P2 as target
+    if (isCoop && player2 && player2.hp > 0) {
+      const d2 = dist(e, player2);
+      if (d2 < targetD) { targetD = d2; target = { x: player2.x, y: player2.y }; }
+    }
     for (const b of buildings) {
       if (b.hp <= 0) continue;
       const d = dist(e, { x: b.x + BUILD_SIZE / 2, y: b.y + BUILD_SIZE / 2 });
@@ -982,8 +1212,10 @@ function update() {
     // === BOSS AI ===
     if (e.isBoss) {
       const bdef = BOSS_DEFS[e.bossKey];
-      // Boss always moves toward player (not buildings)
-      const ba = Math.atan2(player.y - e.y, player.x - e.x);
+      // Boss moves toward closest player
+      let bossTarget = player;
+      if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < dist(e, player)) bossTarget = player2;
+      const ba = Math.atan2(bossTarget.y - e.y, bossTarget.x - e.x);
       let bSpeed = e.speed;
       // Core phase 2: rage at <30% hp
       if (e.bossKey === 'core' && e.hp < e.maxHp * 0.3) { e.phase = 2; bSpeed = e.speed * 1.6; }
@@ -1068,7 +1300,23 @@ function update() {
       if (dist(e, player) < e.size + PLAYER_R + 6 && e.attackCD <= 0) {
         player.hp -= e.damage; e.attackCD = 40;
         spawnParticles(player.x, player.y, '#ff0000', 8, 4);
-        document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+        updateHpDisplay();
+      }
+      // Boss melee P2
+      if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < e.size + PLAYER_R + 6 && e.attackCD <= 0) {
+        player2.hp -= e.damage; e.attackCD = 40;
+        spawnParticles(player2.x, player2.y, '#ff0000', 8, 4);
+        updateHpDisplay();
+      }
+      // Boss melee spacemen
+      if (e.attackCD <= 0) {
+        for (const sm of spacemen) {
+          if (sm.hp > 0 && dist(e, sm) < e.size + sm.size + 6) {
+            sm.hp -= e.damage; e.attackCD = 40;
+            spawnParticles(sm.x, sm.y, '#4488ff', 6, 3);
+            break;
+          }
+        }
       }
       if (e.attackCD > 0) e.attackCD--;
       // Update boss HP bar
@@ -1094,7 +1342,14 @@ function update() {
         const la = e.laserAngle;
         const playerDist = dist(e, player);
         if (Math.abs(Math.atan2(player.y - e.y, player.x - e.x) - la) < 0.3 && playerDist < LASER_E_RANGE) {
-          player.hp -= LASER_E_DPS; document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+          player.hp -= LASER_E_DPS; updateHpDisplay();
+        }
+        // Laser hits P2
+        if (isCoop && player2 && player2.hp > 0) {
+          const p2Dist = dist(e, player2);
+          if (Math.abs(Math.atan2(player2.y - e.y, player2.x - e.x) - la) < 0.3 && p2Dist < LASER_E_RANGE) {
+            player2.hp -= LASER_E_DPS; updateHpDisplay();
+          }
         }
         for (const b of buildings) {
           if (b.hp <= 0) continue;
@@ -1131,7 +1386,14 @@ function update() {
         if (dist(e, player) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
           player.hp -= e.damage * 2; e.attackCD = 60;
           spawnParticles(player.x, player.y, '#ff0000', 10, 5);
-          document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+          updateHpDisplay();
+          e.isCharging = false; e.stunTimer = CHARGER_STUN;
+        }
+        // Charger collision with P2
+        if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
+          player2.hp -= e.damage * 2; e.attackCD = 60;
+          spawnParticles(player2.x, player2.y, '#ff0000', 10, 5);
+          updateHpDisplay();
           e.isCharging = false; e.stunTimer = CHARGER_STUN;
         }
         if (e.attackCD > 0) e.attackCD--;
@@ -1141,7 +1403,9 @@ function update() {
         e.chargeWindup--;
         if (e.chargeWindup <= 0) {
           e.isCharging = true; e.chargeWindup = 12;
-          const ca = Math.atan2(player.y - e.y, player.x - e.x);
+          let chargeTarget = player;
+          if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < dist(e, player)) chargeTarget = player2;
+          const ca = Math.atan2(chargeTarget.y - e.y, chargeTarget.x - e.x);
           e.chargeDX = Math.cos(ca) * CHARGER_SPEED; e.chargeDY = Math.sin(ca) * CHARGER_SPEED;
         }
         if (e.attackCD > 0) e.attackCD--;
@@ -1181,14 +1445,33 @@ function update() {
       }
       if (!found) { edx = 0; edy = 0; }
     }
-    // Stuck detection: if enemy hasn't moved much, try a random direction
+    // Stuck detection: if enemy hasn't moved much for 3 seconds, redirect toward player
     if (!e._prevX) { e._prevX = e.x; e._prevY = e.y; e._stuckFrames = 0; }
     if (frameCount % 30 === 0) {
       if (Math.hypot(e.x - e._prevX, e.y - e._prevY) < 2) {
         e._stuckFrames++;
-        if (e._stuckFrames >= 3) {
-          const ra = Math.random() * Math.PI * 2;
-          edx = Math.cos(ra) * e.speed; edy = Math.sin(ra) * e.speed;
+        if (e._stuckFrames >= 6) { // 6 checks * 30 frames = 180 frames = 3 seconds
+          // Head toward closest player instead of random direction
+          let stuckTarget = player;
+          if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < dist(e, player)) stuckTarget = player2;
+          const toPlayer = Math.atan2(stuckTarget.y - e.y, stuckTarget.x - e.x);
+          // Try perpendicular angles to slide around obstacles
+          const offsets = [Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4];
+          let unstuck = false;
+          for (const off of offsets) {
+            const tryA = toPlayer + off;
+            const tryX = e.x + Math.cos(tryA) * e.speed * 8;
+            const tryY = e.y + Math.sin(tryA) * e.speed * 8;
+            if (!isObstacle(tryX, tryY)) {
+              edx = Math.cos(tryA) * e.speed * 1.5;
+              edy = Math.sin(tryA) * e.speed * 1.5;
+              unstuck = true; break;
+            }
+          }
+          if (!unstuck) {
+            edx = Math.cos(toPlayer) * e.speed;
+            edy = Math.sin(toPlayer) * e.speed;
+          }
           e._stuckFrames = 0;
         }
       } else { e._stuckFrames = 0; }
@@ -1211,7 +1494,23 @@ function update() {
     if (dist(e, player) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
       player.hp -= e.damage; e.attackCD = 30;
       spawnParticles(player.x, player.y, '#ff0000', 6, 3);
-      document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+      updateHpDisplay();
+    }
+    // Normal melee P2
+    if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < e.size + PLAYER_R + 4 && e.attackCD <= 0) {
+      player2.hp -= e.damage; e.attackCD = 30;
+      spawnParticles(player2.x, player2.y, '#ff0000', 6, 3);
+      updateHpDisplay();
+    }
+    // Melee attack spacemen
+    if (e.attackCD <= 0) {
+      for (const sm of spacemen) {
+        if (sm.hp > 0 && dist(e, sm) < e.size + sm.size + 4) {
+          sm.hp -= e.damage; e.attackCD = 30;
+          spawnParticles(sm.x, sm.y, '#4488ff', 4, 3);
+          break;
+        }
+      }
     }
   }
 
@@ -1223,9 +1522,18 @@ function update() {
   // -- Collect orbs --
   for (let i = orbs.length - 1; i >= 0; i--) {
     const o = orbs[i]; o.pulse += 0.05;
-    if (dist(player, o) < PLAYER_R + ENERGY_ORB_R + 4) {
-      energy += 5; spawnParticles(o.x, o.y, '#ffdd00', 6, 3); orbs.splice(i, 1);
+    let collector = null;
+    if (dist(player, o) < PLAYER_R + ENERGY_ORB_R + 4) { collector = player; }
+    if (!collector && isCoop && player2 && player2.hp > 0 && dist(player2, o) < PLAYER_R + ENERGY_ORB_R + 4) { collector = player2; }
+    if (collector) {
+      energy += 5;
+      // Heal the collector by 15 HP
+      collector.hp = Math.min(collector.hp + 15, collector.maxHp);
+      spawnParticles(o.x, o.y, '#ffdd00', 6, 3);
+      spawnParticles(collector.x, collector.y, '#44ff44', 4, 2);
+      orbs.splice(i, 1);
       document.getElementById('energy-display').textContent = energy; updateBuildButtons();
+      updateHpDisplay();
     }
   }
 
@@ -1310,7 +1618,7 @@ function update() {
   } else if (wavePhase === 'active') {
     const cfg = WAVE_CONFIG[wave - 1];
     if (enemiesSpawned < totalWaveEnemies) {
-      spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = cfg.spawnRate; }
+      spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = isCoop ? Math.floor(cfg.spawnRate * COOP_MULT.spawnRate) : cfg.spawnRate; }
     }
     // Spawn boss at 50% through the wave
     if (cfg.boss && !bossSpawned && enemiesSpawned >= Math.floor(totalWaveEnemies / 2)) {
@@ -1333,7 +1641,8 @@ function update() {
   } else if (wavePhase === 'endless') {
     endlessTimer++;
     // Spawn enemies continuously
-    spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = getEndlessConfig().spawnRate; }
+    const endlessSpawnRate = isCoop ? Math.floor(getEndlessConfig().spawnRate * COOP_MULT.spawnRate) : getEndlessConfig().spawnRate;
+    spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = endlessSpawnRate; }
     // Escalate difficulty every 30 seconds
     if (endlessTimer % 1800 === 0) endlessLevel++;
     // Spawn boss every 2 minutes
@@ -1354,16 +1663,23 @@ function update() {
   // -- Wave banner --
   if (waveBannerTimer > 0) { waveBannerTimer--; if (waveBannerTimer <= 0) document.getElementById('wave-banner').classList.remove('show'); }
 
-  // -- Camera --
-  camera.x = player.x - W / 2; camera.y = player.y - H / 2;
+  // -- Camera (follows local player) --
+  const camTarget = (isClient && player2) ? player2 : player;
+  camera.x = camTarget.x - W / 2; camera.y = camTarget.y - H / 2;
   camera.x = Math.max(0, Math.min(WORLD_W - W, camera.x));
   camera.y = Math.max(0, Math.min(WORLD_H - H, camera.y));
 
   // -- Score display --
   document.getElementById('score-display').textContent = `Kills: ${totalKills} | Points: ${upgradePoints}`;
 
+  // -- Network state send (HOST) --
+  if (isHost && isCoop && conn && conn.open && frameCount % NET_SEND_INTERVAL === 0) {
+    conn.send({ type: 'state', state: packGameState() });
+  }
+
   // -- Game over --
-  if (player.hp <= 0 && !gameOverShown) {
+  const bothDead = isCoop ? (player.hp <= 0 && (!player2 || player2.hp <= 0)) : (player.hp <= 0);
+  if (bothDead && !gameOverShown) {
     gameOverShown = true; gameRunning = false;
     const title = document.getElementById('go-title');
     if (endlessMode) {
@@ -1426,9 +1742,10 @@ function showVictory() {
   setTimeout(() => {
     document.getElementById('game-over').classList.remove('show');
     gameRunning = true; victoryShown = false; gameOverShown = false;
-    // Heal player partially
+    // Heal player(s) partially
     player.hp = Math.min(player.hp + 50, player.maxHp);
-    document.getElementById('hp-display').textContent = Math.floor(player.hp);
+    if (isCoop && player2) { player2.hp = Math.min(player2.hp + 50, player2.maxHp); }
+    updateHpDisplay();
     startEndless();
   }, 5000);
 }
@@ -1655,7 +1972,9 @@ function draw() {
     let col, trail;
     if (b.owner === 'enemy') { col = '#ff2222'; trail = 'rgba(255,34,34,0.3)'; }
     else if (b.owner === 'player') { col = '#66ccff'; trail = 'rgba(102,204,255,0.3)'; }
+    else if (b.owner === 'player2') { col = '#44ff88'; trail = 'rgba(68,255,136,0.3)'; }
     else if (b.owner === 'drone') { col = '#00ffcc'; trail = 'rgba(0,255,204,0.3)'; }
+    else if (b.owner === 'drone2') { col = '#66ff99'; trail = 'rgba(102,255,153,0.3)'; }
     else { col = '#ff8800'; trail = 'rgba(255,136,0,0.3)'; }
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(b.x, b.y, b.owner === 'enemy' ? BULLET_R + 1 : BULLET_R, 0, Math.PI * 2); ctx.fill();
@@ -1744,7 +2063,9 @@ function draw() {
       } else if (e.type === 'charger') {
         // Triangle for chargers
         ctx.fillStyle = outerColor;
-        const ca = Math.atan2(player.y - e.y, player.x - e.x);
+        let chargerFace = player;
+        if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < dist(e, player)) chargerFace = player2;
+        const ca = Math.atan2(chargerFace.y - e.y, chargerFace.x - e.x);
         ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(ca);
         ctx.beginPath(); ctx.moveTo(e.size, 0); ctx.lineTo(-e.size, -e.size*0.8); ctx.lineTo(-e.size, e.size*0.8); ctx.closePath(); ctx.fill();
         ctx.shadowBlur = 0; ctx.fillStyle = innerColor;
@@ -1844,6 +2165,59 @@ function draw() {
     ctx.fillStyle = hpPct > 0.5 ? '#44ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff2222';
     ctx.fillRect(player.x - 20, player.y - PLAYER_R - 12, 40 * hpPct, 5);
   }
+  // P1 label in co-op
+  if (isCoop) {
+    ctx.fillStyle = '#88ccff'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('P1', player.x, player.y + PLAYER_R + 14);
+  }
+
+  // Player 2
+  if (isCoop && player2) {
+    const p2alive = player2.hp > 0;
+    if (p2alive) {
+      // Dash trail P2
+      if (dashTimer2 > 0) {
+        for (let i = 1; i <= 4; i++) {
+          ctx.globalAlpha = 0.15 / i;
+          ctx.fillStyle = '#00ff88';
+          ctx.beginPath();
+          ctx.arc(player2.x - dashDX2 * i * 2, player2.y - dashDY2 * i * 2, PLAYER_R - i, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      ctx.shadowColor = dashTimer2 > 0 ? '#00ff88' : '#22cc44';
+      ctx.shadowBlur = dashTimer2 > 0 ? 25 : 15;
+      ctx.fillStyle = dashTimer2 > 0 ? '#00aa44' : '#228833';
+      ctx.beginPath(); ctx.arc(player2.x, player2.y, PLAYER_R, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = dashTimer2 > 0 ? '#44ff88' : '#44cc66';
+      ctx.beginPath(); ctx.arc(player2.x, player2.y, PLAYER_R - 3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#88ffaa'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(player2.x, player2.y);
+      ctx.lineTo(player2.x + Math.cos(player2.angle) * (PLAYER_R + 8), player2.y + Math.sin(player2.angle) * (PLAYER_R + 8));
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(player2.x + Math.cos(player2.angle) * 6, player2.y + Math.sin(player2.angle) * 6, 4, 0, Math.PI * 2); ctx.fill();
+      if (player2.hp < player2.maxHp) {
+        const hpPct2 = Math.max(0, player2.hp / player2.maxHp);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(player2.x - 20, player2.y - PLAYER_R - 12, 40, 5);
+        ctx.fillStyle = hpPct2 > 0.5 ? '#44ff44' : hpPct2 > 0.25 ? '#ffaa00' : '#ff2222';
+        ctx.fillRect(player2.x - 20, player2.y - PLAYER_R - 12, 40 * hpPct2, 5);
+      }
+      ctx.fillStyle = '#88ffaa'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillText('P2', player2.x, player2.y + PLAYER_R + 14);
+    } else {
+      // Dead P2 marker
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#444';
+      ctx.beginPath(); ctx.arc(player2.x, player2.y, PLAYER_R, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#888'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillText('P2 DOWN', player2.x, player2.y + 4);
+    }
+  }
 
   // Drone
   ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 8;
@@ -1854,6 +2228,18 @@ function draw() {
   ctx.beginPath(); ctx.arc(drone.x, drone.y, DRONE_R - 2, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(0,255,200,0.15)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(drone.x, drone.y); ctx.stroke();
+
+  // Drone 2
+  if (isCoop && player2 && player2.hp > 0 && drone2) {
+    ctx.shadowColor = '#44ff88'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#22cc66';
+    ctx.beginPath(); ctx.arc(drone2.x, drone2.y, DRONE_R, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#66ff99';
+    ctx.beginPath(); ctx.arc(drone2.x, drone2.y, DRONE_R - 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(68,255,136,0.15)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(player2.x, player2.y); ctx.lineTo(drone2.x, drone2.y); ctx.stroke();
+  }
 
   // Shockwaves
   for (const sw of shockwaves) {
@@ -1978,7 +2364,18 @@ function draw() {
     ctx.fillStyle = 'rgba(0,255,255,0.15)'; ctx.fillRect(rbX, rbY, rbW, rbH);
     ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(rbX, rbY, rbW, rbH);
     ctx.fillStyle = '#0ff'; ctx.font = 'bold 22px Segoe UI'; ctx.textAlign = 'center';
-    ctx.fillText('READY [ENTER]', W/2, rbY + 33);
+    if (isCoop) {
+      const localReady = isHost ? hostReady : p2Ready;
+      const remoteReady = isHost ? p2Ready : hostReady;
+      if (localReady && !remoteReady) {
+        ctx.fillStyle = '#888';
+        ctx.fillText(isHost ? 'WAITING FOR P2...' : 'WAITING FOR HOST...', W/2, rbY + 33);
+      } else {
+        ctx.fillText('READY [ENTER]', W/2, rbY + 33);
+      }
+    } else {
+      ctx.fillText('READY [ENTER]', W/2, rbY + 33);
+    }
 
     // Store positions for click detection
     window._upgradeBoxes = { startX, startY, boxW, boxH, gap, readyX: rbX, readyY: rbY, readyW: rbW, readyH: rbH };
@@ -2013,6 +2410,11 @@ function drawMinimap() {
   for (const e of enemies) ctx.fillRect(mmX + e.x * scaleX - 1, mmY + e.y * scaleY - 1, 2, 2);
   ctx.fillStyle = '#4499ff';
   ctx.beginPath(); ctx.arc(mmX + player.x * scaleX, mmY + player.y * scaleY, 3, 0, Math.PI * 2); ctx.fill();
+  // P2 on minimap
+  if (isCoop && player2 && player2.hp > 0) {
+    ctx.fillStyle = '#44ff88';
+    ctx.beginPath(); ctx.arc(mmX + player2.x * scaleX, mmY + player2.y * scaleY, 3, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.strokeStyle = 'rgba(255,255,255,0.2)';
   ctx.strokeRect(mmX + camera.x * scaleX, mmY + camera.y * scaleY, W * scaleX, H * scaleY);
 }
@@ -2146,11 +2548,16 @@ canvas.addEventListener('mousedown', e => {
     for (let i = 0; i < UPGRADE_DEFS.length; i++) {
       const bx = ub.startX + i * (ub.boxW + ub.gap);
       if (mx >= bx && mx <= bx + ub.boxW && my >= ub.startY && my <= ub.startY + ub.boxH) {
-        const u = UPGRADE_DEFS[i]; const lv = playerUpgrades[u.key]; const cost = getUpgradeCost(lv);
-        if (lv < u.max && upgradePoints >= cost) {
-          upgradePoints -= cost; playerUpgrades[u.key]++;
-          applyUpgrades();
-          document.getElementById('hp-display').textContent = Math.floor(player.hp);
+        if (isClient) {
+          // Client sends upgrade request to host
+          if (conn && conn.open) conn.send({ type: 'upgrade', index: i });
+        } else {
+          const u = UPGRADE_DEFS[i]; const lv = playerUpgrades[u.key]; const cost = getUpgradeCost(lv);
+          if (lv < u.max && upgradePoints >= cost) {
+            upgradePoints -= cost; playerUpgrades[u.key]++;
+            applyUpgrades();
+            updateHpDisplay();
+          }
         }
         return;
       }
@@ -2163,21 +2570,56 @@ canvas.addEventListener('mousedown', e => {
   }
 
   if (e.button === 0) {
-    if (selectedBuild) { placeBuild(); }
+    if (selectedBuild) {
+      if (isClient) {
+        // Client sends build request to host
+        const wmx = mouse.x + camera.x, wmy = mouse.y + camera.y;
+        const tx = Math.floor(wmx / TILE) * TILE, ty = Math.floor(wmy / TILE) * TILE;
+        if (conn && conn.open) conn.send({ type: 'build', buildType: selectedBuild, tx, ty });
+      } else {
+        placeBuild();
+      }
+    }
     else { mouse.clicked = true; }
   }
   if (e.button === 2) {
-    if (selectedBuild) { placeBuild(); }
+    if (selectedBuild) {
+      if (isClient) {
+        const wmx = mouse.x + camera.x, wmy = mouse.y + camera.y;
+        const tx = Math.floor(wmx / TILE) * TILE, ty = Math.floor(wmy / TILE) * TILE;
+        if (conn && conn.open) conn.send({ type: 'build', buildType: selectedBuild, tx, ty });
+      } else {
+        placeBuild();
+      }
+    }
     else {
       // Right-click: try to upgrade building under cursor
       const wmx = mouse.x + camera.x, wmy = mouse.y + camera.y;
-      const b = getBuildingAt(wmx, wmy);
-      if (b) upgradeBuilding(b);
+      if (isClient) {
+        const tx = Math.floor(wmx / TILE) * TILE, ty = Math.floor(wmy / TILE) * TILE;
+        if (conn && conn.open) conn.send({ type: 'upgradeBuild', bx: tx, by: ty });
+      } else {
+        const b = getBuildingAt(wmx, wmy);
+        if (b) upgradeBuilding(b);
+      }
     }
   }
 });
 
 function dismissUpgradeMenu() {
+  if (isCoop) {
+    if (isHost) {
+      hostReady = true;
+      if (!p2Ready) return; // wait for P2
+    } else {
+      // Client sends ready to host
+      if (conn && conn.open) conn.send({ type: 'ready' });
+      p2Ready = true;
+      return; // host will dismiss when both ready
+    }
+    // Both ready — reset
+    hostReady = false; p2Ready = false;
+  }
   showingUpgrades = false;
   wavePhase = 'cleared';
   if (wave >= MAX_WAVES) { betweenTimer = 120; }
@@ -2186,6 +2628,301 @@ function dismissUpgradeMenu() {
 }
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ============================================================
+// MULTIPLAYER — Connection, Sync, Helpers
+// ============================================================
+
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/1/O/0
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function hostGame() {
+  roomCode = generateRoomCode();
+  isCoop = true; isHost = true; isClient = false;
+  document.getElementById('lobby-room-code').textContent = roomCode;
+  document.getElementById('lobby-title').textContent = 'HOST — CO-OP LOBBY';
+  document.getElementById('lobby-status').textContent = 'Waiting for Player 2...';
+  document.getElementById('lobby-start-btn').disabled = true;
+  document.getElementById('lobby-overlay').classList.add('show');
+
+  peer = new Peer('energysiege-' + roomCode, { debug: 0 });
+  peer.on('open', () => {
+    document.getElementById('lobby-status').textContent = 'Room open. Share code: ' + roomCode;
+  });
+  peer.on('connection', c => {
+    conn = c;
+    document.getElementById('lobby-status').textContent = 'Player 2 connected!';
+    document.getElementById('lobby-start-btn').disabled = false;
+    conn.on('data', handleNetData);
+    conn.on('close', handleDisconnect);
+  });
+  peer.on('error', err => {
+    document.getElementById('lobby-status').textContent = 'Error: ' + err.type;
+  });
+}
+
+function joinGame() {
+  const code = document.getElementById('join-code-input').value.toUpperCase().trim();
+  if (code.length !== 6) return;
+  roomCode = code;
+  isCoop = true; isHost = false; isClient = true;
+  document.getElementById('lobby-room-code').textContent = roomCode;
+  document.getElementById('lobby-title').textContent = 'JOIN — CO-OP LOBBY';
+  document.getElementById('lobby-status').textContent = 'Connecting to host...';
+  document.getElementById('lobby-start-btn').disabled = true;
+  document.getElementById('lobby-start-btn').style.display = 'none';
+  document.getElementById('lobby-overlay').classList.add('show');
+
+  peer = new Peer(undefined, { debug: 0 });
+  peer.on('open', () => {
+    conn = peer.connect('energysiege-' + roomCode, { reliable: true });
+    conn.on('open', () => {
+      document.getElementById('lobby-status').textContent = 'Connected! Waiting for host to start...';
+      conn.on('data', handleNetData);
+      conn.on('close', handleDisconnect);
+    });
+  });
+  peer.on('error', err => {
+    document.getElementById('lobby-status').textContent = 'Error: ' + err.type;
+  });
+}
+
+function startCoopGame() {
+  if (!isHost || !conn) return;
+  conn.send({ type: 'start' });
+  document.getElementById('lobby-overlay').classList.remove('show');
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('coop-badge').classList.add('show');
+  initGame();
+  gameRunning = true;
+}
+
+function cancelLobby() {
+  document.getElementById('lobby-overlay').classList.remove('show');
+  document.getElementById('lobby-start-btn').style.display = '';
+  if (conn) { conn.close(); conn = null; }
+  if (peer) { peer.destroy(); peer = null; }
+  isCoop = false; isHost = false; isClient = false; roomCode = '';
+}
+
+function handleDisconnect() {
+  if (!isCoop) return;
+  conn = null;
+  if (isClient) {
+    // Client: game over
+    gameRunning = false; gameOverShown = true;
+    document.getElementById('go-title').textContent = 'DISCONNECTED';
+    document.getElementById('go-title').style.color = '#ff6600';
+    document.getElementById('go-stats').textContent = 'Lost connection to host';
+    document.getElementById('game-over').classList.add('show');
+  } else {
+    // Host: continue solo, show toast
+    player2 = null; drone2 = null;
+    const toast = document.getElementById('disconnect-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+}
+
+function handleNetData(data) {
+  if (!data || !data.type) return;
+  switch(data.type) {
+    case 'start':
+      if (isClient) {
+        document.getElementById('lobby-overlay').classList.remove('show');
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('coop-badge').classList.add('show');
+        initGame();
+        gameRunning = true;
+      }
+      break;
+    case 'input':
+      if (isHost) {
+        remoteInput = data.input;
+      }
+      break;
+    case 'state':
+      if (isClient) {
+        applyHostState(data.state);
+      }
+      break;
+    case 'upgrade':
+      if (isHost && showingUpgrades) {
+        const u = UPGRADE_DEFS[data.index];
+        if (u) {
+          const lv = playerUpgrades[u.key];
+          const cost = getUpgradeCost(lv);
+          if (lv < u.max && upgradePoints >= cost) {
+            upgradePoints -= cost;
+            playerUpgrades[u.key]++;
+            applyUpgrades();
+          }
+        }
+      }
+      break;
+    case 'ready':
+      if (isHost) {
+        p2Ready = true;
+        // If host is also ready, dismiss
+        if (hostReady && showingUpgrades) dismissUpgradeMenu();
+      }
+      break;
+    case 'build':
+      if (isHost) { placeBuildAt(data.buildType, data.tx, data.ty); }
+      break;
+    case 'upgradeBuild':
+      if (isHost) {
+        const b = getBuildingAt(data.bx + TILE/2, data.by + TILE/2);
+        if (b) upgradeBuilding(b);
+      }
+      break;
+  }
+}
+
+function placeBuildAt(buildType, tx, ty) {
+  if (!buildType || energy < COSTS[buildType]) return;
+  if (isObstacle(tx + TILE / 2, ty + TILE / 2)) return;
+  if (isBuildingAt(tx + TILE / 2, ty + TILE / 2)) return;
+  if (circleRect(player.x, player.y, PLAYER_R, tx, ty, BUILD_SIZE, BUILD_SIZE)) return;
+  if (player2 && circleRect(player2.x, player2.y, PLAYER_R, tx, ty, BUILD_SIZE, BUILD_SIZE)) return;
+  energy -= COSTS[buildType];
+  buildings.push({
+    x: tx, y: ty, type: buildType, level: 1,
+    hp: BUILD_HP[buildType], maxHp: BUILD_HP[buildType],
+    fireCD: 0, angle: 0, laserTarget: null
+  });
+  spawnParticles(tx + BUILD_SIZE / 2, ty + BUILD_SIZE / 2, '#00ff88', 8, 3);
+  document.getElementById('energy-display').textContent = energy;
+  updateBuildButtons();
+}
+
+function packGameState() {
+  const packEnemy = e => ({
+    x: e.x, y: e.y, size: e.size, hp: e.hp, maxHp: e.maxHp, type: e.type,
+    isBoss: e.isBoss, bossKey: e.bossKey, isRaged: e.isRaged, isCharging: e.isCharging,
+    chargeWindup: e.chargeWindup, stunTimer: e.stunTimer,
+    laserCharging: e.laserCharging, laserChargeTimer: e.laserChargeTimer,
+    laserFiring: e.laserFiring, laserFireTimer: e.laserFireTimer, laserAngle: e.laserAngle,
+    phase: e.phase, slamWindup: e.slamWindup, speed: e.speed,
+    chargeDX: e.chargeDX, chargeDY: e.chargeDY
+  });
+  return {
+    p1: { x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp, angle: player.angle },
+    p2: player2 ? { x: player2.x, y: player2.y, hp: player2.hp, maxHp: player2.maxHp, angle: player2.angle } : null,
+    d1: { x: drone.x, y: drone.y },
+    d2: drone2 ? { x: drone2.x, y: drone2.y } : null,
+    enemies: enemies.map(packEnemy),
+    bullets: bullets.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, life: b.life, owner: b.owner, damage: b.damage })),
+    buildings: buildings.map(b => ({ x: b.x, y: b.y, type: b.type, level: b.level, hp: b.hp, maxHp: b.maxHp, fireCD: b.fireCD, angle: b.angle,
+      laserTarget: b.laserTarget ? { x: b.laserTarget.x, y: b.laserTarget.y } : null })),
+    orbs: orbs.map(o => ({ x: o.x, y: o.y, pulse: o.pulse })),
+    mines: mines.map(m => ({ x: m.x, y: m.y, armed: m.armed, armTimer: m.armTimer, lifetime: m.lifetime })),
+    shockwaves: shockwaves.map(s => ({ x: s.x, y: s.y, radius: s.radius, maxRadius: s.maxRadius, speed: s.speed, damage: s.damage })),
+    spacemen: spacemen.map(s => ({ x: s.x, y: s.y, hp: s.hp, maxHp: s.maxHp, size: s.size })),
+    hud: {
+      energy, wave, wavePhase, upgradePoints, totalKills, showingUpgrades,
+      endlessMode, endlessTimer, endlessLevel, playerUpgrades: { ...playerUpgrades },
+      activeBossHp: activeBoss ? activeBoss.hp / activeBoss.maxHp : -1,
+      activeBossName: activeBoss ? BOSS_DEFS[activeBoss.bossKey].name : '',
+      dashCooldown, dashTimer,
+      dashCooldown2: dashCooldown2, dashTimer2: dashTimer2,
+      hostReady, p2Ready
+    },
+    frameCount
+  };
+}
+
+function applyHostState(s) {
+  if (!s) return;
+  // Players
+  player.x = s.p1.x; player.y = s.p1.y; player.hp = s.p1.hp; player.maxHp = s.p1.maxHp; player.angle = s.p1.angle;
+  if (s.p2) {
+    if (!player2) player2 = { x: 0, y: 0, hp: 100, maxHp: 100, angle: 0 };
+    player2.x = s.p2.x; player2.y = s.p2.y; player2.hp = s.p2.hp; player2.maxHp = s.p2.maxHp; player2.angle = s.p2.angle;
+  } else { player2 = null; }
+  // Drones
+  drone.x = s.d1.x; drone.y = s.d1.y;
+  if (s.d2) {
+    if (!drone2) drone2 = { x: 0, y: 0 };
+    drone2.x = s.d2.x; drone2.y = s.d2.y;
+  }
+  // Entities
+  enemies = s.enemies;
+  bullets = s.bullets;
+  buildings = s.buildings;
+  orbs = s.orbs;
+  mines = s.mines;
+  shockwaves = s.shockwaves;
+  spacemen = s.spacemen;
+  // HUD
+  energy = s.hud.energy;
+  wave = s.hud.wave;
+  wavePhase = s.hud.wavePhase;
+  upgradePoints = s.hud.upgradePoints;
+  totalKills = s.hud.totalKills;
+  showingUpgrades = s.hud.showingUpgrades;
+  endlessMode = s.hud.endlessMode;
+  endlessTimer = s.hud.endlessTimer;
+  endlessLevel = s.hud.endlessLevel;
+  playerUpgrades = s.hud.playerUpgrades;
+  hostReady = s.hud.hostReady;
+  p2Ready = s.hud.p2Ready;
+  dashCooldown = s.hud.dashCooldown;
+  dashTimer = s.hud.dashTimer;
+  dashCooldown2 = s.hud.dashCooldown2;
+  dashTimer2 = s.hud.dashTimer2;
+  frameCount = s.frameCount;
+  // Camera follows P2 on client
+  if (player2) {
+    camera.x = player2.x - W / 2;
+    camera.y = player2.y - H / 2;
+    camera.x = Math.max(0, Math.min(WORLD_W - W, camera.x));
+    camera.y = Math.max(0, Math.min(WORLD_H - H, camera.y));
+  }
+  // Update HUD elements
+  document.getElementById('energy-display').textContent = energy;
+  document.getElementById('wave-display').textContent = endlessMode ? 'ENDLESS' : `${wave} / ${MAX_WAVES}`;
+  updateHpDisplay();
+  updateBuildButtons();
+  updateWaveHUD();
+  // Boss bar
+  if (s.hud.activeBossHp >= 0) {
+    document.getElementById('boss-bar').classList.add('show');
+    document.getElementById('boss-name-text').textContent = s.hud.activeBossName;
+    document.getElementById('boss-bar-fill').style.width = (s.hud.activeBossHp * 100) + '%';
+  } else {
+    document.getElementById('boss-bar').classList.remove('show');
+  }
+  // Endless timer
+  if (endlessMode) {
+    document.getElementById('endless-timer').classList.add('show');
+    const secs = Math.floor(endlessTimer / 60);
+    const m = Math.floor(secs / 60), sec = secs % 60;
+    document.getElementById('endless-timer').textContent = `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+  // Game over check for client
+  if (player.hp <= 0 && player2 && player2.hp <= 0 && !gameOverShown) {
+    gameOverShown = true; gameRunning = false;
+    document.getElementById('go-title').textContent = 'OVERLOADED';
+    document.getElementById('go-title').style.color = '#ff2222';
+    document.getElementById('go-stats').textContent = `Destroyed on Wave ${wave} / ${MAX_WAVES} | Kills: ${totalKills}`;
+    document.getElementById('game-over').classList.add('show');
+  }
+}
+
+function updateHpDisplay() {
+  if (isCoop && player2) {
+    const p1hp = Math.max(0, Math.floor(player.hp));
+    const p2hp = Math.max(0, Math.floor(player2.hp));
+    document.getElementById('hp-display').textContent = `P1:${p1hp} P2:${p2hp}`;
+  } else {
+    document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+  }
+}
 
 // ---- Game Loop ----
 function gameLoop() {
@@ -2202,6 +2939,17 @@ function startGame() {
 
 function restartGame() {
   document.getElementById('game-over').classList.remove('show');
+  if (isCoop) {
+    // Disconnect and return to start screen
+    if (conn) { conn.close(); conn = null; }
+    if (peer) { peer.destroy(); peer = null; }
+    isCoop = false; isHost = false; isClient = false; roomCode = '';
+    player2 = null; drone2 = null;
+    document.getElementById('coop-badge').classList.remove('show');
+    document.getElementById('start-screen').classList.remove('hidden');
+    gameRunning = false;
+    return;
+  }
   initGame();
   gameRunning = true;
 }
