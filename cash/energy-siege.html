@@ -385,6 +385,7 @@ let betweenTimer = 0, enemiesSpawned = 0, totalWaveEnemies = 0, spawnTimer = 0, 
 
 // New systems
 let mines = [];
+let shockwaves = [];
 let activeBoss = null;
 let bossSpawned = false;
 let gamePaused = false;
@@ -475,7 +476,7 @@ function initGame() {
   player = { x: WORLD_W / 2, y: WORLD_H / 2, hp: 100, maxHp: 100, angle: 0 };
   drone = { x: player.x, y: player.y };
   droneAngle = 0; playerFireCD = 0; droneFireCD = 0;
-  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = [];
+  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = []; shockwaves = [];
   energy = 20; wave = 0; waveBannerTimer = 0; selectedBuild = null;
   generatorTimer = 0; frameCount = 0;
   gameOverShown = false; victoryShown = false;
@@ -898,6 +899,31 @@ function update() {
     }
   }
 
+  // -- Shockwaves update --
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const sw = shockwaves[i];
+    sw.radius += sw.speed;
+    if (sw.radius >= sw.maxRadius) { shockwaves.splice(i, 1); continue; }
+    // Damage player if caught in the ring (between radius-18 and radius+18)
+    const pd = Math.hypot(sw.x - player.x, sw.y - player.y);
+    if (!sw.hitPlayer && Math.abs(pd - sw.radius) < 18) {
+      player.hp -= sw.damage; sw.hitPlayer = true;
+      spawnParticles(player.x, player.y, '#aa44ff', 8, 4);
+      document.getElementById('hp-display').textContent = Math.max(0, Math.floor(player.hp));
+    }
+    // Damage spacemen
+    for (const s of spacemen) {
+      const sd = Math.hypot(sw.x - s.x, sw.y - s.y);
+      if (Math.abs(sd - sw.radius) < 18) s.hp -= sw.damage * 0.4;
+    }
+    // Damage buildings
+    for (const b of buildings) {
+      if (b.hp <= 0) continue;
+      const bd = Math.hypot(sw.x - (b.x + BUILD_SIZE/2), sw.y - (b.y + BUILD_SIZE/2));
+      if (Math.abs(bd - sw.radius) < 25) b.hp -= sw.damage * 0.3;
+    }
+  }
+
   // -- Enemies AI (type-specific) --
   for (const e of enemies) {
     // Frenzy check
@@ -940,16 +966,22 @@ function update() {
           if (e.chargeCooldown <= 0) e.isCharging = false;
         }
       }
-      // Warden: summon minions
+      // Warden: shockwave slam
       if (e.bossKey === 'warden') {
-        e.abilityCD1--; if (e.abilityCD1 <= 0) {
-          e.abilityCD1 = bdef.summonCD;
-          for (let s = 0; s < 3; s++) { const mPos = findValidPosition(e.x + (Math.random()-0.5)*60, e.y + (Math.random()-0.5)*60, 10); enemies.push({
-            x: mPos.x, y: mPos.y, size: 10, hp: 30, maxHp: 30,
-            speed: 1.5, attackCD: 0, damage: 8, type: 'normal', isBoss: false, spawnFrame: frameCount, isRaged: false,
-            laserCharging:false,laserChargeTimer:0,laserFiring:false,laserFireTimer:0,laserCooldown:0,laserAngle:0,
-            mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:0,stunTimer:0,canSplit:false }); }
-          spawnParticles(e.x, e.y, '#8800cc', 12, 5);
+        if (!e.slamWindup) e.slamWindup = 0;
+        e.abilityCD1--;
+        if (e.abilityCD1 <= 0 && e.slamWindup === 0) {
+          e.slamWindup = 60; // 1 second windup — stops moving, pulses purple
+          bdx = 0; bdy = 0;
+        }
+        if (e.slamWindup > 0) {
+          e.slamWindup--; bdx = 0; bdy = 0; // freeze during windup
+          if (e.slamWindup <= 0) {
+            e.abilityCD1 = 240; // 4 second cooldown
+            shockwaves.push({ x: e.x, y: e.y, radius: 0, maxRadius: 220, speed: 5, damage: 22 });
+            spawnParticles(e.x, e.y, '#aa44ff', 20, 8);
+            spawnParticles(e.x, e.y, '#8800cc', 15, 5);
+          }
         }
       }
       // Overlord: shoot spread + summon
@@ -1577,10 +1609,24 @@ function draw() {
         ctx.strokeStyle = `rgba(255,0,0,${Math.sin(frameCount*0.15)*0.4+0.6})`; ctx.lineWidth = 3;
         ctx.strokeRect(e.x - e.size - 4, e.y - e.size - 4, e.size*2+8, e.size*2+8);
       }
-      // Charge windup indicator
+      // Charge windup indicator (Sentinel)
       if (e.chargeWindup > 0 && !e.isCharging) {
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(e.x, e.y, e.size + 10, 0, Math.PI * 2 * (1 - e.chargeWindup / 40)); ctx.stroke();
+      }
+      // Warden shockwave windup
+      if (e.bossKey === 'warden' && e.slamWindup > 0) {
+        const pct = 1 - e.slamWindup / 60;
+        const pulseR = e.size + 10 + pct * 30;
+        ctx.strokeStyle = `rgba(170,68,255,${0.3 + pct * 0.5})`; ctx.lineWidth = 3 + pct * 4;
+        ctx.beginPath(); ctx.arc(e.x, e.y, pulseR, 0, Math.PI * 2); ctx.stroke();
+        // Fill telegraph circle showing blast radius
+        ctx.fillStyle = `rgba(136,0,204,${pct * 0.12})`;
+        ctx.beginPath(); ctx.arc(e.x, e.y, 220 * pct, 0, Math.PI * 2); ctx.fill();
+        // Exclamation warning
+        ctx.fillStyle = `rgba(255,100,255,${Math.sin(frameCount*0.3)*0.3+0.7})`;
+        ctx.font = 'bold 18px Segoe UI'; ctx.textAlign = 'center';
+        ctx.fillText('SLAM!', e.x, e.y - e.size - 20);
       }
     } else {
       // Regular enemy rendering by type
@@ -1714,6 +1760,22 @@ function draw() {
   ctx.beginPath(); ctx.arc(drone.x, drone.y, DRONE_R - 2, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(0,255,200,0.15)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(drone.x, drone.y); ctx.stroke();
+
+  // Shockwaves
+  for (const sw of shockwaves) {
+    if (sw.x + sw.radius < camera.x || sw.x - sw.radius > camera.x + W ||
+        sw.y + sw.radius < camera.y || sw.y - sw.radius > camera.y + H) continue;
+    const alpha = 1 - sw.radius / sw.maxRadius;
+    // Outer glow ring
+    ctx.strokeStyle = `rgba(136,0,204,${alpha * 0.5})`; ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2); ctx.stroke();
+    // Bright inner ring
+    ctx.strokeStyle = `rgba(200,100,255,${alpha * 0.8})`; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2); ctx.stroke();
+    // White core edge
+    ctx.strokeStyle = `rgba(255,200,255,${alpha * 0.6})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2); ctx.stroke();
+  }
 
   // Spacemen
   for (const s of spacemen) {
