@@ -764,14 +764,11 @@ function getUpgradeCost(level) {
 
 function applyUpgrades() {
   const newMaxHp = 100 + playerUpgrades.maxHp * 30;
-  const hpGain = newMaxHp - player.maxHp;
   player.maxHp = newMaxHp;
-  if (hpGain > 0) player.hp = Math.min(player.hp + hpGain, player.maxHp);
+  player.hp = Math.min(player.hp + 15, player.maxHp);
   if (isCoop && player2) {
-    const oldMax2 = player2.maxHp;
     player2.maxHp = newMaxHp;
-    const gain2 = newMaxHp - oldMax2;
-    if (gain2 > 0) player2.hp = Math.min(player2.hp + gain2, player2.maxHp);
+    player2.hp = Math.min(player2.hp + 15, player2.maxHp);
   }
 }
 
@@ -1295,6 +1292,23 @@ function update() {
             mineCD:0,chargeWindup:0,isCharging:false,chargeDX:0,chargeDY:0,chargeCooldown:200,stunTimer:0,canSplit:false }); }
         }
       }
+      // Boss obstacle avoidance
+      const bossLook = 5;
+      const bossAheadX = e.x + bdx * bossLook, bossAheadY = e.y + bdy * bossLook;
+      let bossPathBlocked = isObstacle(bossAheadX, bossAheadY);
+      if (!bossPathBlocked) { for (const bb of buildings) { if (bb.hp > 0 && circleRect(bossAheadX, bossAheadY, e.size, bb.x, bb.y, BUILD_SIZE, BUILD_SIZE)) { bossPathBlocked = true; break; } } }
+      if (bossPathBlocked && (Math.abs(bdx) > 0.01 || Math.abs(bdy) > 0.01)) {
+        const bMoveA = Math.atan2(bdy, bdx);
+        const bSpd = Math.hypot(bdx, bdy);
+        for (const off of [Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4]) {
+          const tryA = bMoveA + off;
+          const tx = e.x + Math.cos(tryA) * bSpd * bossLook;
+          const ty = e.y + Math.sin(tryA) * bSpd * bossLook;
+          let clear = !isObstacle(tx, ty);
+          if (clear) { for (const bb of buildings) { if (bb.hp > 0 && circleRect(tx, ty, e.size, bb.x, bb.y, BUILD_SIZE, BUILD_SIZE)) { clear = false; break; } } }
+          if (clear) { bdx = Math.cos(tryA) * bSpd; bdy = Math.sin(tryA) * bSpd; break; }
+        }
+      }
       moveWithCollision(e, bdx, bdy, e.size);
       // Boss melee
       if (dist(e, player) < e.size + PLAYER_R + 6 && e.attackCD <= 0) {
@@ -1362,8 +1376,24 @@ function update() {
       // Laser enemies stop moving when firing/charging, move slowly toward target otherwise
       if (!e.laserCharging && !e.laserFiring) {
         if (targetD > LASER_E_RANGE * 0.6) {
-          let edx = Math.cos(a) * e.speed * 0.7, edy = Math.sin(a) * e.speed * 0.7;
-          moveWithCollision(e, edx, edy, e.size);
+          let ledx = Math.cos(a) * e.speed * 0.7, ledy = Math.sin(a) * e.speed * 0.7;
+          // Check if direct path is blocked
+          const laserLook = 6;
+          const lax = e.x + ledx * laserLook, lay = e.y + ledy * laserLook;
+          let laserBlocked = isObstacle(lax, lay);
+          if (!laserBlocked) { for (const b of buildings) { if (b.hp > 0 && circleRect(lax, lay, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) { laserBlocked = true; break; } } }
+          if (laserBlocked) {
+            // Try angled approaches
+            for (const off of [Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4]) {
+              const tryA = a + off;
+              const tx = e.x + Math.cos(tryA) * e.speed * 0.7 * laserLook;
+              const ty = e.y + Math.sin(tryA) * e.speed * 0.7 * laserLook;
+              let clear = !isObstacle(tx, ty);
+              if (clear) { for (const b of buildings) { if (b.hp > 0 && circleRect(tx, ty, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) { clear = false; break; } } }
+              if (clear) { ledx = Math.cos(tryA) * e.speed * 0.7; ledy = Math.sin(tryA) * e.speed * 0.7; break; }
+            }
+          }
+          moveWithCollision(e, ledx, ledy, e.size);
         }
       }
       if (e.attackCD > 0) e.attackCD--;
@@ -1423,60 +1453,150 @@ function update() {
     }
 
     // === DEFAULT MOVEMENT (normal, miner, splitter, charger when not charging) ===
-    // Check if path is blocked by obstacles or buildings
-    function isPathBlocked(x, y, r) {
-      if (isObstacle(x, y)) return true;
-      for (const b of buildings) {
-        if (b.hp > 0 && circleRect(x, y, r, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) return true;
-      }
-      return false;
-    }
-    let edx = Math.cos(a) * e.speed, edy = Math.sin(a) * e.speed;
-    const lookDist = 8;
-    const ahead = { x: e.x + edx * lookDist, y: e.y + edy * lookDist };
-    if (isPathBlocked(ahead.x, ahead.y, e.size)) {
-      let found = false;
-      // Try multiple angles: tight first, then wider — helps slide along surfaces
-      for (const offset of [Math.PI/6, -Math.PI/6, Math.PI/3, -Math.PI/3, Math.PI/2, -Math.PI/2, Math.PI*2/3, -Math.PI*2/3]) {
-        const tx = Math.cos(a + offset) * e.speed, ty = Math.sin(a + offset) * e.speed;
-        if (!isPathBlocked(e.x + tx * lookDist, e.y + ty * lookDist, e.size)) {
-          edx = tx; edy = ty; found = true; break;
+    // Multi-point path probe: checks center + shoulder points for the enemy's full width
+    function isPathClear(x, y, r, angle) {
+      // Check center and two shoulder points perpendicular to movement
+      const perp = angle + Math.PI / 2;
+      const shoulderOff = r * 0.7;
+      const cx = x, cy = y;
+      const lx = x + Math.cos(perp) * shoulderOff, ly = y + Math.sin(perp) * shoulderOff;
+      const rx = x - Math.cos(perp) * shoulderOff, ry = y - Math.sin(perp) * shoulderOff;
+      for (const px of [cx, lx, rx]) {
+        for (const py of [cy, ly, ry]) {
+          if (px === cx && py !== cy) continue; // only paired
+          if (isObstacle(px, py)) return false;
+          for (const b of buildings) {
+            if (b.hp > 0 && circleRect(px, py, r * 0.5, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) return false;
+          }
         }
       }
-      if (!found) { edx = 0; edy = 0; }
+      // Check the three points properly
+      const points = [[cx, cy], [lx, ly], [rx, ry]];
+      for (const [px, py] of points) {
+        if (isObstacle(px, py)) return false;
+        for (const b of buildings) {
+          if (b.hp > 0 && circleRect(px, py, r * 0.3, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) return false;
+        }
+      }
+      return true;
     }
-    // Stuck detection: if enemy hasn't moved much for 3 seconds, redirect toward player
-    if (!e._prevX) { e._prevX = e.x; e._prevY = e.y; e._stuckFrames = 0; }
-    if (frameCount % 30 === 0) {
-      if (Math.hypot(e.x - e._prevX, e.y - e._prevY) < 2) {
+
+    // Probe at multiple distances ahead
+    function probeDirection(fromX, fromY, angle, speed, r) {
+      for (const d of [3, 6, 10]) {
+        const px = fromX + Math.cos(angle) * speed * d;
+        const py = fromY + Math.sin(angle) * speed * d;
+        if (!isPathClear(px, py, r, angle)) return false;
+      }
+      return true;
+    }
+
+    let edx = Math.cos(a) * e.speed, edy = Math.sin(a) * e.speed;
+
+    // Initialize steering memory on first use
+    if (e._steerDir === undefined) { e._steerDir = 0; e._steerFrames = 0; e._prevX = e.x; e._prevY = e.y; e._stuckFrames = 0; }
+
+    const directClear = probeDirection(e.x, e.y, a, e.speed, e.size);
+
+    if (!directClear) {
+      let found = false;
+      // If we have a remembered steer direction and it's still working, keep using it
+      if (e._steerDir !== 0 && e._steerFrames > 0) {
+        const steerAngle = a + e._steerDir;
+        if (probeDirection(e.x, e.y, steerAngle, e.speed, e.size)) {
+          edx = Math.cos(steerAngle) * e.speed;
+          edy = Math.sin(steerAngle) * e.speed;
+          e._steerFrames--;
+          found = true;
+        } else {
+          e._steerDir = 0; e._steerFrames = 0; // path closed, try new direction
+        }
+      }
+
+      if (!found) {
+        // Try increasingly wide angles, alternating sides but COMMIT to one side
+        // Score each angle by how far we can travel in that direction
+        let bestAngle = a, bestScore = -1;
+        const tryAngles = [
+          Math.PI/8, -Math.PI/8,
+          Math.PI/5, -Math.PI/5,
+          Math.PI/3, -Math.PI/3,
+          Math.PI/2.2, -Math.PI/2.2,
+          Math.PI/1.7, -Math.PI/1.7,
+          Math.PI/1.3, -Math.PI/1.3,
+          Math.PI, -Math.PI * 0.9
+        ];
+        for (const offset of tryAngles) {
+          const tryA = a + offset;
+          // Score: how many probe distances are clear (0-3)
+          let score = 0;
+          for (const d of [3, 6, 10]) {
+            const px = e.x + Math.cos(tryA) * e.speed * d;
+            const py = e.y + Math.sin(tryA) * e.speed * d;
+            if (isPathClear(px, py, e.size, tryA)) score++;
+            else break;
+          }
+          // Bonus: prefer directions that are more toward the target
+          const angleDiff = Math.abs(offset);
+          score += (Math.PI - angleDiff) / Math.PI * 0.5; // up to 0.5 bonus for closer-to-target angles
+          if (score > bestScore) { bestScore = score; bestAngle = tryA; }
+        }
+        if (bestScore > 0) {
+          edx = Math.cos(bestAngle) * e.speed;
+          edy = Math.sin(bestAngle) * e.speed;
+          // Remember this steer direction for consistency (30-60 frames)
+          e._steerDir = bestAngle - a;
+          e._steerFrames = 30 + Math.floor(Math.random() * 30);
+          found = true;
+        }
+        if (!found) { edx = 0; edy = 0; }
+      }
+    } else {
+      // Direct path is clear — decay steer memory
+      if (e._steerFrames > 0) e._steerFrames = Math.max(0, e._steerFrames - 2);
+      if (e._steerFrames <= 0) e._steerDir = 0;
+    }
+
+    // Fast stuck detection: check every 20 frames (~0.33s), trigger after 1.5s stuck
+    if (frameCount % 20 === 0) {
+      const moved = Math.hypot(e.x - e._prevX, e.y - e._prevY);
+      if (moved < 1.5) {
         e._stuckFrames++;
-        if (e._stuckFrames >= 6) { // 6 checks * 30 frames = 180 frames = 3 seconds
-          // Head toward closest player instead of random direction
+        if (e._stuckFrames >= 5) { // 5 * 20 frames = 100 frames ≈ 1.7 seconds
+          // Hard unstuck: pick the best open perpendicular direction toward player
           let stuckTarget = player;
           if (isCoop && player2 && player2.hp > 0 && dist(e, player2) < dist(e, player)) stuckTarget = player2;
           const toPlayer = Math.atan2(stuckTarget.y - e.y, stuckTarget.x - e.x);
-          // Try perpendicular angles to slide around obstacles
-          const offsets = [Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4];
-          let unstuck = false;
-          for (const off of offsets) {
-            const tryA = toPlayer + off;
-            const tryX = e.x + Math.cos(tryA) * e.speed * 8;
-            const tryY = e.y + Math.sin(tryA) * e.speed * 8;
-            if (!isObstacle(tryX, tryY)) {
-              edx = Math.cos(tryA) * e.speed * 1.5;
-              edy = Math.sin(tryA) * e.speed * 1.5;
-              unstuck = true; break;
+          // Sweep 12 directions, pick the best clear one closest to player direction
+          let bestA = toPlayer, bestClearDist = -1;
+          for (let i = 0; i < 12; i++) {
+            const tryA = toPlayer + (i * Math.PI * 2 / 12);
+            let clearDist = 0;
+            for (let d = 1; d <= 5; d++) {
+              const px = e.x + Math.cos(tryA) * e.speed * d * 3;
+              const py = e.y + Math.sin(tryA) * e.speed * d * 3;
+              if (isObstacle(px, py)) break;
+              let bldBlock = false;
+              for (const b of buildings) { if (b.hp > 0 && circleRect(px, py, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) { bldBlock = true; break; } }
+              if (bldBlock) break;
+              clearDist = d;
             }
+            // Weight by alignment with player direction
+            const align = Math.cos(tryA - toPlayer) * 0.3 + 0.7; // 0.4 to 1.0
+            const score = clearDist * align;
+            if (score > bestClearDist) { bestClearDist = score; bestA = tryA; }
           }
-          if (!unstuck) {
-            edx = Math.cos(toPlayer) * e.speed;
-            edy = Math.sin(toPlayer) * e.speed;
-          }
+          edx = Math.cos(bestA) * e.speed * 1.5;
+          edy = Math.sin(bestA) * e.speed * 1.5;
+          e._steerDir = bestA - a;
+          e._steerFrames = 40 + Math.floor(Math.random() * 20);
           e._stuckFrames = 0;
         }
       } else { e._stuckFrames = 0; }
       e._prevX = e.x; e._prevY = e.y;
     }
+
+    // Check if movement would collide with a building — if so, attack it
     let blocked = false;
     for (const b of buildings) {
       if (b.hp > 0 && circleRect(e.x + edx, e.y + edy, e.size, b.x, b.y, BUILD_SIZE, BUILD_SIZE)) {
