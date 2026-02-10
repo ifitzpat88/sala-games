@@ -247,9 +247,9 @@
   <div class="controls">
     <span>WASD</span> Move &nbsp;|&nbsp; <span>Mouse</span> Aim &nbsp;|&nbsp; <span>Click</span> Shoot (Semi-Auto)<br>
     <span>SPACE</span> Dash &nbsp;|&nbsp; <span>1</span> Wall (15E) &nbsp;|&nbsp; <span>2</span> Generator (40E)<br>
-    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E) &nbsp;|&nbsp; <span>5</span> Barracks (60E)<br>
-    <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>Right Click</span> Upgrade Building<br>
-    <span>ESC</span> Pause / Cancel Build<br>
+    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E) &nbsp;|&nbsp; <span>5</span> Barracks (60E) &nbsp;|&nbsp; <span>6</span> Catapult (75E)<br>
+    <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>Right Click</span> Upgrade Building &nbsp;|&nbsp; <span>R</span> Repair Building<br>
+    <span>Q</span> Airstrike (60E) &nbsp;|&nbsp; <span>ESC</span> Pause / Cancel Build<br>
     Survive <span style="color:#ff4444">10 Waves + Bosses</span> then face the <span style="color:#ff4444">Endless Siege</span><br>
     Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
   </div>
@@ -326,6 +326,11 @@
     <div class="cost">60 E</div>
     <div class="key">[5]</div>
   </div>
+  <div class="build-btn" data-type="catapult" onclick="selectBuild('catapult')">
+    <div>Catapult</div>
+    <div class="cost">75 E</div>
+    <div class="key">[6]</div>
+  </div>
 </div>
 
 <div id="dash-indicator">
@@ -356,7 +361,7 @@
 // ============================================================
 // ENERGY SIEGE: OVERLOAD — Designed by Cash
 // ============================================================
-const GAME_VERSION = 'v1.1.0';
+const GAME_VERSION = 'v1.2.0';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -409,6 +414,9 @@ const LASER_E_CHARGE = 90;
 const LASER_E_FIRE = 60;
 const LASER_E_DPS = 0.8;
 const LASER_E_COOLDOWN = 180;
+
+const HEAT_RADIUS = 100;
+const HEAT_DPS = 0.5;
 
 const BARRACKS_SPAWN_RATE = 300;
 const BARRACKS_MAX_MEN = 2;
@@ -518,25 +526,61 @@ const BIOMES = {
       ctx.fillRect(x + 2, y + TILE - 5, TILE - 4, 3);
     },
   },
+  dystopia: {
+    name: 'Dystopia', desc: 'Ruined city',
+    bgFill: '#1a1a18', gridStroke: 'rgba(160,160,140,0.04)',
+    rockFill: '#4a4a42', rockStroke: '#5a5a52', rockDetail: '#3a3a34',
+    lakeFill: 'rgba(60,80,40,0.6)', lakeShimmerBase: [80, 100, 60],
+    minimapBg: '#101010', minimapRock: '#4a4a42', minimapLake: 'rgba(60,80,40,0.5)',
+    previewBg: '#1a1a18', previewAccent: '#4a4a42',
+    decorateRock(ctx, x, y, TILE, fc) {
+      // Cracked lines on ruined concrete
+      ctx.strokeStyle = 'rgba(90,90,80,0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 8); ctx.lineTo(x + 18, y + 20); ctx.lineTo(x + 12, y + TILE - 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + TILE - 6, y + 5); ctx.lineTo(x + 22, y + 16);
+      ctx.stroke();
+      // Rebar stubs
+      ctx.fillStyle = 'rgba(140,80,50,0.5)';
+      ctx.fillRect(x + TILE - 8, y + TILE - 10, 3, 8);
+      ctx.fillRect(x + 6, y + 2, 2, 6);
+    },
+    decorateLake(ctx, x, y, TILE, fc) {
+      // Toxic bubbles floating up
+      ctx.fillStyle = 'rgba(120,140,60,0.4)';
+      const b1 = Math.sin(fc * 0.04 + x * 0.2) * 3;
+      const b2 = Math.cos(fc * 0.03 + y * 0.15) * 2;
+      ctx.beginPath(); ctx.arc(x + 12 + b1, y + 18 + b2, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 28 + b2, y + 10 - b1, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 20 - b1, y + 30 + b2, 2.5, 0, Math.PI * 2); ctx.fill();
+    },
+  },
 };
 
-const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60 };
-const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100 };
+const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75 };
+const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100, catapult: 90 };
 const BUILD_MAX_LEVEL = 3;
 const BUILD_UPGRADE_COST = {
-  wall: [10, 20], generator: [25, 45], turret: [20, 35], laser: [30, 50], barracks: [35, 55]
+  wall: [10, 20], generator: [25, 45], turret: [20, 35], laser: [30, 50], barracks: [35, 55], catapult: [40, 65]
 };
+const CATAPULT_RANGE = 350;
+const CATAPULT_FIRE_RATE = 180;
+const CATAPULT_BLAST_RADIUS = 160;
+const CATAPULT_DAMAGE = 40;
 
 // Upgrade definitions: [name, description, maxLevel, statPerLevel]
 const UPGRADE_DEFS = [
-  { name: 'Max HP', key: 'maxHp', max: 5, per: 30, icon: '+' },
+  { name: 'Max HP', key: 'maxHp', max: 5, per: 15, icon: '+' },
   { name: 'Speed', key: 'speed', max: 5, per: 0.5, icon: '>' },
   { name: 'Damage', key: 'damage', max: 5, per: 6, icon: '!' },
   { name: 'Drone Rate', key: 'droneRate', max: 5, per: 3, icon: 'D' },
   { name: 'Dash CD', key: 'dashCD', max: 5, per: 20, icon: '~' },
   { name: 'Squad', key: 'squad', max: 5, per: 1, icon: 'S' },
 ];
-const UPGRADE_COSTS = [4, 8, 14, 22, 32];
+const UPGRADE_COSTS = [6, 12, 20, 30, 44];
 
 // Boss definitions
 const BOSS_DEFS = {
@@ -557,17 +601,17 @@ const WAVE_CONFIG = [
   { count: 25, hpMult: 2.25, speedMult: 1.3, dmgMult: 1.6, spawnRate: 23, sizeMin: 14, sizeMax: 19,
     name: 'Siege Force', types: ['normal','laser','miner'], boss: null },
   { count: 33, hpMult: 2.75, speedMult: 1.35, dmgMult: 1.9, spawnRate: 18, sizeMin: 14, sizeMax: 20,
-    name: 'Heavy Armor', types: ['normal','laser','miner','charger'], boss: null },
+    name: 'Heavy Armor', types: ['normal','laser','miner','charger','heat'], boss: null },
   { count: 40, hpMult: 3.4, speedMult: 1.45, dmgMult: 2.1, spawnRate: 16, sizeMin: 15, sizeMax: 21,
-    name: 'Blitz Swarm', types: ['normal','charger','splitter'], boss: null },
+    name: 'Blitz Swarm', types: ['normal','charger','splitter','heat'], boss: null },
   { count: 50, hpMult: 4.0, speedMult: 1.5, dmgMult: 2.5, spawnRate: 13, sizeMin: 15, sizeMax: 22,
-    name: 'War Party', types: ['normal','laser','miner','charger','splitter'], boss: 'overlord' },
+    name: 'War Party', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'overlord' },
   { count: 60, hpMult: 4.8, speedMult: 1.6, dmgMult: 2.9, spawnRate: 10, sizeMin: 16, sizeMax: 23,
-    name: 'Death March', types: ['normal','laser','charger','splitter'], boss: null },
+    name: 'Death March', types: ['normal','laser','charger','splitter','heat'], boss: null },
   { count: 73, hpMult: 5.6, speedMult: 1.7, dmgMult: 3.4, spawnRate: 8, sizeMin: 16, sizeMax: 24,
-    name: 'Annihilation', types: ['normal','laser','miner','charger','splitter'], boss: null },
+    name: 'Annihilation', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
   { count: 94, hpMult: 7.5, speedMult: 1.85, dmgMult: 4.0, spawnRate: 5, sizeMin: 18, sizeMax: 28,
-    name: 'O V E R L O A D', types: ['normal','laser','miner','charger','splitter'], boss: 'core' },
+    name: 'O V E R L O A D', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'core' },
 ];
 
 // ---- State ----
@@ -590,6 +634,13 @@ let orbs = [];
 let particles = [];
 let obstacles = [];
 let spacemen = [];
+let catapultBoulders = [];
+let activePlanes = [];
+let napalmFires = [];
+let planeCooldownTimer = 0;
+let planeWeaponSelect = false;
+const PLANE_COST = 60;
+const PLANE_COOLDOWN = 900;
 let energy = 0, wave = 0;
 let waveBannerTimer = 0, selectedBuild = null, droneAngle = 0, playerFireCD = 0, droneFireCD = 0;
 let generatorTimer = 0, frameCount = 0;
@@ -811,7 +862,8 @@ function initGame() {
   player = { x: WORLD_W / 2, y: WORLD_H / 2, hp: 100, maxHp: 100, angle: 0 };
   drone = { x: player.x, y: player.y };
   droneAngle = 0; playerFireCD = 0; droneFireCD = 0;
-  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = []; shockwaves = [];
+  bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = []; shockwaves = []; catapultBoulders = [];
+  activePlanes = []; napalmFires = []; planeCooldownTimer = 0; planeWeaponSelect = false;
   energy = 20; wave = 0; waveBannerTimer = 0; selectedBuild = null;
   generatorTimer = 0; frameCount = 0;
   gameOverShown = false; victoryShown = false;
@@ -984,7 +1036,7 @@ function getUpgradeCost(level) {
 }
 
 function applyUpgrades(boughtKey) {
-  const newMaxHp = 100 + playerUpgrades.maxHp * 30;
+  const newMaxHp = 100 + playerUpgrades.maxHp * 15;
   player.maxHp = newMaxHp;
   if (isCoop && player2) {
     player2.maxHp = newMaxHp;
@@ -1300,6 +1352,115 @@ function update() {
     b.laserTarget = closest;
     if (closest) { b.angle = Math.atan2(closest.y - bcy, closest.x - bcx); closest.hp -= lDps;
       if (frameCount % 6 === 0) spawnParticles(closest.x, closest.y, '#ff44ff', 2, 2); }
+  }
+
+  // -- Catapult firing --
+  for (const b of buildings) {
+    if (b.type !== 'catapult' || b.hp <= 0) continue;
+    const lv = b.level || 1;
+    const cRange = CATAPULT_RANGE * (1 + (lv - 1) * 0.15);
+    const cRate = Math.floor(CATAPULT_FIRE_RATE * Math.pow(0.85, lv - 1));
+    const cDmg = Math.floor(CATAPULT_DAMAGE * (1 + (lv - 1) * 0.3));
+    if (b.fireCD > 0) { b.fireCD--; continue; }
+    const bcx = b.x + BUILD_SIZE / 2, bcy = b.y + BUILD_SIZE / 2;
+    let closest = null, closestD = Infinity;
+    for (const e of enemies) { const d = Math.hypot(e.x - bcx, e.y - bcy); if (d < closestD && d < cRange) { closest = e; closestD = d; } }
+    if (closest) {
+      b.fireCD = cRate;
+      b.angle = Math.atan2(closest.y - bcy, closest.x - bcx);
+      catapultBoulders.push({
+        sx: bcx, sy: bcy, tx: closest.x, ty: closest.y,
+        progress: 0, speed: 0.025, damage: cDmg
+      });
+      spawnParticles(bcx, bcy, '#ff6600', 4, 3);
+    }
+  }
+
+  // -- Boulder arc update --
+  for (let i = catapultBoulders.length - 1; i >= 0; i--) {
+    const cb = catapultBoulders[i];
+    cb.progress += cb.speed;
+    if (cb.progress >= 1) {
+      // Impact — area damage
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.hypot(e.x - cb.tx, e.y - cb.ty) < CATAPULT_BLAST_RADIUS) {
+          e.hp -= cb.damage;
+          if (e.hp <= 0) killEnemy(e, j);
+        }
+      }
+      spawnParticles(cb.tx, cb.ty, '#ff4400', 18, 6);
+      spawnParticles(cb.tx, cb.ty, '#ffaa00', 12, 4);
+      catapultBoulders.splice(i, 1);
+    }
+  }
+
+  // -- Plane airstrike update --
+  if (planeCooldownTimer > 0) planeCooldownTimer--;
+  for (let i = activePlanes.length - 1; i >= 0; i--) {
+    const pl = activePlanes[i];
+    pl.x += Math.cos(pl.angle) * pl.speed;
+    pl.y += Math.sin(pl.angle) * pl.speed;
+    const totalD = Math.hypot(pl.ex - (pl.x - Math.cos(pl.angle) * pl.speed * 200), pl.ey - (pl.y - Math.sin(pl.angle) * pl.speed * 200));
+    const atTarget = Math.hypot(pl.x - pl.tx, pl.y - pl.ty) < pl.speed * 3;
+    // Fire weapon when passing over target
+    if (!pl.fired && atTarget) {
+      pl.fired = true;
+      if (pl.weapon === 'bombs') {
+        for (let b = 0; b < 3; b++) {
+          const bx = pl.tx + (Math.random() - 0.5) * 80;
+          const by = pl.ty + (Math.random() - 0.5) * 80;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (Math.hypot(e.x - bx, e.y - by) < 120) {
+              e.hp -= 50;
+              if (e.hp <= 0) killEnemy(e, j);
+            }
+          }
+          spawnParticles(bx, by, '#ff4400', 20, 7);
+          spawnParticles(bx, by, '#ffaa00', 14, 5);
+        }
+      } else if (pl.weapon === 'napalm') {
+        for (let n = -3; n <= 3; n++) {
+          napalmFires.push({
+            x: pl.tx + Math.cos(pl.angle) * n * 40,
+            y: pl.ty + Math.sin(pl.angle) * n * 40,
+            life: 300, dps: 8
+          });
+        }
+      } else if (pl.weapon === 'machinegun') {
+        for (let m = 0; m < 8; m++) {
+          const mx = pl.tx + Math.cos(pl.angle) * (m - 4) * 30 + (Math.random() - 0.5) * 20;
+          const my = pl.ty + Math.sin(pl.angle) * (m - 4) * 30 + (Math.random() - 0.5) * 20;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (Math.hypot(e.x - mx, e.y - my) < e.size + 12) {
+              e.hp -= 12;
+              if (e.hp <= 0) killEnemy(e, j);
+            }
+          }
+          spawnParticles(mx, my, '#ffcc00', 4, 3);
+        }
+      }
+    }
+    // Remove when far past target
+    if (Math.hypot(pl.x - pl.ex, pl.y - pl.ey) < pl.speed * 2) {
+      activePlanes.splice(i, 1);
+    }
+  }
+
+  // -- Napalm fire damage --
+  for (let i = napalmFires.length - 1; i >= 0; i--) {
+    const nf = napalmFires[i];
+    nf.life--;
+    if (nf.life <= 0) { napalmFires.splice(i, 1); continue; }
+    for (const e of enemies) {
+      if (Math.hypot(e.x - nf.x, e.y - nf.y) < 40) {
+        e.hp -= nf.dps / 60; // per-frame DPS
+      }
+    }
+    const pd = Math.hypot(player.x - nf.x, player.y - nf.y);
+    if (pd < 40) { player.hp -= nf.dps / 120; updateHpDisplay(); }
   }
 
   // -- Bullets (friendly + enemy) --
@@ -1677,6 +1838,24 @@ function update() {
     // === MINER ENEMY AI (drops mines) ===
     if (e.type === 'miner') {
       e.mineCD--; if (e.mineCD <= 0) { e.mineCD = 180 + Math.floor(Math.random() * 120); spawnMine(e.x, e.y, e.damage); }
+    }
+
+    // === HEAT EMITTER AI (radius damage aura) ===
+    if (e.type === 'heat') {
+      const pd = Math.hypot(e.x - player.x, e.y - player.y);
+      if (pd < HEAT_RADIUS) {
+        player.hp -= HEAT_DPS;
+        updateHpDisplay();
+      }
+      if (isCoop && player2 && player2.hp > 0) {
+        const p2d = Math.hypot(e.x - player2.x, e.y - player2.y);
+        if (p2d < HEAT_RADIUS) { player2.hp -= HEAT_DPS; updateHpDisplay(); }
+      }
+      for (const b of buildings) {
+        if (b.hp <= 0) continue;
+        const bd = Math.hypot(e.x - (b.x + BUILD_SIZE / 2), e.y - (b.y + BUILD_SIZE / 2));
+        if (bd < HEAT_RADIUS) b.hp -= HEAT_DPS * 0.3;
+      }
     }
 
     // === PHASE-THROUGH STUCK DETECTION ===
@@ -2161,6 +2340,21 @@ function draw() {
       const maxM = BARRACKS_MAX_MEN + playerUpgrades.squad + (bLv - 1);
       ctx.fillStyle = '#88ccff'; ctx.font = '9px monospace'; ctx.textAlign = 'center';
       ctx.fillText(`${myMen}/${maxM}`, bx + BUILD_SIZE / 2, by - 2);
+    } else if (b.type === 'catapult') {
+      ctx.fillStyle = '#3a2a10';
+      ctx.fillRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.strokeStyle = '#cc6600'; ctx.lineWidth = 2;
+      ctx.strokeRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      // Arm
+      const ca = b.angle || 0;
+      const ccx = bx + BUILD_SIZE / 2, ccy = by + BUILD_SIZE / 2;
+      ctx.strokeStyle = '#8B4513'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(ccx, ccy + 6);
+      ctx.lineTo(ccx + Math.cos(ca) * 16, ccy + Math.sin(ca) * 16 - 8); ctx.stroke();
+      // Bucket
+      ctx.fillStyle = '#cc6600';
+      ctx.beginPath(); ctx.arc(ccx + Math.cos(ca) * 16, ccy + Math.sin(ca) * 16 - 8, 5, 0, Math.PI * 2); ctx.fill();
+      // Range indicator on hover handled separately
     }
     if (b.hp < b.maxHp) {
       const hpPct = b.hp / b.maxHp;
@@ -2187,24 +2381,35 @@ function draw() {
     if (hoverB) {
       const hbx = hoverB.x + BUILD_SIZE / 2, hby = hoverB.y - 18;
       const hLv = hoverB.level || 1;
+      // Repair tooltip (if damaged)
+      const isDamaged = hoverB.hp < hoverB.maxHp;
+      if (isDamaged) {
+        const repCost = Math.ceil((hoverB.maxHp - hoverB.hp) / hoverB.maxHp * COSTS[hoverB.type] * 0.5);
+        const canRep = energy >= repCost;
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(hbx - 55, hby - 44, 110, 18);
+        ctx.strokeStyle = canRep ? '#00ff88' : '#666'; ctx.lineWidth = 1;
+        ctx.strokeRect(hbx - 55, hby - 44, 110, 18);
+        ctx.fillStyle = canRep ? '#00ff88' : '#888'; ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'center';
+        ctx.fillText(`[R] Repair — ${repCost}E`, hbx, hby - 31);
+      }
+      const tipY = isDamaged ? hby - 12 : hby - 28;
       if (hLv < BUILD_MAX_LEVEL) {
         const uCost = getUpgradeCostForBuilding(hoverB);
         const canAfford = energy >= uCost;
-        // Background
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(hbx - 55, hby - 28, 110, 26);
+        ctx.fillRect(hbx - 55, tipY, 110, 26);
         ctx.strokeStyle = canAfford ? '#00ffcc' : '#666'; ctx.lineWidth = 1;
-        ctx.strokeRect(hbx - 55, hby - 28, 110, 26);
-        // Text
+        ctx.strokeRect(hbx - 55, tipY, 110, 26);
         ctx.fillStyle = canAfford ? '#00ffcc' : '#888'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
-        ctx.fillText(`Upgrade Lv${hLv + 1} — ${uCost}E`, hbx, hby - 12);
+        ctx.fillText(`Upgrade Lv${hLv + 1} — ${uCost}E`, hbx, tipY + 12);
         ctx.fillStyle = '#888'; ctx.font = '9px Segoe UI';
-        ctx.fillText('Right-click', hbx, hby - 1);
+        ctx.fillText('Right-click', hbx, tipY + 23);
       } else {
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(hbx - 35, hby - 20, 70, 18);
+        ctx.fillRect(hbx - 35, tipY, 70, 18);
         ctx.fillStyle = '#888'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
-        ctx.fillText('MAX LEVEL', hbx, hby - 7);
+        ctx.fillText('MAX LEVEL', hbx, tipY + 13);
       }
       // Show range circle for turret/laser on hover
       if (hoverB.type === 'turret') {
@@ -2215,6 +2420,10 @@ function draw() {
         const lR = LASER_RANGE * (1 + (hLv - 1) * 0.15);
         ctx.strokeStyle = 'rgba(200,80,255,0.2)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(hbx, hoverB.y + BUILD_SIZE / 2, lR, 0, Math.PI * 2); ctx.stroke();
+      } else if (hoverB.type === 'catapult') {
+        const cR = CATAPULT_RANGE * (1 + (hLv - 1) * 0.15);
+        ctx.strokeStyle = 'rgba(204,102,0,0.2)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(hbx, hoverB.y + BUILD_SIZE / 2, cR, 0, Math.PI * 2); ctx.stroke();
       }
     }
   }
@@ -2241,6 +2450,26 @@ function draw() {
       ctx.strokeStyle = 'rgba(68,136,255,0.15)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(mx + BUILD_SIZE / 2, my + BUILD_SIZE / 2, 80, 0, Math.PI * 2); ctx.stroke();
     }
+  }
+
+  // Catapult boulders (arc trajectory)
+  for (const cb of catapultBoulders) {
+    const p = cb.progress;
+    const cx = cb.sx + (cb.tx - cb.sx) * p;
+    const cy = cb.sy + (cb.ty - cb.sy) * p;
+    const arcH = Math.sin(p * Math.PI) * 120;
+    const bx = cx, by = cy - arcH;
+    // Shadow on ground
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx, cy, 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Fire trail
+    ctx.fillStyle = `rgba(255,100,0,${0.6 - p * 0.4})`;
+    ctx.beginPath(); ctx.arc(bx, by, 8 + Math.random() * 3, 0, Math.PI * 2); ctx.fill();
+    // Boulder
+    ctx.fillStyle = '#cc4400';
+    ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff8800';
+    ctx.beginPath(); ctx.arc(bx - 1, by - 1, 3, 0, Math.PI * 2); ctx.fill();
   }
 
   // Energy orbs
@@ -2340,6 +2569,7 @@ function draw() {
       else if (e.type === 'miner') { outerColor = '#cc8800'; innerColor = '#ffaa22'; }
       else if (e.type === 'charger') { outerColor = '#22cccc'; innerColor = '#44ffff'; }
       else if (e.type === 'splitter') { outerColor = '#22cc22'; innerColor = '#44ff44'; }
+      else if (e.type === 'heat') { outerColor = '#cc4400'; innerColor = '#ff6622'; }
 
       ctx.shadowColor = e.isRaged ? '#ff8800' : outerColor; ctx.shadowBlur = e.isRaged ? 15 : 10;
 
@@ -2404,6 +2634,17 @@ function draw() {
       if (e.type === 'miner') {
         ctx.fillStyle = '#ffaa00'; ctx.font = `${e.size}px monospace`; ctx.textAlign = 'center';
         ctx.fillText('M', e.x, e.y + e.size * 0.3);
+      }
+
+      // Heat emitter: pulsing heat ring
+      if (e.type === 'heat') {
+        ctx.fillStyle = '#ffcc00'; ctx.font = `${e.size}px monospace`; ctx.textAlign = 'center';
+        ctx.fillText('H', e.x, e.y + e.size * 0.3);
+        const pulse = Math.sin(frameCount * 0.08) * 0.12 + 0.18;
+        ctx.strokeStyle = `rgba(255,100,0,${pulse + 0.1})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(e.x, e.y, HEAT_RADIUS, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = `rgba(255,60,0,${pulse * 0.4})`;
+        ctx.beginPath(); ctx.arc(e.x, e.y, HEAT_RADIUS, 0, Math.PI * 2); ctx.fill();
       }
 
       // Rage glow
@@ -2549,6 +2790,36 @@ function draw() {
     ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2); ctx.stroke();
   }
 
+  // Napalm fires
+  for (const nf of napalmFires) {
+    if (nf.x < camera.x - 50 || nf.x > camera.x + W + 50 || nf.y < camera.y - 50 || nf.y > camera.y + H + 50) continue;
+    const flicker = Math.sin(frameCount * 0.15 + nf.x) * 0.15 + 0.4;
+    const lifeAlpha = Math.min(1, nf.life / 60);
+    ctx.fillStyle = `rgba(255,80,0,${flicker * lifeAlpha})`;
+    ctx.beginPath(); ctx.arc(nf.x, nf.y, 35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(255,200,50,${flicker * 0.6 * lifeAlpha})`;
+    ctx.beginPath(); ctx.arc(nf.x, nf.y, 18, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Active planes
+  for (const pl of activePlanes) {
+    // Shadow on ground
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(pl.x + 20, pl.y + 30, 20, 8, pl.angle, 0, Math.PI * 2); ctx.fill();
+    // Plane body (triangle)
+    ctx.save();
+    ctx.translate(pl.x, pl.y);
+    ctx.rotate(pl.angle);
+    ctx.fillStyle = '#aabbcc';
+    ctx.beginPath();
+    ctx.moveTo(18, 0); ctx.lineTo(-12, -10); ctx.lineTo(-8, 0); ctx.lineTo(-12, 10);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#667788';
+    ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(-18, -14); ctx.lineTo(-14, -6); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-10, 8); ctx.lineTo(-18, 14); ctx.lineTo(-14, 6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   // Spacemen
   for (const s of spacemen) {
     if (s.x < camera.x - 20 || s.x > camera.x + W + 20 || s.y < camera.y - 20 || s.y > camera.y + H + 20) continue;
@@ -2581,6 +2852,36 @@ function draw() {
 
   ctx.restore();
   drawMinimap();
+
+  // Plane cooldown bar (near dash indicator)
+  if (gameRunning && !gamePaused) {
+    const pcX = W / 2 - 60, pcY = H - 38;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(pcX, pcY, 120, 16);
+    ctx.strokeStyle = 'rgba(0,255,255,0.2)'; ctx.lineWidth = 1; ctx.strokeRect(pcX, pcY, 120, 16);
+    if (planeCooldownTimer > 0) {
+      const pct = 1 - planeCooldownTimer / PLANE_COOLDOWN;
+      ctx.fillStyle = '#555'; ctx.fillRect(pcX + 1, pcY + 1, 118 * pct, 14);
+    } else {
+      ctx.fillStyle = energy >= PLANE_COST ? '#0ff' : '#444';
+      ctx.fillRect(pcX + 1, pcY + 1, 118, 14);
+    }
+    ctx.fillStyle = planeCooldownTimer > 0 ? '#888' : (energy >= PLANE_COST ? '#fff' : '#666');
+    ctx.font = '9px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText(planeCooldownTimer > 0 ? `Plane ${Math.ceil(planeCooldownTimer/60)}s` : `[Q] Airstrike ${PLANE_COST}E`, pcX + 60, pcY + 12);
+  }
+
+  // Plane weapon select popup
+  if (planeWeaponSelect && gameRunning && !gamePaused) {
+    const wpX = W / 2 - 130, wpY = H / 2 - 50;
+    ctx.fillStyle = 'rgba(0,0,0,0.9)'; ctx.fillRect(wpX, wpY, 260, 100);
+    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(wpX, wpY, 260, 100);
+    ctx.fillStyle = '#0ff'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('SELECT WEAPON', wpX + 130, wpY + 22);
+    ctx.font = '13px Segoe UI';
+    ctx.fillStyle = '#ff6600'; ctx.fillText('[1] Bombs — Area Blast', wpX + 130, wpY + 45);
+    ctx.fillStyle = '#ff4400'; ctx.fillText('[2] Napalm — Fire Trail', wpX + 130, wpY + 63);
+    ctx.fillStyle = '#ffcc00'; ctx.fillText('[3] Machine Gun — Strafing', wpX + 130, wpY + 81);
+  }
 
   // Pause overlay
   if (gamePaused) {
@@ -2694,7 +2995,7 @@ function drawMinimap() {
     if (o.type === 'lake') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
   for (const b of buildings) {
-    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'laser' ? '#bb44ff' : b.type === 'barracks' ? '#4488ff' : '#ff6600';
+    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'laser' ? '#bb44ff' : b.type === 'barracks' ? '#4488ff' : b.type === 'catapult' ? '#cc6600' : '#ff6600';
     ctx.fillRect(mmX + b.x * scaleX, mmY + b.y * scaleY, 3, 3);
   }
   ctx.fillStyle = '#88ccff';
@@ -2798,13 +3099,56 @@ window.addEventListener('keydown', e => {
   if (e.key === '3') selectBuild('turret');
   if (e.key === '4') selectBuild('laser');
   if (e.key === '5') selectBuild('barracks');
+  if (e.key === '6' && !planeWeaponSelect) selectBuild('catapult');
+
+  // Plane airstrike: Q toggles weapon select, 1/2/3 picks weapon while selecting
+  if (k === 'q' && gameRunning) {
+    if (planeCooldownTimer > 0 || energy < PLANE_COST) { planeWeaponSelect = false; }
+    else { planeWeaponSelect = !planeWeaponSelect; if (planeWeaponSelect) selectedBuild = null; }
+  }
+  if (planeWeaponSelect && (e.key === '1' || e.key === '2' || e.key === '3')) {
+    const weaponType = e.key === '1' ? 'bombs' : e.key === '2' ? 'napalm' : 'machinegun';
+    energy -= PLANE_COST;
+    document.getElementById('energy-display').textContent = energy;
+    planeCooldownTimer = PLANE_COOLDOWN;
+    planeWeaponSelect = false;
+    // Calculate flight path through mouse cursor
+    const tx = worldMouseX, ty = worldMouseY;
+    const flyAngle = Math.random() * Math.PI * 2;
+    const dist = Math.max(W, H) * 0.8;
+    const sx = tx - Math.cos(flyAngle) * dist;
+    const sy = ty - Math.sin(flyAngle) * dist;
+    const ex = tx + Math.cos(flyAngle) * dist;
+    const ey = ty + Math.sin(flyAngle) * dist;
+    activePlanes.push({
+      x: sx, y: sy, ex, ey, tx, ty,
+      speed: 8, weapon: weaponType, fired: false,
+      angle: flyAngle, progress: 0
+    });
+  }
+
   if (e.key === 'b' || e.key === 'B') {
     if (!selectedBuild) selectBuild('wall');
     else if (selectedBuild === 'wall') selectBuild('generator');
     else if (selectedBuild === 'generator') selectBuild('turret');
     else if (selectedBuild === 'turret') selectBuild('laser');
     else if (selectedBuild === 'laser') selectBuild('barracks');
+    else if (selectedBuild === 'barracks') selectBuild('catapult');
     else selectBuild('wall');
+  }
+
+  // Repair building (R key)
+  if (k === 'r' && gameRunning) {
+    const rb = getBuildingAt(worldMouseX, worldMouseY);
+    if (rb && rb.hp < rb.maxHp) {
+      const repairCost = Math.ceil((rb.maxHp - rb.hp) / rb.maxHp * COSTS[rb.type] * 0.5);
+      if (repairCost > 0 && energy >= repairCost) {
+        energy -= repairCost;
+        rb.hp = rb.maxHp;
+        spawnParticles(rb.x + BUILD_SIZE / 2, rb.y + BUILD_SIZE / 2, '#00ff88', 10, 3);
+        document.getElementById('energy-display').textContent = energy;
+      }
+    }
   }
 
   // Dash
