@@ -1289,10 +1289,37 @@ function handleInteract() {
     const sx=s.x*TILE_SIZE+TILE_SIZE/2,sy=s.y*TILE_SIZE+TILE_SIZE/2;
     const dist=Math.sqrt((sx-player.x)**2+(sy-player.y)**2);
     if(dist<40){
-      if(BUILD_ITEMS[s.type].name==='Healer'&&player.activeDinoIdx>=0){
+      const structName=BUILD_ITEMS[s.type].name;
+      if(structName==='Healer'&&player.activeDinoIdx>=0){
         myDinos[player.activeDinoIdx].currentHp=myDinos[player.activeDinoIdx].maxHp;
         addNotification('Dino fully healed!','success');updateDinoHUD();
-      } else if(BUILD_ITEMS[s.type].name==='Craft Table'){
+      } else if(structName==='Healer'){
+        addNotification('No active dino to heal! Press Tab to select one.','info');
+      } else if(structName==='Incubator'){
+        const eggSlot=inventory.find(sl=>sl&&sl.id==='dino_egg');
+        if(eggSlot&&eggSlot.count>0){
+          eggSlot.count--;if(eggSlot.count<=0){const idx=inventory.indexOf(eggSlot);inventory[idx]=null;}
+          const dinoPool=DINO_DEFS.filter(d=>d.biome===currentBiome||Math.random()<0.3);
+          const pick=dinoPool[Math.floor(Math.random()*dinoPool.length)]||DINO_DEFS[0];
+          const lv=Math.max(1,player.level-1);
+          myDinos.push({...pick,nickname:pick.name,level:lv,currentHp:pick.hp,maxHp:pick.hp,xp:0,followX:0,followY:0});
+          addNotification('The incubator hatched a '+pick.name+'!','epic');
+          for(let j=0;j<20;j++) spawnParticle(sx,sy,'#FFD700',1000,(Math.random()-0.5)*3,-Math.random()*3,4);
+          updateDinoHUD();gainXP(15);
+        } else {
+          addNotification('No eggs in inventory! Find glowing eggs in the wild.','info');
+        }
+      } else if(structName==='Chest'){
+        const stored=[];for(const sl of inventory){if(sl&&sl.count>0) stored.push(sl.id);}
+        addNotification('Chest contains your items. Storage coming soon!','info');
+      } else if(structName==='Stone Wall'||structName==='Wood Wall'){
+        addNotification('Solid wall. Press B to enter build mode and place more.','info');
+      } else if(structName==='Dino Pen'){
+        const dinoCount=myDinos.length;
+        addNotification('Dino Pen — You have '+dinoCount+' tamed dino'+(dinoCount!==1?'s':'')+'!','info');
+      } else if(structName==='Floor'){
+        addNotification('Decorative floor tile.','info');
+      } else if(structName==='Craft Table'){
         addNotification('Crafting not yet available in this version','info');
       }
       return;
