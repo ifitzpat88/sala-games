@@ -121,9 +121,9 @@ canvas{display:block;margin:0 auto;image-rendering:pixelated;cursor:default;outl
     <button class="fight-btn" id="fight-btn" disabled onclick="startFight()">FIGHT!</button>
 
     <div class="controls-hint">
-      <span>←→</span> Move &nbsp;|&nbsp; <span>↑</span> Block Head &nbsp; <span>↓</span> Block Body<br>
-      <span>1</span> Jab &nbsp; <span>2</span> Cross &nbsp; <span>3</span> Uppercut &nbsp; <span>4</span> SUPER (when Rage full)<br>
-      Hold <span>SHIFT</span> to aim HIGH &nbsp;|&nbsp; Default aim is BODY
+      <span>←→</span> Move &nbsp;|&nbsp; <span>SPACE</span> Jump &nbsp;|&nbsp; <span>↑</span> Block Head &nbsp; <span>↓</span> Block Body<br>
+      <span>1</span> Jab &nbsp; <span>2</span> Cross &nbsp; <span>3</span> Uppercut &nbsp; <span>5</span> Low Kick &nbsp; <span>6</span> Roundhouse<br>
+      <span>4</span> SUPER (when Rage full) &nbsp;|&nbsp; Hold <span>SHIFT</span> to aim HIGH
     </div>
   </div>
 
@@ -159,8 +159,8 @@ const keys = {};
 const justPressed = {};
 const GAME_KEYS = new Set([
   'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
-  'Digit1','Digit2','Digit3','Digit4',
-  'Numpad1','Numpad2','Numpad3','Numpad4',
+  'Digit1','Digit2','Digit3','Digit4','Digit5','Digit6',
+  'Numpad1','Numpad2','Numpad3','Numpad4','Numpad5','Numpad6',
   'ShiftLeft','ShiftRight','Space'
 ]);
 
@@ -205,6 +205,7 @@ function sfxKO(){ playTone(200,.4,'sawtooth',.3); setTimeout(()=>playTone(80,.6,
 function sfxWhiff(){ playTone(500,.04,'sine',.05); }
 function sfxBell(){ playTone(880,.3,'sine',.15); setTimeout(()=>playTone(880,.3,'sine',.1),350); }
 function sfxCombo(n){ playTone(400+n*80,.1,'square',.12); }
+function sfxKick(){ playTone(160,.1,'sawtooth',.18); playTone(90,.15,'square',.12); }
 function sfxSuper(){ playTone(150,.5,'sawtooth',.3); playTone(300,.3,'square',.2); setTimeout(()=>playTone(600,.4,'sine',.25),200); }
 
 // ========== RACE / STYLE DATA ==========
@@ -229,9 +230,11 @@ const STYLES = {
 };
 
 const ATTACKS = {
-  jab:      { dmg: 6,  stam: 8,  windup: 6,  recovery: 10, name:'Jab' },
-  cross:    { dmg: 12, stam: 15, windup: 12, recovery: 18, name:'Cross' },
-  uppercut: { dmg: 20, stam: 25, windup: 20, recovery: 28, name:'Uppercut' },
+  jab:        { dmg: 6,  stam: 8,  windup: 6,  recovery: 10, name:'Jab' },
+  cross:      { dmg: 12, stam: 15, windup: 12, recovery: 18, name:'Cross' },
+  uppercut:   { dmg: 20, stam: 25, windup: 20, recovery: 28, name:'Uppercut' },
+  low_kick:   { dmg: 10, stam: 12, windup: 10, recovery: 14, name:'Low Kick', isKick: true },
+  roundhouse: { dmg: 24, stam: 28, windup: 18, recovery: 26, name:'Roundhouse', isKick: true },
 };
 
 // ========== PARTICLES ==========
@@ -333,6 +336,9 @@ class Fighter {
 
     this.x = x;
     this.y = 210;
+    this.groundY = 210;
+    this.vy = 0;
+    this.grounded = true;
     this.facing = facing;
 
     // Combat state
@@ -403,6 +409,15 @@ class Fighter {
     return true;
   }
 
+  jump(){
+    if(!this.grounded || this.attacking || this.stunTimer > 0 || this.superActive) return false;
+    this.grounded = false;
+    this.vy = -320;
+    this.blocking = false;
+    playTone(250,.08,'triangle',.06);
+    return true;
+  }
+
   update(dt, opponent){
     const fps60 = dt * 60;
 
@@ -420,6 +435,20 @@ class Fighter {
     // Stamina regen
     if(!this.attacking && !this.superActive){
       this.stamina = Math.min(this.maxStamina, this.stamina + 14 * dt);
+    }
+
+    // Jump physics
+    if(!this.grounded){
+      this.vy += 800 * dt; // gravity
+      this.y += this.vy * dt;
+      if(this.y >= this.groundY){
+        this.y = this.groundY;
+        this.vy = 0;
+        this.grounded = true;
+        // Landing thud
+        playTone(80,.06,'square',.04);
+        spawnParticles(this.x, this.groundY + 48, 4, '#666', 30, 0.2);
+      }
     }
 
     // Smooth HP bar
@@ -579,7 +608,8 @@ class Fighter {
 
   tryHit(opponent){
     const dist = Math.abs(this.x - opponent.x);
-    const reach = 85;
+    const atk0 = ATTACKS[this.attackType];
+    const reach = atk0.isKick ? 100 : 85; // kicks have longer reach
 
     if(dist > reach){
       sfxWhiff();
@@ -629,8 +659,9 @@ class Fighter {
     if(dmg < 1) dmg = 1;
     opponent.hp = Math.max(0, opponent.hp - dmg);
     opponent.hurtFlash = 1;
-    opponent.stunTimer = Math.min(18, dmg * 0.5);
-    opponent.shakeX = this.facing * Math.min(8, dmg * 0.3);
+    const kickStun = atk0.isKick ? 1.4 : 1; // kicks stun longer
+    opponent.stunTimer = Math.min(22, dmg * 0.5 * kickStun);
+    opponent.shakeX = this.facing * Math.min(10, dmg * (atk0.isKick ? 0.5 : 0.3));
     opponent.shakeY = -Math.min(4, dmg * 0.15);
 
     if(this.attackZone === 'body'){
@@ -652,7 +683,8 @@ class Fighter {
     opponent.comboCount = 0;
 
     // SFX + VFX
-    if(dmg >= 18) sfxHeavyHit(); else sfxHit();
+    if(atk0.isKick) sfxKick();
+    else if(dmg >= 18) sfxHeavyHit(); else sfxHit();
     if(this.comboCount >= 3) sfxCombo(this.comboCount);
 
     const hitX = opponent.x + this.facing * 10;
@@ -735,8 +767,8 @@ function updateAI(enemy, player, dt){
       enemy.blocking = false;
     }
 
-    // Attack AI
-    if(aiCooldown <= 0 && dist < 90 && !enemy.blocking){
+    // Attack AI (punches + kicks)
+    if(aiCooldown <= 0 && dist < 105 && !enemy.blocking){
       const roll = Math.random();
       let atkType, atkZone;
 
@@ -746,16 +778,29 @@ function updateAI(enemy, player, dt){
         atkZone = Math.random() < 0.35 ? 'head' : 'body';
       }
 
-      // Vary attack choice based on situation
+      // Vary attack choice — now includes kicks
       if(enemy.comboCount >= 1 && Math.random() < 0.6){
         atkType = 'jab'; // keep combos going with fast attacks
-      } else if(roll < 0.45) atkType = 'jab';
-      else if(roll < 0.78) atkType = 'cross';
-      else atkType = 'uppercut';
+      } else if(roll < 0.32) atkType = 'jab';
+      else if(roll < 0.55) atkType = 'cross';
+      else if(roll < 0.70) atkType = 'uppercut';
+      else if(roll < 0.85) atkType = 'low_kick';
+      else atkType = 'roundhouse';
 
       if(enemy.stamina > ATTACKS[atkType].stam){
         enemy.startAttack(atkType, atkZone);
         aiCooldown = 12 + Math.random() * 20;
+      }
+    }
+
+    // AI jump: occasionally jump over player when cornered or to reposition
+    if(enemy.grounded && !enemy.attacking && Math.random() < 0.004){
+      const nearWall = enemy.x < 120 || enemy.x > W - 120;
+      if(nearWall || (dist < 60 && Math.random() < 0.5)){
+        enemy.jump();
+        // Move toward/past opponent during jump
+        enemy.x += enemy.facing * 30;
+        aiCooldown = 15;
       }
     }
 
@@ -937,22 +982,28 @@ function updateFight(dt, framePresses){
         }
       }
     }
-    // Attacks
+    // Jump
+    if(framePresses['Space']) player.jump();
+
+    // Attacks (punches: 1-3, kicks: 5-6, super: 4)
     const zone = (keys['ShiftLeft']||keys['ShiftRight']) ? 'head' : 'body';
     if(framePresses['Digit1']||framePresses['Numpad1']) player.startAttack('jab', zone);
     if(framePresses['Digit2']||framePresses['Numpad2']) player.startAttack('cross', zone);
     if(framePresses['Digit3']||framePresses['Numpad3']) player.startAttack('uppercut', zone);
-    if(framePresses['Digit4']||framePresses['Numpad4']||framePresses['Space']) player.startSuper();
+    if(framePresses['Digit4']||framePresses['Numpad4']) player.startSuper();
+    if(framePresses['Digit5']||framePresses['Numpad5']) player.startAttack('low_kick', 'body');
+    if(framePresses['Digit6']||framePresses['Numpad6']) player.startAttack('roundhouse', zone);
   }
 
   // Bounds
   player.x = Math.max(75, Math.min(W - 75, player.x));
   enemy.x = Math.max(75, Math.min(W - 75, enemy.x));
 
-  // Push apart
+  // Push apart (disabled when someone is airborne — allows jumping over)
+  const bothGrounded = player.grounded && enemy.grounded;
   const minDist = 42;
   const dx = enemy.x - player.x;
-  if(Math.abs(dx) < minDist){
+  if(bothGrounded && Math.abs(dx) < minDist){
     const push = (minDist - Math.abs(dx)) / 2;
     if(dx > 0){ player.x -= push; enemy.x += push; }
     else { player.x += push; enemy.x -= push; }
@@ -1227,10 +1278,12 @@ function drawFighter(f){
   ctx.translate(fx, fy);
   ctx.rotate(f.bodyTilt);
 
-  // Drop shadow on mat
-  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  // Drop shadow on mat (stays on ground when jumping)
+  const jumpH = f.groundY - f.y;
+  const shadowScale = Math.max(0.3, 1 - jumpH / 150);
+  ctx.fillStyle = `rgba(0,0,0,${0.2 * shadowScale})`;
   ctx.beginPath();
-  ctx.ellipse(0, 52, 18, 5, 0, 0, Math.PI*2);
+  ctx.ellipse(0, 52 + jumpH, 18 * shadowScale, 5 * shadowScale, 0, 0, Math.PI*2);
   ctx.fill();
 
   // Stun stars
@@ -1246,15 +1299,74 @@ function drawFighter(f){
     }
   }
 
-  // Legs
+  // Legs (with kick animation + jump tuck)
   const footW = 7, legH = 26;
-  ctx.fillStyle = hurtWhite ? '#fff' : (f.isPlayer ? '#111830' : '#301010');
-  ctx.fillRect(-11, 22, footW, legH);
-  ctx.fillRect(4, 22, footW, legH);
-  // Shoes
-  ctx.fillStyle = hurtWhite ? '#eee' : '#222';
-  ctx.fillRect(-12, 44, 9, 6);
-  ctx.fillRect(3, 44, 9, 6);
+  const legColor = hurtWhite ? '#fff' : (f.isPlayer ? '#111830' : '#301010');
+  const shoeColor = hurtWhite ? '#eee' : '#222';
+  const isKicking = f.attacking && ATTACKS[f.attackType] && ATTACKS[f.attackType].isKick;
+  const inAir = !f.grounded;
+
+  if(isKicking){
+    // Back leg (stationary)
+    ctx.fillStyle = legColor;
+    ctx.fillRect(-11, 22, footW, legH);
+    ctx.fillStyle = shoeColor;
+    ctx.fillRect(-12, 44, 9, 6);
+
+    // Kicking leg — extends toward opponent
+    const ext = f.punchExtend;
+    const kickAngle = f.attackType === 'roundhouse'
+      ? f.facing * ext * 1.2 - 0.3 * f.facing  // high arc
+      : f.facing * ext * 0.8;  // low straight
+    const kickLen = 28 * ext;
+    const kickY = f.attackType === 'roundhouse' ? 15 - ext * 20 : 30;
+    const kickEndX = 4 + Math.cos(kickAngle) * kickLen * f.facing;
+    const kickEndY = kickY + Math.sin(Math.abs(kickAngle) - 0.5) * kickLen * 0.3;
+
+    ctx.fillStyle = legColor;
+    ctx.save();
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = legColor;
+    ctx.beginPath();
+    ctx.moveTo(4, 26);
+    ctx.lineTo(f.facing * (10 + ext * 35), kickEndY);
+    ctx.stroke();
+    ctx.restore();
+
+    // Kicking shoe/foot
+    ctx.fillStyle = shoeColor;
+    ctx.fillRect(f.facing * (8 + ext * 34) - 4, kickEndY - 3, 10, 7);
+
+    // Kick impact flash
+    if(f.attackPhase === 'hit' && f.hitLanded){
+      ctx.fillStyle = '#fbbf24';
+      ctx.globalAlpha = 0.7;
+      const impX = f.facing * (10 + 38);
+      const impY = kickEndY;
+      for(let i=0;i<3;i++){
+        const a = Math.random()*Math.PI*2;
+        const d = 6+Math.random()*6;
+        ctx.fillRect(impX+Math.cos(a)*d-1, impY+Math.sin(a)*d-1, 3, 3);
+      }
+      ctx.globalAlpha = 1;
+    }
+  } else if(inAir){
+    // Tucked legs during jump
+    ctx.fillStyle = legColor;
+    ctx.fillRect(-10, 22, footW, 16);
+    ctx.fillRect(3, 22, footW, 16);
+    ctx.fillStyle = shoeColor;
+    ctx.fillRect(-10, 34, 9, 5);
+    ctx.fillRect(3, 34, 9, 5);
+  } else {
+    // Normal standing legs
+    ctx.fillStyle = legColor;
+    ctx.fillRect(-11, 22, footW, legH);
+    ctx.fillRect(4, 22, footW, legH);
+    ctx.fillStyle = shoeColor;
+    ctx.fillRect(-12, 44, 9, 6);
+    ctx.fillRect(3, 44, 9, 6);
+  }
 
   // Shorts
   ctx.fillStyle = hurtWhite ? '#fff' : f.shortsColor;
@@ -1301,7 +1413,8 @@ function drawFighter(f){
   const armY = -14;
   ctx.fillStyle = hurtWhite ? '#fff' : f.glovesColor;
 
-  if(f.attacking || f.superActive){
+  const isKickAtk = f.attacking && ATTACKS[f.attackType] && ATTACKS[f.attackType].isKick;
+  if((f.attacking && !isKickAtk) || f.superActive){
     const ext = f.punchExtend;
     let px, py;
     if(f.superActive){
