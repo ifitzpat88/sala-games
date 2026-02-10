@@ -40,9 +40,9 @@ canvas{display:block;margin:0 auto;image-rendering:pixelated;outline:none;}
     <h3>Select Level</h3>
     <div class="lvl-row" id="lvl-row"></div>
     <div class="hint">
-      <span>← →</span> Move &nbsp; <span>Space</span> Jump &nbsp; <span>Z</span> Sword &nbsp; <span>X</span> Shield &nbsp; <span>C</span> Bow<br>
+      <span>← →</span> Move &nbsp; <span>Space</span> Jump &nbsp; <span>Z</span> Sword &nbsp; <span>X</span> Shield &nbsp; <span>C</span> Bow &nbsp; <span>Shift</span> Dash<br>
       Hold <span>↑/↓</span> + <span>C</span> to aim bow &nbsp; <span>Double-tap Space</span> for double jump<br>
-      Slide on walls and <span>wall-jump</span> to reach new heights!
+      Slide on walls and <span>wall-jump</span> to reach new heights! &nbsp; <span>Z</span> on rune switches to toggle bridges
     </div>
   </div>
   <div class="panel" id="p-lvl">
@@ -89,6 +89,8 @@ function sfxBoss(){tone(80,.4,'sawtooth',.2);tone(60,.3,'square',.15);}
 function sfxShield(){tone(400,.06,'triangle',.1);tone(500,.04,'sine',.08);}
 function sfxArrowHit(){tone(250,.08,'square',.12);}
 function sfxPowerUp(){tone(600,.1,'sine',.12);setTimeout(()=>tone(800,.1,'sine',.1),100);setTimeout(()=>tone(1000,.15,'sine',.1),200);}
+function sfxRuneSwitch(){tone(500,.1,'sine',.12);setTimeout(()=>tone(700,.15,'sine',.1),100);setTimeout(()=>tone(900,.1,'sine',.08),200);}
+function sfxDash(){tone(250,.08,'sine',.1);tone(180,.12,'sawtooth',.08);setTimeout(()=>tone(350,.06,'sine',.06),60);}
 
 // ===== CONSTANTS =====
 const T=32; // tile size on screen
@@ -109,6 +111,7 @@ const TILES={
   'T':{s:TILE_SOLID,stone:true},
   'B':{s:TILE_SOLID,brick:true},
   '=':{s:TILE_PLATFORM,bridge:true},
+  '~':{s:0,runeBridge:true},
 };
 const ENT_CHARS='@EckhH123459^';
 
@@ -156,13 +159,13 @@ const LEVELS=[
     map:[
     '                                                                          ',
     '                       c                         c   c                    ',
-    '             c       PPPPP         c            IIIIIII        E          ',
+    '             c       PPPPP         c            II~~~~~        E          ',
     '           IIIII              c   PPP     3                  IIII         ',
     '     c           3         IIIII        IIIII          3                  ',
     '    III      IIIII    5          IIIII                IIIII     IIII      ',
     '                          IIII           5    IIII                    5   ',
     '  5        c     IIII            IIII       c       c      IIII          ',
-    '@ IIII  IIIII        IISSSII  II      IIII    IIIII   IIIII     IIIIIII  ',
+    '@ IIII  IIIII    ^   IISSSII  II      IIII    IIIII   IIIII     IIIIIII  ',
     'IIII##IIII####III###IISSSSII##IIII###IIII##III####IIIII####IIII#####IIIII',
     '###########################################################################',
     '###########################################################################',
@@ -175,8 +178,8 @@ const LEVELS=[
     '       PPPP        c    PPP    4           4  PPP              c  PPP      GGGG      ',
     '  c          4    PPP              PPP             PPP        PPP     4              ',
     ' PPP    GGGG          GGGGG   4         GGGGG          GGGGG              GGGGG     ',
-    '              1              2        1          2              1    GGGGG        2  ',
-    '@ GGG    GG     GGGLLLLGGGG    GGG      GGGLLLLGGG   GGGLLLLGGG                 GGG',
+    '              1    ^         2        1          2              1    GGGGG        2  ',
+    '@ GGG    GG     GGGLLLLGGGG    GGG      GGGLLLLGGG   GGGLLLLGGG     ~~~~~~      GGG',
     'GGGG##GGG##GGGG##LLLLLLL####GGG####GGGG##LLLLLLL##GGG##LLLLLLL##GGGG####GGG####GGGG',
     '##################LLLLLLL##########################################################################',
     '###########################################################################',
@@ -218,6 +221,7 @@ let tileGrid=[], lvlW=0, lvlH=0;
 let exitX=0, exitY=0, exitActive=true;
 let hitstop=0, screenShake=0;
 let bossHP=0, bossMaxHP=0;
+let runeBridgesActive=false, runeSwitches=[], dashGhosts=[];
 
 // Saved progress
 try{unlocked=parseInt(localStorage.getItem('swordsman_unlocked'))||1;}catch(e){}
@@ -234,6 +238,7 @@ function loadLevel(n){
   enemies=[];coins=[];projectiles=[];items=[];powerups=[];parts=[];ftexts=[];
   exitX=0;exitY=0;exitActive=true;
   bossHP=0;bossMaxHP=0;
+  runeBridgesActive=false;runeSwitches=[];dashGhosts=[];
 
   let px=0,py=0;
   for(let r=0;r<lvlH;r++){
@@ -254,6 +259,7 @@ function loadLevel(n){
         else if(ch==='4'){enemies.push(makeEnemy('bat',wx,wy));}
         else if(ch==='5'){enemies.push(makeEnemy('wolf',wx,wy));}
         else if(ch==='9'){const b=makeEnemy('dragon',wx,wy);enemies.push(b);bossHP=b.hp;bossMaxHP=b.hp;}
+        else if(ch==='^'){runeSwitches.push({x:wx,y:wy,w:T,h:T,t:0});}
       } else {
         tileGrid[r][c]=ch;
       }
@@ -274,6 +280,8 @@ function loadLevel(n){
     wallDir:0, wallSliding:false, wallJumpTimer:0,
     // Power-ups
     powerUp:null, powerUpTimer:0, puGlow:0,
+    // Phantom Dash
+    dashing:false, dashTimer:0, dashCd:0, dashDir:0,
   };
   cam.x=px-W/2;cam.y=py-H/2;
   clampCam();
@@ -305,7 +313,7 @@ function tileAt(c,r){
 function tileProps(ch){return TILES[ch]||{s:0};}
 function isSolid(c,r){return (tileProps(tileAt(c,r)).s & TILE_SOLID)!==0;}
 function isDeadly(c,r){return (tileProps(tileAt(c,r)).s & TILE_DEADLY)!==0;}
-function isPlatform(c,r){return (tileProps(tileAt(c,r)).s & TILE_PLATFORM)!==0;}
+function isPlatform(c,r){const tp=tileProps(tileAt(c,r));if(tp.runeBridge)return runeBridgesActive;return (tp.s & TILE_PLATFORM)!==0;}
 function isIce(c,r){return (tileProps(tileAt(c,r)).s & TILE_ICE)!==0;}
 
 function boxOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
@@ -421,7 +429,7 @@ function updatePlayer(dt){
 
   // Movement
   let moveDir=0;
-  if(!p.shielding&&p.swordT<=0&&p.bowDraw<=0&&p.wallJumpTimer<=0){
+  if(!p.shielding&&p.swordT<=0&&p.bowDraw<=0&&p.wallJumpTimer<=0&&!p.dashing){
     if(key['ArrowLeft']){moveDir=-1;p.dir=-1;}
     if(key['ArrowRight']){moveDir=1;p.dir=1;}
   }
@@ -476,7 +484,7 @@ function updatePlayer(dt){
   else p.jbuf=Math.max(0,p.jbuf-dt);
 
   // === JUMP / DOUBLE JUMP / WALL JUMP ===
-  if(p.jbuf>0&&p.swordT<=0&&!p.shielding){
+  if(p.jbuf>0&&p.swordT<=0&&!p.shielding&&!p.dashing){
     if(p.wallSliding){
       // Wall jump: kick off the wall
       p.vy=WALL_JUMP_VY;
@@ -514,12 +522,39 @@ function updatePlayer(dt){
     addTrail(p.x+p.w/2,p.y+p.h-4,p.powerUp.col);
   }
 
+  // === PHANTOM DASH ===
+  p.dashCd=Math.max(0,p.dashCd-dt);
+  if(!p.dashing&&(jp['ShiftLeft']||jp['ShiftRight'])&&p.dashCd<=0&&!p.shielding&&p.swordT<=0&&p.bowDraw<=0){
+    p.dashing=true;p.dashTimer=0.12;p.dashCd=1.5;p.dashDir=p.dir;
+    sfxDash();addPart(p.x+p.w/2,p.y+p.h/2,8,'#a78bfa',60,.3);
+    enemies.forEach(en=>{en.dashHit=false;});
+  }
+  if(p.dashing){
+    p.dashTimer-=dt;
+    p.iframes=Math.max(p.iframes,0.05);
+    p.vx=p.dashDir*600;p.vy=0;
+    dashGhosts.push({x:p.x,y:p.y,dir:p.dir,life:0.25});
+    if(p.dashTimer<=0){p.dashing=false;p.vx=p.dashDir*MOVE_SPD*0.5;}
+  }
+
   // Move + collide
   moveEntity(p,dt,true);
 
+  // Dash enemy damage
+  if(p.dashing){
+    enemies.forEach(en=>{
+      if(!en.alive||en.dashHit)return;
+      if(boxOverlap(p,en)){
+        damageEnemy(en,2);
+        addSpark(en.x+en.w/2,en.y+en.h/3,p.dir,8,'#a78bfa');
+        hitstop=0.03;en.dashHit=true;
+      }
+    });
+  }
+
   // Bounds
-  if(p.x<0){p.x=0;p.vx=0;}
-  if(p.x+p.w>lvlW*T){p.x=lvlW*T-p.w;p.vx=0;}
+  if(p.x<0){p.x=0;p.vx=0;p.dashing=false;}
+  if(p.x+p.w>lvlW*T){p.x=lvlW*T-p.w;p.vx=0;p.dashing=false;}
   if(p.y>lvlH*T+50){hurtPlayer(99);}
 
   // === SWORD ===
@@ -542,6 +577,16 @@ function updatePlayer(dt){
         addSpark(en.x+en.w/2,en.y+en.h/3,p.dir,hasFire?10:6,sparkCol);
         hitstop=0.04;
         if(hasFire) addPart(en.x+en.w/2,en.y+en.h/3,5,'#ef4444',50,.3);
+      }
+    });
+    // Rune switch interaction
+    runeSwitches.forEach(sw=>{
+      if(boxOverlap(sbox,sw)){
+        runeBridgesActive=!runeBridgesActive;
+        sfxRuneSwitch();
+        addPart(sw.x+T/2,sw.y+T/2,12,runeBridgesActive?'#c0a040':'#666',80,.4);
+        addFT(sw.x+T/2,sw.y-10,runeBridgesActive?'BRIDGE ON':'BRIDGE OFF',runeBridgesActive?'#c0a040':'#888',12);
+        screenShake=2;
       }
     });
   }
@@ -864,10 +909,8 @@ function loop(ts){
   const dt=Math.min((ts-lastT)/1000,1/20);
   lastT=ts;
 
-  const fp={...jp};for(const k in jp)jp[k]=false;
-
   if(state==='play'){
-    if(hitstop>0){hitstop-=dt;requestAnimationFrame(loop);drawGame(dt);return;}
+    if(hitstop>0){hitstop-=dt;for(const k in jp)jp[k]=false;requestAnimationFrame(loop);drawGame(dt);return;}
 
     updatePlayer(dt);
     updateEnemies(dt);
@@ -878,6 +921,9 @@ function loop(ts){
     parts=parts.filter(p=>p.life>0);
     ftexts.forEach(t=>{t.y-=30*dt;t.life-=dt;});
     ftexts=ftexts.filter(t=>t.life>0);
+    dashGhosts.forEach(g=>{g.life-=dt;});
+    dashGhosts=dashGhosts.filter(g=>g.life>0);
+    runeSwitches.forEach(sw=>{sw.t+=dt;});
     screenShake*=0.88;
 
     const L=LEVELS[lvl];
@@ -885,6 +931,9 @@ function loop(ts){
       exitActive=true;
     }
   }
+
+  // Clear just-pressed AFTER updates have consumed them
+  for(const k in jp)jp[k]=false;
 
   drawGame(dt);
   requestAnimationFrame(loop);
@@ -910,12 +959,14 @@ function drawGame(dt){
   X.translate(-cam.x,-cam.y);
 
   drawTiles(L);
+  drawRuneSwitches();
   drawCoins();
   drawItems();
   drawPowerUpsAll();
   drawExit();
   drawEnemiesAll();
   drawProjectilesAll();
+  drawDashGhosts();
   if(player&&!player.dead) drawPlayer();
   else if(player&&player.dead) drawPlayerDead();
   drawPartsAll();
@@ -995,6 +1046,17 @@ function drawTiles(L){
         X.strokeRect(tx,ty,T/2,T/2);X.strokeRect(tx+T/2,ty,T/2,T/2);
         X.strokeRect(tx+T/4,ty+T/2,T/2,T/2);
       }
+      else if(tp.runeBridge){
+        if(runeBridgesActive){
+          const shimmer=0.5+Math.sin(Date.now()/300+c*0.5)*0.2;
+          X.fillStyle=`rgba(192,160,64,${shimmer})`;X.fillRect(tx,ty,T,T);
+          X.fillStyle=`rgba(255,255,200,${shimmer*0.3})`;X.fillRect(tx,ty,T,4);
+          X.strokeStyle=`rgba(192,160,64,${shimmer*0.6})`;X.lineWidth=1;X.strokeRect(tx+1,ty+1,T-2,T-2);
+        } else {
+          X.strokeStyle='rgba(192,160,64,0.15)';X.lineWidth=1;
+          X.setLineDash([4,4]);X.strokeRect(tx+2,ty+2,T-4,T-4);X.setLineDash([]);
+        }
+      }
       else {
         X.fillStyle=L.dirt;X.fillRect(tx,ty,T,T);
         X.fillStyle='rgba(0,0,0,.1)';X.fillRect(tx,ty+T*0.7,T,T*0.3);
@@ -1056,6 +1118,53 @@ function drawPowerUpsAll(){
       X.fillStyle='#fff';X.beginPath();X.arc(pu.x+12,pu.y+12+bob,12,0,Math.PI*2);X.fill();
       X.globalAlpha=1;
     }
+  });
+}
+
+function drawRuneSwitches(){
+  runeSwitches.forEach(sw=>{
+    const active=runeBridgesActive;
+    const pulse=0.6+Math.sin(sw.t*4)*0.3;
+    // Pedestal
+    X.fillStyle=active?'#8a7030':'#444';
+    X.fillRect(sw.x+6,sw.y+T-10,T-12,10);
+    X.fillRect(sw.x+4,sw.y+T-4,T-8,4);
+    // Rune crystal
+    X.fillStyle=active?`rgba(192,160,64,${pulse})`:`rgba(120,120,120,${pulse})`;
+    X.beginPath();
+    X.moveTo(sw.x+T/2,sw.y+4);
+    X.lineTo(sw.x+T/2+8,sw.y+T-12);
+    X.lineTo(sw.x+T/2-8,sw.y+T-12);
+    X.closePath();X.fill();
+    // Glow
+    if(active){
+      X.fillStyle=`rgba(192,160,64,${pulse*0.15})`;
+      X.beginPath();X.arc(sw.x+T/2,sw.y+T/2,20,0,Math.PI*2);X.fill();
+    }
+    // Rune lines on crystal
+    X.strokeStyle=active?`rgba(255,240,180,${pulse*0.8})`:'rgba(200,200,200,0.3)';
+    X.lineWidth=1;
+    X.beginPath();X.moveTo(sw.x+T/2,sw.y+8);X.lineTo(sw.x+T/2,sw.y+T-14);X.stroke();
+    X.beginPath();X.moveTo(sw.x+T/2-4,sw.y+T/2-4);X.lineTo(sw.x+T/2+4,sw.y+T/2-4);X.stroke();
+  });
+}
+
+function drawDashGhosts(){
+  dashGhosts.forEach(g=>{
+    const alpha=(g.life/0.25)*0.35;
+    X.globalAlpha=alpha;
+    X.fillStyle='#a78bfa';
+    X.save();
+    X.translate(g.x+11,g.y+38);
+    if(g.dir<0)X.scale(-1,1);
+    // Simple knight silhouette
+    X.fillRect(-9,-38,18,28);
+    X.beginPath();X.arc(0,-34,7,0,Math.PI*2);X.fill();
+    X.fillRect(-7,-10,5,10);X.fillRect(2,-10,5,10);
+    // Sword
+    X.fillRect(8,-32,3,14);
+    X.restore();
+    X.globalAlpha=1;
   });
 }
 
@@ -1390,6 +1499,28 @@ function drawHUD(){
     }
   }
 
+  // Dash cooldown indicator
+  const dashReady=player.dashCd<=0;
+  const dashX=10,dashY=44;
+  X.fillStyle='rgba(0,0,0,.5)';X.fillRect(dashX,dashY,52,12);
+  if(dashReady){
+    X.fillStyle='rgba(167,139,250,.7)';X.fillRect(dashX+1,dashY+1,50,10);
+  } else {
+    const pct=1-player.dashCd/1.5;
+    X.fillStyle='rgba(167,139,250,.4)';X.fillRect(dashX+1,dashY+1,50*pct,10);
+  }
+  X.strokeStyle=dashReady?'#a78bfa':'#555';X.lineWidth=1;X.strokeRect(dashX,dashY,52,12);
+  X.fillStyle=dashReady?'#d4bfff':'#777';X.font="bold 7px 'Courier New'";X.textAlign='center';
+  X.fillText(player.dashing?'DASH!':'SHIFT',dashX+26,dashY+9);
+
+  // Rune bridge status (show only on levels with switches)
+  if(runeSwitches.length>0){
+    const rbx=W/2,rby=24;
+    X.fillStyle=runeBridgesActive?'rgba(192,160,64,.7)':'rgba(100,100,100,.4)';
+    X.font="bold 8px 'Courier New'";X.textAlign='center';
+    X.fillText(runeBridgesActive?'BRIDGES: ON':'BRIDGES: OFF',rbx,rby);
+  }
+
   // Level name
   X.fillStyle='rgba(255,255,255,.4)';X.font="9px 'Courier New'";X.textAlign='center';
   X.fillText(LEVELS[lvl].name,W/2,14);
@@ -1411,9 +1542,9 @@ function drawHUD(){
       X.globalAlpha=Math.max(0,1-ft/6);
       X.fillStyle='rgba(0,0,0,.5)';X.fillRect(W/2-155,H-52,310,28);
       X.fillStyle='#aaa';X.font="9px 'Courier New'";X.textAlign='center';
-      X.fillText('Z:Sword  X:Shield  C:Bow  Space:Jump/Double-Jump',W/2,H-38);
+      X.fillText('Z:Sword  X:Shield  C:Bow  Space:Jump  Shift:Dash',W/2,H-38);
       X.fillStyle='#888';X.font="8px 'Courier New'";
-      X.fillText('Hold direction into wall to slide + Space to wall-jump',W/2,H-28);
+      X.fillText('Wall-slide + Space to wall-jump | Z on rune switches to toggle bridges',W/2,H-28);
       X.globalAlpha=1;
     }
   }
