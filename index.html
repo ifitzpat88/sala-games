@@ -152,6 +152,7 @@ body::before{
 .color-heather{background:var(--pink);}
 .color-el-padre{background:var(--accent);}
 .color-bob{background:var(--red);}
+.color-claude{background:#3b82f6;}
 
 .tag-survival{background:rgba(239,68,68,.15);color:#f87171;}
 .tag-creative{background:rgba(6,182,212,.15);color:#22d3ee;}
@@ -192,6 +193,7 @@ body::before{
     <button class="filter-btn" data-filter="cash" onclick="filterGames('cash',this)">🟠 Cash</button>
     <button class="filter-btn" data-filter="heather" onclick="filterGames('heather',this)">🩷 Heather</button>
     <button class="filter-btn" data-filter="el-padre" onclick="filterGames('el-padre',this)">🟣 El Padre</button>
+    <button class="filter-btn" data-filter="claude" onclick="filterGames('claude',this)">🔷 Claude</button>
   </div>
 
   <div class="game-grid" id="game-grid"></div>
@@ -271,6 +273,17 @@ const GAMES = [
     tagClass: 'tag-action',
   },
   {
+    title: 'Portal Knights: Shattered Isles',
+    desc: 'Explore island biomes, gather resources, craft tools, build houses with chimneys, farm crops, fight monsters, and level up your character across 4 portal-linked worlds.',
+    emoji: '🪐',
+    banner: 'linear-gradient(135deg, #1a0a3a, #2a1a5a)',
+    url: 'cash/portal-knights.html',
+    player: 'Cash',
+    playerColor: 'color-cash',
+    tag: 'Adventure',
+    tagClass: 'tag-adventure',
+  },
+  {
     title: 'Energy Siege: Overload',
     desc: 'A strategic energy management game. Build defenses, manage power, and survive the siege!',
     emoji: '⚡',
@@ -335,6 +348,17 @@ const GAMES = [
     playerColor: 'color-heather',
     tag: 'Flight',
     tagClass: 'tag-flight',
+  },
+  {
+    title: 'ORBIT',
+    desc: 'A gravitational slingshot puzzle. Place planets to bend spacetime and guide your ship to the portal across 10 hand-crafted levels.',
+    emoji: '🪐',
+    banner: 'linear-gradient(135deg, #0a0e2e, #1a2a5a)',
+    url: 'claude/orbit.html',
+    player: 'Claude',
+    playerColor: 'color-claude',
+    tag: 'Puzzle',
+    tagClass: 'tag-puzzle',
   },
   {
     title: 'El Padre\'s Tetris',
