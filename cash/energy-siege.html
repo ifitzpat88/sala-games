@@ -116,6 +116,30 @@
   #start-screen button:hover { background: rgba(0,255,255,0.25); transform: scale(1.05); }
   #start-screen .credit { position: absolute; bottom: 20px; color: #444; font-size: 12px; }
 
+  /* Biome selector */
+  .biome-selector {
+    display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap;
+  }
+  .biome-card {
+    width: 100px; height: 80px; border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding-bottom: 6px; overflow: hidden;
+  }
+  .biome-card:hover { transform: scale(1.08); border-color: rgba(0,255,255,0.4); }
+  .biome-card.selected {
+    border-color: #0ff; box-shadow: 0 0 14px rgba(0,255,255,0.4);
+  }
+  .biome-card .biome-name {
+    color: #fff; font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8); z-index: 1;
+  }
+  .biome-card .biome-desc {
+    color: #aaa; font-size: 9px; z-index: 1;
+  }
+  .biome-card svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .biome-label { font-size: 13px; color: #888; margin-bottom: 8px; letter-spacing: 2px; text-transform: uppercase; }
+
   #dash-indicator {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
     z-index: 10; pointer-events: none; text-align: center;
@@ -229,6 +253,8 @@
     Survive <span style="color:#ff4444">10 Waves + Bosses</span> then face the <span style="color:#ff4444">Endless Siege</span><br>
     Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
   </div>
+  <div class="biome-label">MAP THEME</div>
+  <div class="biome-selector" id="biome-selector"></div>
   <button onclick="startGame()">START GAME</button>
   <div class="coop-btns">
     <button onclick="hostGame()">HOST CO-OP</button>
@@ -330,7 +356,7 @@
 // ============================================================
 // ENERGY SIEGE: OVERLOAD — Designed by Cash
 // ============================================================
-const GAME_VERSION = 'v1.0.1';
+const GAME_VERSION = 'v1.1.0';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -391,6 +417,108 @@ const SPACEMAN_SPEED = 2.2;
 const SPACEMAN_DMG = 8;
 const SPACEMAN_ATTACK_CD = 35;
 const SPACEMAN_R = 7;
+
+// ---- Biome / Map Theme System ----
+let currentBiome = 'moon';
+const BIOMES = {
+  moon: {
+    name: 'Moon', desc: 'Lunar surface',
+    bgFill: '#111', gridStroke: 'rgba(255,255,255,0.04)',
+    rockFill: '#2a2a2a', rockStroke: '#3a3a3a', rockDetail: '#333',
+    lakeFill: 'rgba(30,80,160,0.6)', lakeShimmerBase: [80, 150, 255],
+    minimapBg: '#0a0a0a', minimapRock: '#333', minimapLake: 'rgba(30,80,160,0.5)',
+    previewBg: '#111', previewAccent: '#3a3a3a',
+    decorateRock: null,
+    decorateLake: null,
+  },
+  safari: {
+    name: 'Safari', desc: 'African savanna',
+    bgFill: '#2a2210', gridStroke: 'rgba(200,180,120,0.05)',
+    rockFill: '#5c4a2e', rockStroke: '#7a6340', rockDetail: '#6b5535',
+    lakeFill: 'rgba(60,120,50,0.6)', lakeShimmerBase: [90, 160, 70],
+    minimapBg: '#1a1808', minimapRock: '#5c4a2e', minimapLake: 'rgba(60,120,50,0.5)',
+    previewBg: '#2a2210', previewAccent: '#5c4a2e',
+    decorateRock(ctx, x, y, TILE, fc) {
+      // Grass tufts swaying near rocks
+      ctx.strokeStyle = 'rgba(140,160,50,0.6)';
+      ctx.lineWidth = 1.5;
+      const sway = Math.sin(fc * 0.04 + x * 0.2) * 3;
+      for (let i = 0; i < 3; i++) {
+        const bx = x - 4 + i * (TILE / 2 + 4);
+        const by = y + TILE + 1;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.quadraticCurveTo(bx + sway, by - 10, bx + sway + 2, by - 14);
+        ctx.stroke();
+      }
+    },
+    decorateLake: null,
+  },
+  sky: {
+    name: 'Sky', desc: 'Aerial platforms',
+    bgFill: '#1a2a44', gridStroke: 'rgba(180,200,255,0.04)',
+    rockFill: '#ccd8e8', rockStroke: '#dde6f0', rockDetail: '#b8c8dc',
+    lakeFill: 'rgba(100,180,255,0.5)', lakeShimmerBase: [160, 210, 255],
+    minimapBg: '#101828', minimapRock: '#ccd8e8', minimapLake: 'rgba(100,180,255,0.4)',
+    previewBg: '#1a2a44', previewAccent: '#ccd8e8',
+    decorateRock(ctx, x, y, TILE, fc) {
+      // Cloud wisps drifting on rock platforms
+      const drift = Math.sin(fc * 0.015 + x * 0.05) * 6;
+      ctx.fillStyle = 'rgba(220,230,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(x + 10 + drift, y + 12, 8, 0, Math.PI * 2);
+      ctx.arc(x + 22 + drift, y + 10, 10, 0, Math.PI * 2);
+      ctx.arc(x + 32 + drift, y + 14, 7, 0, Math.PI * 2);
+      ctx.fill();
+    },
+    decorateLake: null,
+  },
+  plains: {
+    name: 'Plains', desc: 'Grassland',
+    bgFill: '#1a2a12', gridStroke: 'rgba(100,160,80,0.04)',
+    rockFill: '#5a5a50', rockStroke: '#6a6a60', rockDetail: '#505048',
+    lakeFill: 'rgba(40,100,180,0.6)', lakeShimmerBase: [70, 140, 220],
+    minimapBg: '#0e1a08', minimapRock: '#5a5a50', minimapLake: 'rgba(40,100,180,0.5)',
+    previewBg: '#1a2a12', previewAccent: '#5a5a50',
+    decorateRock(ctx, x, y, TILE, fc) {
+      // Moss patches on rocks
+      ctx.fillStyle = 'rgba(60,120,40,0.45)';
+      ctx.fillRect(x + 3, y + TILE - 10, 12, 6);
+      ctx.fillRect(x + TILE - 16, y + 4, 10, 5);
+    },
+    decorateLake(ctx, x, y, TILE, fc) {
+      // Lily pad dots on lakes
+      ctx.fillStyle = 'rgba(50,140,50,0.5)';
+      const bob = Math.sin(fc * 0.025 + x * 0.3) * 1.5;
+      ctx.beginPath(); ctx.arc(x + 12, y + 14 + bob, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 28, y + 26 + bob, 3, 0, Math.PI * 2); ctx.fill();
+    },
+  },
+  beach: {
+    name: 'Beach', desc: 'Tropical coast',
+    bgFill: '#2a2418', gridStroke: 'rgba(200,180,140,0.04)',
+    rockFill: '#c2a86e', rockStroke: '#d4bc82', rockDetail: '#b09858',
+    lakeFill: 'rgba(30,160,180,0.6)', lakeShimmerBase: [80, 200, 220],
+    minimapBg: '#1a1810', minimapRock: '#c2a86e', minimapLake: 'rgba(30,160,180,0.5)',
+    previewBg: '#2a2418', previewAccent: '#c2a86e',
+    decorateRock(ctx, x, y, TILE, fc) {
+      // Sand grain scatter on rocks
+      ctx.fillStyle = 'rgba(220,200,150,0.3)';
+      for (let i = 0; i < 6; i++) {
+        const gx = x + 5 + ((i * 17 + x) % (TILE - 10));
+        const gy = y + 4 + ((i * 13 + y) % (TILE - 8));
+        ctx.fillRect(gx, gy, 2, 2);
+      }
+    },
+    decorateLake(ctx, x, y, TILE, fc) {
+      // Foam edge on water
+      const foam = Math.sin(fc * 0.03 + x * 0.15) * 0.15 + 0.3;
+      ctx.fillStyle = `rgba(240,248,255,${foam})`;
+      ctx.fillRect(x + 2, y + 2, TILE - 4, 3);
+      ctx.fillRect(x + 2, y + TILE - 5, TILE - 4, 3);
+    },
+  },
+};
 
 const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60 };
 const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100 };
@@ -1912,7 +2040,8 @@ function showVictory() {
 
 // ---- Drawing ----
 function draw() {
-  ctx.fillStyle = '#111';
+  const biome = BIOMES[currentBiome];
+  ctx.fillStyle = biome.bgFill;
   ctx.fillRect(0, 0, W, H);
   if (!gameRunning && !gameOverShown && !victoryShown && !gamePaused) return;
 
@@ -1920,7 +2049,7 @@ function draw() {
   ctx.translate(-camera.x, -camera.y);
 
   // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.strokeStyle = biome.gridStroke;
   ctx.lineWidth = 1;
   const gx0 = Math.floor(camera.x / TILE) * TILE;
   const gy0 = Math.floor(camera.y / TILE) * TILE;
@@ -1932,22 +2061,25 @@ function draw() {
   }
 
   // Obstacles
+  const [shR, shG, shB] = biome.lakeShimmerBase;
   for (const o of obstacles) {
     if (o.x + TILE < camera.x || o.x > camera.x + W || o.y + TILE < camera.y || o.y > camera.y + H) continue;
     if (o.type === 'rock') {
-      ctx.fillStyle = '#2a2a2a';
+      ctx.fillStyle = biome.rockFill;
       ctx.fillRect(o.x + 1, o.y + 1, TILE - 2, TILE - 2);
-      ctx.strokeStyle = '#3a3a3a';
+      ctx.strokeStyle = biome.rockStroke;
       ctx.strokeRect(o.x + 1, o.y + 1, TILE - 2, TILE - 2);
-      ctx.fillStyle = '#333';
+      ctx.fillStyle = biome.rockDetail;
       ctx.fillRect(o.x + 8, o.y + 6, 10, 6);
       ctx.fillRect(o.x + 20, o.y + 22, 12, 8);
+      if (biome.decorateRock) biome.decorateRock(ctx, o.x, o.y, TILE, frameCount);
     } else {
-      ctx.fillStyle = 'rgba(30,80,160,0.6)';
+      ctx.fillStyle = biome.lakeFill;
       ctx.fillRect(o.x + 1, o.y + 1, TILE - 2, TILE - 2);
       const shimmer = Math.sin(frameCount * 0.03 + o.x * 0.1) * 0.15 + 0.2;
-      ctx.fillStyle = `rgba(80,150,255,${shimmer})`;
+      ctx.fillStyle = `rgba(${shR},${shG},${shB},${shimmer})`;
       ctx.fillRect(o.x + 4, o.y + 4, TILE - 8, TILE - 8);
+      if (biome.decorateLake) biome.decorateLake(ctx, o.x, o.y, TILE, frameCount);
     }
   }
 
@@ -2543,20 +2675,21 @@ function draw() {
 }
 
 function drawMinimap() {
+  const biome = BIOMES[currentBiome];
   const mmW = 160, mmH = 160;
   const mmX = W - mmW - 12, mmY = H - mmH - 60;
   const scaleX = mmW / WORLD_W, scaleY = mmH / WORLD_H;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-  ctx.fillStyle = '#0a0a0a';
+  ctx.fillStyle = biome.minimapBg;
   ctx.fillRect(mmX, mmY, mmW, mmH);
   ctx.strokeStyle = 'rgba(0,255,255,0.3)'; ctx.lineWidth = 1;
   ctx.strokeRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-  ctx.fillStyle = '#333';
+  ctx.fillStyle = biome.minimapRock;
   for (const o of obstacles) {
     if (o.type === 'rock') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
-  ctx.fillStyle = 'rgba(30,80,160,0.5)';
+  ctx.fillStyle = biome.minimapLake;
   for (const o of obstacles) {
     if (o.type === 'lake') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
@@ -2853,7 +2986,7 @@ function joinGame() {
 
 function startCoopGame() {
   if (!isHost || !conn) return;
-  conn.send({ type: 'start' });
+  conn.send({ type: 'start', biome: currentBiome });
   document.getElementById('lobby-overlay').classList.remove('show');
   document.getElementById('start-screen').classList.add('hidden');
   document.getElementById('coop-badge').classList.add('show');
@@ -2893,6 +3026,7 @@ function handleNetData(data) {
   switch(data.type) {
     case 'start':
       if (isClient) {
+        if (data.biome && BIOMES[data.biome]) currentBiome = data.biome;
         document.getElementById('lobby-overlay').classList.remove('show');
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('coop-badge').classList.add('show');
@@ -3115,6 +3249,39 @@ function restartGame() {
 }
 
 document.getElementById('version-display').textContent = GAME_VERSION;
+
+// ---- Build Biome Selector Cards ----
+(function() {
+  const container = document.getElementById('biome-selector');
+  Object.entries(BIOMES).forEach(([key, b]) => {
+    const card = document.createElement('div');
+    card.className = 'biome-card' + (key === currentBiome ? ' selected' : '');
+    card.dataset.biome = key;
+    // Mini SVG preview showing bg, rock, lake, grid
+    card.innerHTML = `
+      <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="80" fill="${b.previewBg}"/>
+        <line x1="25" y1="0" x2="25" y2="80" stroke="${b.gridStroke}" stroke-width="1"/>
+        <line x1="50" y1="0" x2="50" y2="80" stroke="${b.gridStroke}" stroke-width="1"/>
+        <line x1="75" y1="0" x2="75" y2="80" stroke="${b.gridStroke}" stroke-width="1"/>
+        <line x1="0" y1="20" x2="100" y2="20" stroke="${b.gridStroke}" stroke-width="1"/>
+        <line x1="0" y1="40" x2="100" y2="40" stroke="${b.gridStroke}" stroke-width="1"/>
+        <line x1="0" y1="60" x2="100" y2="60" stroke="${b.gridStroke}" stroke-width="1"/>
+        <rect x="10" y="15" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>
+        <rect x="60" y="35" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>
+        <rect x="30" y="45" width="22" height="18" rx="2" fill="${b.lakeFill}"/>
+      </svg>
+      <div class="biome-name">${b.name}</div>
+      <div class="biome-desc">${b.desc}</div>`;
+    card.onclick = () => {
+      container.querySelectorAll('.biome-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      currentBiome = key;
+    };
+    container.appendChild(card);
+  });
+})();
+
 gameLoop();
 </script>
 </body>
