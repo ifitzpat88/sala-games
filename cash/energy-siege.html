@@ -93,6 +93,38 @@
   }
   #game-over button:hover { background: rgba(0,255,255,0.3); }
 
+  #story-screen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, #0a1a0a 0%, #000 70%);
+    display: none; z-index: 100;
+    justify-content: center; align-items: center; flex-direction: column;
+    padding: 40px;
+  }
+  #story-screen.show { display: flex; }
+  #story-screen h2 {
+    font-size: 42px; color: #44ff44; margin-bottom: 24px;
+    text-shadow: 0 0 30px rgba(0,255,0,0.5);
+    animation: storyFadeIn 1.5s ease-out;
+  }
+  #story-text {
+    max-width: 640px; text-align: center; color: #ccc; font-size: 17px;
+    line-height: 1.8; margin-bottom: 28px; font-style: italic;
+    animation: storyFadeIn 2.5s ease-out;
+  }
+  #story-stats {
+    color: #888; font-size: 14px; margin-bottom: 32px;
+    animation: storyFadeIn 3s ease-out;
+  }
+  #story-screen button {
+    background: rgba(0,255,0,0.1); border: 2px solid #44ff44; color: #44ff44;
+    padding: 14px 40px; font-size: 18px; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 2px;
+    animation: storyFadeIn 3.5s ease-out, storyPulse 2s ease-in-out infinite 3.5s;
+  }
+  #story-screen button:hover { background: rgba(0,255,0,0.25); transform: scale(1.05); }
+  @keyframes storyFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes storyPulse { 0%,100% { box-shadow: 0 0 8px rgba(0,255,0,0.3); } 50% { box-shadow: 0 0 20px rgba(0,255,0,0.6); } }
+
   #start-screen {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: #0a0a0a; display: flex; z-index: 200;
@@ -354,6 +386,13 @@
   <button onclick="restartGame()">PLAY AGAIN</button>
 </div>
 
+<div id="story-screen">
+  <h2>SIEGE BROKEN</h2>
+  <div id="story-text"></div>
+  <div id="story-stats"></div>
+  <button onclick="continueToEndless()">ENTER THE ENDLESS SIEGE</button>
+</div>
+
 <canvas id="game"></canvas>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -361,7 +400,7 @@
 // ============================================================
 // ENERGY SIEGE: OVERLOAD — Designed by Cash
 // ============================================================
-const GAME_VERSION = 'v1.2.0';
+const GAME_VERSION = 'v1.3.0';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -558,6 +597,33 @@ const BIOMES = {
       ctx.beginPath(); ctx.arc(x + 20 - b1, y + 30 + b2, 2.5, 0, Math.PI * 2); ctx.fill();
     },
   },
+  forest: {
+    name: 'Forest', desc: 'Deep woods',
+    bgFill: '#0e1a0a',
+    gridStroke: 'rgba(60,120,40,0.04)',
+    rockFill: '#3a2a1a',
+    rockStroke: '#4a3a2a',
+    rockDetail: '#2a6a1a',
+    lakeFill: 'rgba(80,140,60,0.5)',
+    lakeShimmerBase: [90, 160, 70],
+    minimapBg: '#0a120a',
+    minimapRock: '#2a5a1a',
+    minimapLake: 'rgba(80,140,60,0.4)',
+    previewBg: '#0e1a0a',
+    previewAccent: '#2a5a1a',
+    noRocks: true,
+    decorateRock: null,
+    decorateLake(ctx, x, y, TILE, fc) {
+      // Wildflower dots in grass clearings
+      const colors = ['#cc4466','#ddaa33','#aa66cc','#44aadd'];
+      for (let i = 0; i < 4; i++) {
+        const fx = x + 6 + ((i * 23 + x) % (TILE - 12));
+        const fy = y + 6 + ((i * 17 + y) % (TILE - 12));
+        ctx.fillStyle = colors[i];
+        ctx.beginPath(); ctx.arc(fx, fy, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+  },
 };
 
 const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75 };
@@ -639,6 +705,7 @@ let activePlanes = [];
 let napalmFires = [];
 let planeCooldownTimer = 0;
 let planeWeaponSelect = false;
+let planeTargetingWeapon = null; // non-null = player is choosing where to strike
 const PLANE_COST = 60;
 const PLANE_COOLDOWN = 900;
 let energy = 0, wave = 0;
@@ -704,25 +771,55 @@ function generateObstacles() {
     }
   }
   const cx = Math.floor(MAP_W / 2), cy = Math.floor(MAP_H / 2);
-  for (let i = 0; i < 120; i++) {
-    const x = Math.floor(Math.random() * MAP_W);
-    const y = Math.floor(Math.random() * MAP_H);
-    if (Math.abs(x - cx) < 5 && Math.abs(y - cy) < 5) continue;
-    obstacleGrid[y][x] = 1;
-    obstacles.push({ x: x * TILE, y: y * TILE, w: TILE, h: TILE, type: 'rock' });
-  }
-  for (let i = 0; i < 15; i++) {
-    const bx = Math.floor(Math.random() * (MAP_W - 6)) + 3;
-    const by = Math.floor(Math.random() * (MAP_H - 6)) + 3;
-    const size = Math.floor(Math.random() * 3) + 2;
-    for (let dy = 0; dy < size; dy++) {
-      for (let dx = 0; dx < size; dx++) {
-        const tx = bx + dx, ty = by + dy;
-        if (tx >= MAP_W || ty >= MAP_H) continue;
-        if (Math.abs(tx - cx) < 5 && Math.abs(ty - cy) < 5) continue;
-        if (obstacleGrid[ty][tx] === 0) {
-          obstacleGrid[ty][tx] = 2;
-          obstacles.push({ x: tx * TILE, y: ty * TILE, w: TILE, h: TILE, type: 'lake' });
+  const biome = BIOMES[currentBiome];
+  if (biome.noRocks) {
+    // Trees instead of rocks
+    for (let i = 0; i < 80; i++) {
+      const x = Math.floor(Math.random() * MAP_W);
+      const y = Math.floor(Math.random() * MAP_H);
+      if (Math.abs(x - cx) < 5 && Math.abs(y - cy) < 5) continue;
+      if (obstacleGrid[y][x] !== 0) continue;
+      obstacleGrid[y][x] = 1;
+      obstacles.push({ x: x * TILE, y: y * TILE, w: TILE, h: TILE, type: 'tree' });
+    }
+    // More grass clearings
+    for (let i = 0; i < 25; i++) {
+      const bx = Math.floor(Math.random() * (MAP_W - 6)) + 3;
+      const by = Math.floor(Math.random() * (MAP_H - 6)) + 3;
+      const size = Math.floor(Math.random() * 3) + 2;
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const tx = bx + dx, ty = by + dy;
+          if (tx >= MAP_W || ty >= MAP_H) continue;
+          if (Math.abs(tx - cx) < 5 && Math.abs(ty - cy) < 5) continue;
+          if (obstacleGrid[ty][tx] === 0) {
+            obstacleGrid[ty][tx] = 2;
+            obstacles.push({ x: tx * TILE, y: ty * TILE, w: TILE, h: TILE, type: 'lake' });
+          }
+        }
+      }
+    }
+  } else {
+    for (let i = 0; i < 120; i++) {
+      const x = Math.floor(Math.random() * MAP_W);
+      const y = Math.floor(Math.random() * MAP_H);
+      if (Math.abs(x - cx) < 5 && Math.abs(y - cy) < 5) continue;
+      obstacleGrid[y][x] = 1;
+      obstacles.push({ x: x * TILE, y: y * TILE, w: TILE, h: TILE, type: 'rock' });
+    }
+    for (let i = 0; i < 15; i++) {
+      const bx = Math.floor(Math.random() * (MAP_W - 6)) + 3;
+      const by = Math.floor(Math.random() * (MAP_H - 6)) + 3;
+      const size = Math.floor(Math.random() * 3) + 2;
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const tx = bx + dx, ty = by + dy;
+          if (tx >= MAP_W || ty >= MAP_H) continue;
+          if (Math.abs(tx - cx) < 5 && Math.abs(ty - cy) < 5) continue;
+          if (obstacleGrid[ty][tx] === 0) {
+            obstacleGrid[ty][tx] = 2;
+            obstacles.push({ x: tx * TILE, y: ty * TILE, w: TILE, h: TILE, type: 'lake' });
+          }
         }
       }
     }
@@ -863,7 +960,7 @@ function initGame() {
   drone = { x: player.x, y: player.y };
   droneAngle = 0; playerFireCD = 0; droneFireCD = 0;
   bullets = []; enemies = []; buildings = []; orbs = []; particles = []; mines = []; spacemen = []; shockwaves = []; catapultBoulders = [];
-  activePlanes = []; napalmFires = []; planeCooldownTimer = 0; planeWeaponSelect = false;
+  activePlanes = []; napalmFires = []; planeCooldownTimer = 0; planeWeaponSelect = false; planeTargetingWeapon = null;
   energy = 20; wave = 0; waveBannerTimer = 0; selectedBuild = null;
   generatorTimer = 0; frameCount = 0;
   gameOverShown = false; victoryShown = false;
@@ -1261,7 +1358,7 @@ function update() {
   // -- Player shooting (SEMI-AUTO) --
   const effectiveDmg = PLAYER_BULLET_DMG + playerUpgrades.damage * 6;
   if (playerFireCD > 0) playerFireCD--;
-  if (mouse.clicked && playerFireCD <= 0 && !selectedBuild) {
+  if (mouse.clicked && playerFireCD <= 0 && !selectedBuild && planeTargetingWeapon === null) {
     mouse.clicked = false;
     playerFireCD = PLAYER_FIRE_COOLDOWN;
     const bx = player.x + Math.cos(player.angle) * (PLAYER_R + 6);
@@ -2198,23 +2295,24 @@ function killEnemy(e, index) {
 
 function showVictory() {
   victoryShown = true;
-  const title = document.getElementById('go-title');
-  title.textContent = 'VICTORY!';
-  title.style.color = '#44ff44';
-  title.style.textShadow = '0 0 30px rgba(0,255,0,0.6)';
-  document.getElementById('go-stats').innerHTML = `All ${MAX_WAVES} waves cleared! Kills: ${totalKills}<br><span style="color:#ff4444;font-size:16px">The Endless Siege begins in 5 seconds...</span>`;
-  document.getElementById('game-over').classList.add('show');
   updateWaveHUD();
-  // Transition to endless mode after 5 seconds
-  setTimeout(() => {
-    document.getElementById('game-over').classList.remove('show');
-    gameRunning = true; victoryShown = false; gameOverShown = false;
-    // Heal player(s) partially
-    player.hp = Math.min(player.hp + 50, player.maxHp);
-    if (isCoop && player2) { player2.hp = Math.min(player2.hp + 50, player2.maxHp); }
-    updateHpDisplay();
-    startEndless();
-  }, 5000);
+  // Show story screen with lore
+  document.getElementById('story-text').innerHTML =
+    'The energy grid held. Against impossible odds, the siege was broken &mdash; wave after wave of overloaded drones, heat emitters, and colossal bosses repelled by one operator\'s resolve.' +
+    '<br><br>But the readings are spiking again. The energy signatures beyond the perimeter are growing stronger, more chaotic. This wasn\'t the invasion &mdash; it was the scouting party.' +
+    '<br><br>The Endless Siege has begun. There is no wave 11. There is only survival.';
+  document.getElementById('story-stats').textContent = `${MAX_WAVES} waves cleared | ${totalKills} kills | ${upgradePoints} upgrade points earned`;
+  document.getElementById('story-screen').classList.add('show');
+}
+
+function continueToEndless() {
+  document.getElementById('story-screen').classList.remove('show');
+  gameRunning = true; victoryShown = false; gameOverShown = false;
+  // Heal player(s)
+  player.hp = Math.min(player.hp + 50, player.maxHp);
+  if (isCoop && player2) { player2.hp = Math.min(player2.hp + 50, player2.maxHp); }
+  updateHpDisplay();
+  startEndless();
 }
 
 // ---- Drawing ----
@@ -2243,7 +2341,23 @@ function draw() {
   const [shR, shG, shB] = biome.lakeShimmerBase;
   for (const o of obstacles) {
     if (o.x + TILE < camera.x || o.x > camera.x + W || o.y + TILE < camera.y || o.y > camera.y + H) continue;
-    if (o.type === 'rock') {
+    if (o.type === 'tree') {
+      // Tree: brown trunk + green canopy circle with sway
+      const tcx = o.x + TILE / 2, tcy = o.y + TILE / 2;
+      const sway = Math.sin(frameCount * 0.02 + o.x * 0.1) * 1.5;
+      // Shadow behind canopy
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.arc(tcx + sway + 2, tcy - 6 + 2, 13, 0, Math.PI * 2); ctx.fill();
+      // Trunk
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(tcx - 3, tcy + 2, 6, 14);
+      // Canopy
+      ctx.fillStyle = '#1a6a2a';
+      ctx.beginPath(); ctx.arc(tcx + sway, tcy - 6, 13, 0, Math.PI * 2); ctx.fill();
+      // Lighter canopy highlight
+      ctx.fillStyle = '#2a8a3a';
+      ctx.beginPath(); ctx.arc(tcx + sway - 3, tcy - 9, 7, 0, Math.PI * 2); ctx.fill();
+    } else if (o.type === 'rock') {
       ctx.fillStyle = biome.rockFill;
       ctx.fillRect(o.x + 1, o.y + 1, TILE - 2, TILE - 2);
       ctx.strokeStyle = biome.rockStroke;
@@ -2873,14 +2987,41 @@ function draw() {
   // Plane weapon select popup
   if (planeWeaponSelect && gameRunning && !gamePaused) {
     const wpX = W / 2 - 130, wpY = H / 2 - 50;
-    ctx.fillStyle = 'rgba(0,0,0,0.9)'; ctx.fillRect(wpX, wpY, 260, 100);
-    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(wpX, wpY, 260, 100);
+    ctx.fillStyle = 'rgba(0,0,0,0.9)'; ctx.fillRect(wpX, wpY, 260, 110);
+    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.strokeRect(wpX, wpY, 260, 110);
     ctx.fillStyle = '#0ff'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center';
-    ctx.fillText('SELECT WEAPON', wpX + 130, wpY + 22);
+    ctx.fillText('SELECT WEAPON, THEN CLICK TO TARGET', wpX + 130, wpY + 22);
     ctx.font = '13px Segoe UI';
     ctx.fillStyle = '#ff6600'; ctx.fillText('[1] Bombs — Area Blast', wpX + 130, wpY + 45);
     ctx.fillStyle = '#ff4400'; ctx.fillText('[2] Napalm — Fire Trail', wpX + 130, wpY + 63);
     ctx.fillStyle = '#ffcc00'; ctx.fillText('[3] Machine Gun — Strafing', wpX + 130, wpY + 81);
+    ctx.fillStyle = '#888'; ctx.font = '11px Segoe UI';
+    ctx.fillText('[Q] Cancel', wpX + 130, wpY + 100);
+  }
+
+  // Plane targeting reticle
+  if (planeTargetingWeapon !== null && gameRunning && !gamePaused) {
+    const pulse = Math.sin(frameCount * 0.12) * 0.3 + 0.7;
+    const rSize = 18 + Math.sin(frameCount * 0.08) * 4;
+    const rmx = mouse.x, rmy = mouse.y;
+    // Crosshair lines
+    ctx.strokeStyle = `rgba(255,100,0,${pulse})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(rmx - rSize, rmy); ctx.lineTo(rmx - 6, rmy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rmx + 6, rmy); ctx.lineTo(rmx + rSize, rmy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rmx, rmy - rSize); ctx.lineTo(rmx, rmy - 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rmx, rmy + 6); ctx.lineTo(rmx, rmy + rSize); ctx.stroke();
+    // Outer circle
+    ctx.strokeStyle = `rgba(255,140,0,${pulse * 0.6})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(rmx, rmy, rSize + 4, 0, Math.PI * 2); ctx.stroke();
+    // Inner dot
+    ctx.fillStyle = `rgba(255,200,0,${pulse})`;
+    ctx.beginPath(); ctx.arc(rmx, rmy, 2.5, 0, Math.PI * 2); ctx.fill();
+    // Label
+    const weaponLabel = planeTargetingWeapon === 'bombs' ? 'BOMBS' : planeTargetingWeapon === 'napalm' ? 'NAPALM' : 'MACHINE GUN';
+    ctx.fillStyle = `rgba(255,200,100,${pulse})`; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('CLICK TO STRIKE', rmx, rmy + rSize + 20);
+    ctx.fillStyle = `rgba(255,140,0,${pulse})`; ctx.font = '10px Segoe UI';
+    ctx.fillText(weaponLabel + ' | [Q/ESC] Cancel', rmx, rmy + rSize + 34);
   }
 
   // Pause overlay
@@ -2988,7 +3129,7 @@ function drawMinimap() {
   ctx.strokeRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
   ctx.fillStyle = biome.minimapRock;
   for (const o of obstacles) {
-    if (o.type === 'rock') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
+    if (o.type === 'rock' || o.type === 'tree') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
   ctx.fillStyle = biome.minimapLake;
   for (const o of obstacles) {
@@ -3080,10 +3221,17 @@ window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   keys[k] = true;
 
-  // Escape: pause toggle or cancel build
+  // Escape: cancel targeting / cancel build / pause toggle
   if (e.key === 'Escape') {
     if (showingUpgrades) return; // can't pause during upgrades
-    if (selectedBuild) { selectedBuild = null; updateBuildButtons(); }
+    if (planeTargetingWeapon !== null) {
+      // Cancel targeting, refund energy
+      energy += PLANE_COST;
+      document.getElementById('energy-display').textContent = energy;
+      updateBuildButtons();
+      planeTargetingWeapon = null;
+    } else if (planeWeaponSelect) { planeWeaponSelect = false; }
+    else if (selectedBuild) { selectedBuild = null; updateBuildButtons(); }
     else if (gameRunning) { gamePaused = !gamePaused; }
     return;
   }
@@ -3103,28 +3251,23 @@ window.addEventListener('keydown', e => {
 
   // Plane airstrike: Q toggles weapon select, 1/2/3 picks weapon while selecting
   if (k === 'q' && gameRunning) {
-    if (planeCooldownTimer > 0 || energy < PLANE_COST) { planeWeaponSelect = false; }
+    if (planeTargetingWeapon !== null) {
+      // Cancel targeting, refund energy
+      energy += PLANE_COST;
+      document.getElementById('energy-display').textContent = energy;
+      updateBuildButtons();
+      planeTargetingWeapon = null;
+    } else if (planeCooldownTimer > 0 || energy < PLANE_COST) { planeWeaponSelect = false; }
     else { planeWeaponSelect = !planeWeaponSelect; if (planeWeaponSelect) selectedBuild = null; }
   }
   if (planeWeaponSelect && (e.key === '1' || e.key === '2' || e.key === '3')) {
     const weaponType = e.key === '1' ? 'bombs' : e.key === '2' ? 'napalm' : 'machinegun';
     energy -= PLANE_COST;
     document.getElementById('energy-display').textContent = energy;
-    planeCooldownTimer = PLANE_COOLDOWN;
+    updateBuildButtons();
     planeWeaponSelect = false;
-    // Calculate flight path through mouse cursor
-    const tx = worldMouseX, ty = worldMouseY;
-    const flyAngle = Math.random() * Math.PI * 2;
-    const dist = Math.max(W, H) * 0.8;
-    const sx = tx - Math.cos(flyAngle) * dist;
-    const sy = ty - Math.sin(flyAngle) * dist;
-    const ex = tx + Math.cos(flyAngle) * dist;
-    const ey = ty + Math.sin(flyAngle) * dist;
-    activePlanes.push({
-      x: sx, y: sy, ex, ey, tx, ty,
-      speed: 8, weapon: weaponType, fired: false,
-      angle: flyAngle, progress: 0
-    });
+    planeTargetingWeapon = weaponType; // enter targeting mode
+    selectedBuild = null; // cancel any build mode
   }
 
   if (e.key === 'b' || e.key === 'B') {
@@ -3207,7 +3350,24 @@ canvas.addEventListener('mousedown', e => {
   }
 
   if (e.button === 0) {
-    if (selectedBuild) {
+    // Plane targeting click — spawn plane at clicked world position
+    if (planeTargetingWeapon !== null) {
+      const wmx = mouse.x + camera.x, wmy = mouse.y + camera.y;
+      const tx = wmx, ty = wmy;
+      const flyAngle = Math.random() * Math.PI * 2;
+      const d = Math.max(W, H) * 0.8;
+      const sx = tx - Math.cos(flyAngle) * d;
+      const sy = ty - Math.sin(flyAngle) * d;
+      const ex = tx + Math.cos(flyAngle) * d;
+      const ey = ty + Math.sin(flyAngle) * d;
+      activePlanes.push({
+        x: sx, y: sy, ex, ey, tx, ty,
+        speed: 8, weapon: planeTargetingWeapon, fired: false,
+        angle: flyAngle, progress: 0
+      });
+      planeCooldownTimer = PLANE_COOLDOWN;
+      planeTargetingWeapon = null;
+    } else if (selectedBuild) {
       if (isClient) {
         // Client sends build request to host
         const wmx = mouse.x + camera.x, wmy = mouse.y + camera.y;
@@ -3601,7 +3761,12 @@ document.getElementById('version-display').textContent = GAME_VERSION;
     const card = document.createElement('div');
     card.className = 'biome-card' + (key === currentBiome ? ' selected' : '');
     card.dataset.biome = key;
-    // Mini SVG preview showing bg, rock, lake, grid
+    // Mini SVG preview showing bg, rock/tree, lake, grid
+    const obstaclesSVG = b.noRocks
+      ? `<rect x="17" y="28" width="6" height="10" fill="#3a2a1a"/><circle cx="20" cy="22" r="9" fill="#1a6a2a"/>
+         <rect x="67" y="48" width="6" height="10" fill="#3a2a1a"/><circle cx="70" cy="42" r="9" fill="#1a6a2a"/>`
+      : `<rect x="10" y="15" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>
+         <rect x="60" y="35" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>`;
     card.innerHTML = `
       <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="80" fill="${b.previewBg}"/>
@@ -3611,8 +3776,7 @@ document.getElementById('version-display').textContent = GAME_VERSION;
         <line x1="0" y1="20" x2="100" y2="20" stroke="${b.gridStroke}" stroke-width="1"/>
         <line x1="0" y1="40" x2="100" y2="40" stroke="${b.gridStroke}" stroke-width="1"/>
         <line x1="0" y1="60" x2="100" y2="60" stroke="${b.gridStroke}" stroke-width="1"/>
-        <rect x="10" y="15" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>
-        <rect x="60" y="35" width="20" height="20" rx="2" fill="${b.rockFill}" stroke="${b.rockStroke}" stroke-width="1"/>
+        ${obstaclesSVG}
         <rect x="30" y="45" width="22" height="18" rx="2" fill="${b.lakeFill}"/>
       </svg>
       <div class="biome-name">${b.name}</div>
