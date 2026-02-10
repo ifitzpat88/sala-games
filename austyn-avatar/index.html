@@ -1337,6 +1337,11 @@ function startBattle(enemyDino) {
   document.getElementById('battleLog').textContent=battle.log;
   updateBattleButtons();
   renderBattle();
+
+  // If enemy is faster, trigger enemy's first turn
+  if(battle.turn==='enemy'){
+    setTimeout(()=>{if(battle.active){enemyTurn();}},800);
+  }
 }
 
 function updateBattleButtons() {
@@ -1426,56 +1431,94 @@ function enemyTurn() {
   battle.animType='enemyAttack';battle.animating=true;battle.animTimer=0;
 }
 
+function showBattleResult(isVictory, callback) {
+  const overlay=document.getElementById('battleScreen');
+  let flash=1.0;
+  const color=isVictory?'rgba(255,215,0,':'rgba(255,0,0,';
+  const msg=isVictory?'VICTORY!':'DEFEATED...';
+  const msgColor=isVictory?'#FFD700':'#FF4444';
+
+  // Disable buttons during result
+  document.querySelectorAll('.battle-btn').forEach(b=>b.disabled=true);
+
+  function flashAnim(){
+    // Draw flash overlay on battle canvas
+    battleCtx.fillStyle=color+flash+')';
+    battleCtx.fillRect(0,0,700,350);
+    battleCtx.font='bold 48px "Fredoka One"';battleCtx.textAlign='center';
+    battleCtx.fillStyle=msgColor;
+    battleCtx.globalAlpha=Math.min(1,(1.0-flash)*3);
+    battleCtx.fillText(msg,350,180);
+    battleCtx.globalAlpha=1;
+
+    flash-=0.02;
+    if(flash>0){
+      requestAnimationFrame(flashAnim);
+    } else {
+      setTimeout(callback,600);
+    }
+  }
+  flashAnim();
+}
+
 function checkBattleEnd() {
   if(battle.enemyHp<=0){
     // Victory!
+    battle.animating=false;
     const xpGain=15+battle.enemyDino.level*8;
-    gainXP(xpGain);
-    // Dino XP
-    if(player.activeDinoIdx>=0){
-      myDinos[player.activeDinoIdx].xp=(myDinos[player.activeDinoIdx].xp||0)+xpGain;
-      if(myDinos[player.activeDinoIdx].xp>=myDinos[player.activeDinoIdx].level*30){
-        myDinos[player.activeDinoIdx].level++;
-        myDinos[player.activeDinoIdx].maxHp+=8;
-        myDinos[player.activeDinoIdx].currentHp=myDinos[player.activeDinoIdx].maxHp;
-        myDinos[player.activeDinoIdx].str+=2;myDinos[player.activeDinoIdx].def+=1;
-        myDinos[player.activeDinoIdx].xp=0;
-        addNotification(myDinos[player.activeDinoIdx].nickname+' leveled up to Lv'+myDinos[player.activeDinoIdx].level+'!','epic');
+
+    showBattleResult(true, ()=>{
+      gainXP(xpGain);
+      // Dino XP
+      if(player.activeDinoIdx>=0){
+        myDinos[player.activeDinoIdx].xp=(myDinos[player.activeDinoIdx].xp||0)+xpGain;
+        if(myDinos[player.activeDinoIdx].xp>=myDinos[player.activeDinoIdx].level*30){
+          myDinos[player.activeDinoIdx].level++;
+          myDinos[player.activeDinoIdx].maxHp+=8;
+          myDinos[player.activeDinoIdx].currentHp=myDinos[player.activeDinoIdx].maxHp;
+          myDinos[player.activeDinoIdx].str+=2;myDinos[player.activeDinoIdx].def+=1;
+          myDinos[player.activeDinoIdx].xp=0;
+          addNotification(myDinos[player.activeDinoIdx].nickname+' leveled up to Lv'+myDinos[player.activeDinoIdx].level+'!','epic');
+        }
+        myDinos[player.activeDinoIdx].currentHp=Math.min(myDinos[player.activeDinoIdx].maxHp,battle.playerHp);
       }
-      myDinos[player.activeDinoIdx].currentHp=Math.min(myDinos[player.activeDinoIdx].maxHp,battle.playerHp);
-    }
-    // Drop items
-    const drops=['herbs','stone','wood'];
-    const drop=drops[Math.floor(Math.random()*drops.length)];
-    const amt=1+Math.floor(Math.random()*3);
-    addToInventory(drop,amt);
+      // Drop items
+      const drops=['herbs','stone','wood'];
+      const drop=drops[Math.floor(Math.random()*drops.length)];
+      const amt=1+Math.floor(Math.random()*3);
+      addToInventory(drop,amt);
 
-    // Chance to tame after battle
-    const tameChance=0.3+player.level*0.02;
-    if(Math.random()<tameChance&&battle.enemyRef){
-      myDinos.push({...battle.enemyDino,nickname:battle.enemyDino.name,currentHp:Math.floor(battle.enemyDino.maxHp*0.5),xp:0,followX:0,followY:0});
-      addNotification('The defeated '+battle.enemyDino.name+' respects your strength and joins you!','epic');
-    }
+      // Chance to tame after battle
+      const tameChance=0.3+player.level*0.02;
+      if(Math.random()<tameChance&&battle.enemyRef){
+        myDinos.push({...battle.enemyDino,nickname:battle.enemyDino.name,currentHp:Math.floor(battle.enemyDino.maxHp*0.5),xp:0,followX:0,followY:0});
+        addNotification('The defeated '+battle.enemyDino.name+' respects your strength and joins you!','epic');
+      }
 
-    // Remove from wild
-    const idx=wildDinos.indexOf(battle.enemyRef);
-    if(idx>=0) wildDinos.splice(idx,1);
+      // Remove from wild
+      const idx=wildDinos.indexOf(battle.enemyRef);
+      if(idx>=0) wildDinos.splice(idx,1);
 
-    addNotification('Victory! +'+xpGain+' XP, +'+amt+' '+ITEMS[drop].name,'success');
-    battle.active=false;
-    document.getElementById('battleScreen').style.display='none';
-    updateDinoHUD();
+      addNotification('Victory! +'+xpGain+' XP, +'+amt+' '+ITEMS[drop].name,'success');
+      battle.active=false;
+      document.getElementById('battleScreen').style.display='none';
+      updateDinoHUD();
+    });
     return true;
   }
   if(battle.playerHp<=0){
     // Defeat
-    addNotification('Your '+battle.playerDino.nickname+' fainted!','warning');
-    if(player.activeDinoIdx>=0) myDinos[player.activeDinoIdx].currentHp=1;
-    battle.active=false;
-    document.getElementById('battleScreen').style.display='none';
-    // Teleport to safe area
-    player.x=40*TILE_SIZE;player.y=40*TILE_SIZE;
-    updateDinoHUD();
+    battle.animating=false;
+
+    showBattleResult(false, ()=>{
+      addNotification('Your '+battle.playerDino.nickname+' fainted!','warning');
+      if(player.activeDinoIdx>=0) myDinos[player.activeDinoIdx].currentHp=1;
+      battle.active=false;
+      document.getElementById('battleScreen').style.display='none';
+      // Teleport to safe area
+      player.x=40*TILE_SIZE;player.y=40*TILE_SIZE;
+      updateDinoHUD();
+    });
     return true;
   }
   return false;
@@ -1562,6 +1605,14 @@ function renderBattle() {
   // VS text
   battleCtx.font='32px "Fredoka One"';battleCtx.fillStyle='rgba(255,255,255,0.15)';
   battleCtx.textAlign='center';battleCtx.fillText('VS',350,230);
+
+  // Turn indicator
+  const turnText=battle.turn==='player'?'YOUR TURN':'ENEMY TURN';
+  const turnColor=battle.turn==='player'?'#06D6A0':'#E74C3C';
+  battleCtx.font='bold 16px "Fredoka One"';battleCtx.fillStyle=turnColor;
+  battleCtx.globalAlpha=0.5+0.5*Math.abs(Math.sin(Date.now()/500));
+  battleCtx.fillText(turnText,350,30);
+  battleCtx.globalAlpha=1;
 }
 
 function updateBattle(dt) {
@@ -1571,11 +1622,16 @@ function updateBattle(dt) {
     if(battle.animTimer>40){
       battle.animating=false;battle.animTimer=0;
       if(!checkBattleEnd()){
-        if(battle.turn==='player'){
+        if(battle.animType==='enemyAttack'){
+          // Enemy just finished attacking — player's turn
+          battle.turn='player';
+          updateBattleButtons();
+        } else {
+          // Player just finished acting — enemy's turn
           battle.turn='enemy';
-          setTimeout(()=>{if(battle.active){enemyTurn();battle.turn='player';}},800);
+          updateBattleButtons();
+          setTimeout(()=>{if(battle.active){enemyTurn();}},800);
         }
-        updateBattleButtons();
       }
     }
   }
