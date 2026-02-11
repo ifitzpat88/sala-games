@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.2</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.3</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -296,27 +296,27 @@ const SMELT_RECIPES = [
 
 // ---- CREATURE TYPES ----
 const CREATURE_TYPES = {
-  rabbit:{name:'Rabbit',hp:10,dmg:0,speed:1.8,color:'#C0A080',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.4},
-  chicken:{name:'Chicken',hp:8,dmg:0,speed:1.2,color:'#FFFFFF',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.35},
-  wolf:{name:'Wolf',hp:35,dmg:8,speed:2.2,color:'#808080',hostile:true,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6},
-  lizard:{name:'Lizard',hp:15,dmg:3,speed:1.5,color:'#669944',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.4},
+  rabbit:{name:'Rabbit',hp:10,dmg:0,speed:1.8,color:'#C0A080',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.4,quadruped:true},
+  chicken:{name:'Chicken',hp:8,dmg:0,speed:1.2,color:'#FFFFFF',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.18},
+  wolf:{name:'Wolf',hp:35,dmg:8,speed:2.2,color:'#808080',hostile:true,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,quadruped:true},
+  lizard:{name:'Lizard',hp:15,dmg:3,speed:1.5,color:'#669944',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.4,quadruped:true},
   scorpion:{name:'Scorpion',hp:25,dmg:10,speed:1.8,color:'#884422',hostile:true,tameable:false,drop:'raw_meat',biome:'desert',size:0.45},
-  bear:{name:'Bear',hp:60,dmg:15,speed:1.6,color:'#5A3A1A',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.8},
-  snow_fox:{name:'Snow Fox',hp:18,dmg:4,speed:2.5,color:'#E8E8F0',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.45},
-  raptor:{name:'Raptor',hp:50,dmg:18,speed:2.8,color:'#446622',hostile:true,tameable:true,drop:'raw_meat',biome:'jungle',size:0.75},
-  triceratops:{name:'Triceratops',hp:100,dmg:12,speed:1.2,color:'#667744',hostile:false,tameable:true,drop:'raw_meat',biome:'jungle',size:1.0},
-  fire_drake:{name:'Fire Drake',hp:80,dmg:22,speed:2.0,color:'#DD4400',hostile:true,tameable:true,drop:'raw_meat',biome:'volcanic',size:0.9},
+  bear:{name:'Bear',hp:60,dmg:15,speed:1.6,color:'#5A3A1A',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.8,quadruped:true},
+  snow_fox:{name:'Snow Fox',hp:18,dmg:4,speed:2.5,color:'#E8E8F0',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.45,quadruped:true},
+  raptor:{name:'Raptor',hp:50,dmg:18,speed:2.8,color:'#446622',hostile:true,tameable:true,drop:'raw_meat',biome:'jungle',size:0.75,quadruped:true},
+  triceratops:{name:'Triceratops',hp:100,dmg:12,speed:1.2,color:'#667744',hostile:false,tameable:true,drop:'raw_meat',biome:'jungle',size:1.0,quadruped:true},
+  fire_drake:{name:'Fire Drake',hp:80,dmg:22,speed:2.0,color:'#DD4400',hostile:true,tameable:true,drop:'raw_meat',biome:'volcanic',size:0.9,quadruped:true},
   elemental:{name:'Elemental',hp:60,dmg:16,speed:1.4,color:'#FF6600',hostile:true,tameable:false,drop:'obsidian',biome:'volcanic',size:0.7},
-  horse:{name:'Horse',hp:40,dmg:0,speed:3.5,color:'#8B5A2B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85},
-  deer:{name:'Deer',hp:25,dmg:0,speed:2.4,color:'#B08860',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.7},
-  boar:{name:'Boar',hp:40,dmg:10,speed:2.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'raw_meat',biome:'meadow',size:0.6},
+  horse:{name:'Horse',hp:40,dmg:0,speed:3.5,color:'#8B5A2B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85,quadruped:true},
+  deer:{name:'Deer',hp:25,dmg:0,speed:2.4,color:'#B08860',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.7,quadruped:true},
+  boar:{name:'Boar',hp:40,dmg:10,speed:2.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'raw_meat',biome:'meadow',size:0.6,quadruped:true},
   parrot:{name:'Parrot',hp:12,dmg:0,speed:1.8,color:'#22CC44',hostile:false,tameable:true,drop:'raw_meat',biome:'jungle',size:0.3},
-  mountain_lion:{name:'Mountain Lion',hp:45,dmg:14,speed:2.6,color:'#C0A060',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.7},
-  camel:{name:'Camel',hp:50,dmg:0,speed:1.6,color:'#D4B478',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.9},
-  cow:{name:'Cow',hp:50,dmg:0,speed:1.0,color:'#8B6B4B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85,specialDrop:'milk'},
-  pig:{name:'Pig',hp:30,dmg:0,speed:1.4,color:'#DDA0A0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6},
-  sheep:{name:'Sheep',hp:25,dmg:0,speed:1.2,color:'#E8E0D0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'wool'},
-  goat:{name:'Goat',hp:30,dmg:3,speed:1.6,color:'#B0A090',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.55},
+  mountain_lion:{name:'Mountain Lion',hp:45,dmg:14,speed:2.6,color:'#C0A060',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.7,quadruped:true},
+  camel:{name:'Camel',hp:50,dmg:0,speed:1.6,color:'#D4B478',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.9,quadruped:true},
+  cow:{name:'Cow',hp:50,dmg:0,speed:1.0,color:'#8B6B4B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85,specialDrop:'milk',quadruped:true},
+  pig:{name:'Pig',hp:30,dmg:0,speed:1.4,color:'#DDA0A0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'bacon',quadruped:true},
+  sheep:{name:'Sheep',hp:25,dmg:0,speed:1.2,color:'#E8E0D0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'wool',quadruped:true},
+  goat:{name:'Goat',hp:30,dmg:3,speed:1.6,color:'#B0A090',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.55,quadruped:true},
   eagle:{name:'Eagle',hp:20,dmg:6,speed:3.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'feathers',biome:'tundra',size:0.4},
   crow:{name:'Crow',hp:10,dmg:0,speed:2.5,color:'#222222',hostile:false,tameable:false,drop:'feathers',biome:'meadow',size:0.3},
   fish:{name:'Fish',hp:5,dmg:0,speed:1.5,color:'#6688BB',hostile:false,tameable:false,drop:'raw_fish',biome:'meadow',size:0.2,aquatic:true},
@@ -2033,8 +2033,8 @@ function updateCreatures(dt) {
       const c = creatures[i];
       c.age = (c.age || 0) + dt;
       if (c.breedTimer > 0) c.breedTimer -= dt;
-      if (c.tamed || c.age < 120 || c.breedTimer > 0) continue;
-      // 1% chance per second
+      if (c.age < 120 || c.breedTimer > 0) continue;
+      // 1% chance per second (tamed breed at same rate)
       if (Math.random() > dt * 0.01) continue;
       // Count same-type nearby to cap at ~20
       let nearCount = 0;
@@ -2042,7 +2042,9 @@ function updateCreatures(dt) {
       for (let j = 0; j < creatures.length; j++) {
         if (j === i) continue;
         const o = creatures[j];
-        if (o.type !== c.type || o.tamed) continue;
+        if (o.type !== c.type) continue;
+        // Tamed breeds with tamed, wild breeds with wild
+        if (c.tamed !== o.tamed) continue;
         const odx = o.x - c.x, ody = o.y - c.y;
         const odist = Math.sqrt(odx * odx + ody * ody);
         if (odist < 30) nearCount++;
@@ -2057,8 +2059,8 @@ function updateCreatures(dt) {
       babies.push({
         type: c.type, x: bx, y: by,
         hp: ct2.hp, maxHp: ct2.hp,
-        angle: Math.random() * Math.PI * 2, state: 'idle',
-        tamed: false, stateTimer: Math.random() * 3,
+        angle: Math.random() * Math.PI * 2, state: c.tamed ? 'follow' : 'idle',
+        tamed: c.tamed, stateTimer: Math.random() * 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
         age: 0, breedTimer: 120, attackAnim: 0,
         produceTimer: 0, penned: false,
@@ -2337,7 +2339,7 @@ function renderCreatures() {
     // Attack lunge: creature grows larger + shifts toward player
     const lungeScale = c.attackAnim > 0 ? 1.0 + c.attackAnim * 1.5 : 1.0;
     const spriteHeight = Math.floor((H / dist) * ct.size * lungeScale);
-    const spriteWidth = Math.floor(spriteHeight * 0.8);
+    const spriteWidth = ct.quadruped ? Math.floor(spriteHeight * 1.3) : Math.floor(spriteHeight * 0.8);
     const drawY = Math.floor(halfH - spriteHeight / 2 + (1 - ct.size) * (H / dist) * 0.3);
 
     const startX = Math.max(0, screenX - spriteWidth / 2);
@@ -2367,46 +2369,98 @@ function renderCreatures() {
 
     // Draw sprite as filled rectangle with detail
     ctx.save();
-    for (let x = Math.floor(startX); x <= Math.floor(endX); x++) {
-      if (x < 0 || x >= W || dist >= zBuffer[x]) continue;
-      const relX = (x - (screenX - spriteWidth / 2)) / spriteWidth;
-
-      // Body shape: narrower at top and bottom
-      const bodyTop = drawY + spriteHeight * 0.1;
-      const bodyBot = drawY + spriteHeight;
-      const headTop = drawY;
-      const headBot = drawY + spriteHeight * 0.25;
-      const headWidth = 0.4;
-
-      // Head
-      if (Math.abs(relX - 0.5) < headWidth / 2) {
-        const ht = Math.floor(headTop);
-        const hb = Math.floor(headBot);
-        for (let y = Math.max(0, ht); y < Math.min(H, hb); y++) {
-          if (y >= 0 && y < H) {
-            ctx.fillStyle = `rgb(${Math.floor(r * distShade * 1.1)},${Math.floor(g * distShade * 1.1)},${Math.floor(b * distShade * 1.1)})`;
+    if (ct.quadruped) {
+      // === QUADRUPED RENDERING: horizontal body + 4 legs + head ===
+      const bodyTop = Math.floor(drawY + spriteHeight * 0.2);
+      const bodyBot = Math.floor(drawY + spriteHeight * 0.6);
+      const legBot = Math.floor(drawY + spriteHeight);
+      const headH = Math.floor((bodyBot - bodyTop) * 0.7);
+      const headW = spriteWidth * 0.22;
+      const legW = Math.max(2, Math.floor(spriteWidth * 0.1));
+      for (let x = Math.floor(startX); x <= Math.floor(endX); x++) {
+        if (x < 0 || x >= W || dist >= zBuffer[x]) continue;
+        const relX = (x - (screenX - spriteWidth / 2)) / spriteWidth;
+        // Body (horizontal rectangle, relX 0.1 to 0.9)
+        if (relX > 0.08 && relX < 0.92) {
+          const shade = 0.85 + 0.15 * (1 - Math.abs(relX - 0.5) * 2);
+          ctx.fillStyle = `rgb(${Math.floor(r*distShade*shade)},${Math.floor(g*distShade*shade)},${Math.floor(b*distShade*shade)})`;
+          for (let y = Math.max(0, bodyTop); y < Math.min(H, bodyBot); y++) {
             ctx.fillRect(x, y, 1, 1);
           }
         }
-        // Eyes
-        if (spriteHeight > 20) {
-          const eyeY = Math.floor(headTop + (headBot - headTop) * 0.4);
-          if (Math.abs(relX - 0.4) < 0.05 || Math.abs(relX - 0.6) < 0.05) {
+        // Head (block at front, slightly raised)
+        if (relX < 0.22) {
+          const ht = Math.floor(bodyTop - headH * 0.3);
+          const hb = Math.floor(bodyTop + headH * 0.7);
+          ctx.fillStyle = `rgb(${Math.floor(r*distShade*1.1)},${Math.floor(g*distShade*1.1)},${Math.floor(b*distShade*1.1)})`;
+          for (let y = Math.max(0, ht); y < Math.min(H, hb); y++) {
+            ctx.fillRect(x, y, 1, 1);
+          }
+          // Eye
+          if (spriteHeight > 15 && relX > 0.05 && relX < 0.12) {
+            const eyeY = Math.floor(ht + (hb - ht) * 0.35);
             ctx.fillStyle = '#000';
-            ctx.fillRect(x, eyeY, 1, Math.max(1, spriteHeight * 0.05));
+            ctx.fillRect(x, eyeY, 1, Math.max(1, 2));
+          }
+        }
+        // 4 Legs (thin vertical stripes below body)
+        const legPositions = [0.15, 0.3, 0.7, 0.85];
+        for (const lp of legPositions) {
+          if (Math.abs(relX - lp) < legW / spriteWidth * 0.6) {
+            ctx.fillStyle = `rgb(${Math.floor(r*distShade*0.7)},${Math.floor(g*distShade*0.7)},${Math.floor(b*distShade*0.7)})`;
+            for (let y = Math.max(0, bodyBot); y < Math.min(H, legBot); y++) {
+              ctx.fillRect(x, y, 1, 1);
+            }
+          }
+        }
+        // Tail (thin line at back)
+        if (relX > 0.92 && relX < 0.98) {
+          const tailTop = Math.floor(bodyTop + (bodyBot - bodyTop) * 0.2);
+          const tailBot = Math.floor(bodyTop + (bodyBot - bodyTop) * 0.5);
+          ctx.fillStyle = `rgb(${Math.floor(r*distShade*0.8)},${Math.floor(g*distShade*0.8)},${Math.floor(b*distShade*0.8)})`;
+          for (let y = Math.max(0, tailTop); y < Math.min(H, tailBot); y++) {
+            ctx.fillRect(x, y, 1, 1);
           }
         }
       }
+    } else {
+      // === HUMANOID / BIRD RENDERING (default) ===
+      for (let x = Math.floor(startX); x <= Math.floor(endX); x++) {
+        if (x < 0 || x >= W || dist >= zBuffer[x]) continue;
+        const relX = (x - (screenX - spriteWidth / 2)) / spriteWidth;
 
-      // Body
-      const bodyNarrow = Math.abs(relX - 0.5) < 0.35 ? 1 : 0;
-      if (bodyNarrow) {
-        const bt = Math.floor(headBot);
-        const bb = Math.floor(bodyBot);
-        for (let y = Math.max(0, bt); y < Math.min(H, bb); y++) {
-          const shade = 0.8 + 0.2 * ((y - bt) / (bb - bt));
-          ctx.fillStyle = `rgb(${Math.floor(r * distShade * shade)},${Math.floor(g * distShade * shade)},${Math.floor(b * distShade * shade)})`;
-          ctx.fillRect(x, y, 1, 1);
+        const bodyTop = drawY + spriteHeight * 0.1;
+        const bodyBot = drawY + spriteHeight;
+        const headTop = drawY;
+        const headBot = drawY + spriteHeight * 0.25;
+        const headWidth = 0.4;
+
+        // Head
+        if (Math.abs(relX - 0.5) < headWidth / 2) {
+          const ht = Math.floor(headTop);
+          const hb = Math.floor(headBot);
+          for (let y = Math.max(0, ht); y < Math.min(H, hb); y++) {
+            ctx.fillStyle = `rgb(${Math.floor(r * distShade * 1.1)},${Math.floor(g * distShade * 1.1)},${Math.floor(b * distShade * 1.1)})`;
+            ctx.fillRect(x, y, 1, 1);
+          }
+          if (spriteHeight > 20) {
+            const eyeY = Math.floor(headTop + (headBot - headTop) * 0.4);
+            if (Math.abs(relX - 0.4) < 0.05 || Math.abs(relX - 0.6) < 0.05) {
+              ctx.fillStyle = '#000';
+              ctx.fillRect(x, eyeY, 1, Math.max(1, spriteHeight * 0.05));
+            }
+          }
+        }
+
+        // Body
+        if (Math.abs(relX - 0.5) < 0.35) {
+          const bt = Math.floor(headBot);
+          const bb = Math.floor(bodyBot);
+          for (let y = Math.max(0, bt); y < Math.min(H, bb); y++) {
+            const shade = 0.8 + 0.2 * ((y - bt) / (bb - bt));
+            ctx.fillStyle = `rgb(${Math.floor(r * distShade * shade)},${Math.floor(g * distShade * shade)},${Math.floor(b * distShade * shade)})`;
+            ctx.fillRect(x, y, 1, 1);
+          }
         }
       }
     }
@@ -3395,6 +3449,11 @@ function handleMineOrAttack(dt) {
             const sa = addItem(ct.specialDrop, 1);
             if (sa > 0) notify('+1 ' + ITEMS[ct.specialDrop].name);
           }
+          // Pigs also drop ribs
+          if (c.type === 'pig') {
+            const ra = addItem('ribs', 1);
+            if (ra > 0) notify('+1 Ribs');
+          }
           const killXP = Math.ceil(ct.hp / 10);
           gainXP(killXP);
           creatures.splice(creatures.indexOf(c), 1);
@@ -3665,13 +3724,6 @@ function handleRightClick() {
         addItem('wool', 1);
         c.produceTimer = 75;
         notify('+1 Wool'); SFX.eat();
-        return;
-      } else if (c.type === 'pig') {
-        const pigDrops = ['bacon', 'ribs', 'raw_meat'];
-        const drop = pigDrops[Math.floor(Math.random() * pigDrops.length)];
-        addItem(drop, 1);
-        c.produceTimer = 75;
-        notify('+1 ' + ITEMS[drop].name); SFX.eat();
         return;
       }
     }
