@@ -228,6 +228,23 @@ body {
   animation: blink 0.8s ease-in-out infinite;
 }
 
+.leaderboard { margin: 16px auto; max-width: 320px; }
+.leaderboard h4 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px; color: #00e5ff; text-transform: uppercase;
+  letter-spacing: 2px; text-align: center; margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(0,229,255,0.5);
+}
+.lb-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 10px; font-family: 'Press Start 2P', monospace; font-size: 9px;
+  color: rgba(200,200,255,0.6); border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.lb-row.lb-new { color: #ff9500; text-shadow: 0 0 8px rgba(255,149,0,0.4); }
+.lb-rank { width: 24px; color: #00e5ff; }
+.lb-score { color: #fff; flex: 1; text-align: right; margin-right: 10px; }
+.lb-detail { color: rgba(200,200,255,0.4); font-size: 8px; }
+
 #pause-overlay h1 {
   color: #ffe44d;
   text-shadow: 0 0 30px rgba(255, 228, 77, 0.5);
@@ -323,6 +340,7 @@ body {
   <h1 style="color:#ff3355;text-shadow:0 0 30px rgba(255,51,85,0.6);">GAME OVER</h1>
   <div id="new-high-indicator" class="new-high hidden">NEW HIGH SCORE!</div>
   <div class="game-over-stats" id="go-stats"></div>
+  <div class="leaderboard" id="leaderboard"></div>
   <div class="blink">PRESS ENTER TO RESTART</div>
 </div>
 
@@ -452,6 +470,54 @@ let level = 1;
 let lines = 0;
 let combo = -1;
 let maxCombo = 0;
+
+// --- Leaderboard (top 5) ---
+const LB_KEY = 'elpadre_tetris_leaderboard';
+const LB_MAX = 5;
+// Seed: El Padre's legendary first score
+const LB_SEED = [{score:80776,level:11,lines:103,combo:4,date:'2026-02-09'}];
+
+function loadLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LB_KEY);
+    if (raw) {
+      const lb = JSON.parse(raw);
+      if (Array.isArray(lb) && lb.length > 0) return lb;
+    }
+  } catch(e) {}
+  // First time: seed with El Padre's score
+  saveLeaderboard(LB_SEED);
+  return [...LB_SEED];
+}
+
+function saveLeaderboard(lb) {
+  try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch(e) {}
+}
+
+function addToLeaderboard(s, lv, ln, cmb) {
+  const lb = loadLeaderboard();
+  const entry = {score:s, level:lv, lines:ln, combo:cmb, date:new Date().toISOString().slice(0,10)};
+  lb.push(entry);
+  lb.sort((a,b) => b.score - a.score);
+  while (lb.length > LB_MAX) lb.pop();
+  saveLeaderboard(lb);
+  // Return rank (0-indexed) or -1 if not on board
+  return lb.findIndex(e => e === entry);
+}
+
+function renderLeaderboard(newRank) {
+  const lb = loadLeaderboard();
+  let html = '<h4>Top Scores</h4>';
+  lb.forEach((e, i) => {
+    const isNew = i === newRank;
+    html += `<div class="lb-row ${isNew ? 'lb-new' : ''}">
+      <span class="lb-rank">#${i+1}</span>
+      <span class="lb-score">${e.score.toLocaleString()}</span>
+      <span class="lb-detail">Lv${e.level} · ${e.lines}L · ${e.date}</span>
+    </div>`;
+  });
+  document.getElementById('leaderboard').innerHTML = html;
+}
 let backToBack = false;
 let gameState = 'title'; // title, playing, paused, gameover
 let dropTimer = 0;
@@ -512,11 +578,9 @@ function init() {
   titleCtx = titleCanvas.getContext('2d');
   resizeTitle();
 
-  // Load high score
-  try {
-    const saved = localStorage.getItem('elpadre_tetris_high');
-    if (saved) highScore = parseInt(saved) || 0;
-  } catch(e) {}
+  // Load high score from leaderboard
+  const lb = loadLeaderboard();
+  highScore = lb.length > 0 ? lb[0].score : 0;
 
   updateHUD();
   window.addEventListener('resize', () => { resizeBg(); resizeTitle(); scaleGame(); });
@@ -863,10 +927,9 @@ function startLineClear(lineRows, isTSpin) {
     showFloatingText('LEVEL UP!', '#39ff14', 28);
   }
 
-  // Check high score
+  // Check high score (live update during game)
   if (score > highScore) {
     highScore = score;
-    try { localStorage.setItem('elpadre_tetris_high', highScore.toString()); } catch(e) {}
   }
 
   // Show special text
@@ -954,10 +1017,16 @@ function startGame() {
 function gameOver() {
   gameState = 'gameover';
 
+  const comboVal = maxCombo > 0 ? maxCombo + 1 : 0;
   const isNewHigh = score >= highScore && score > 0;
-  if (isNewHigh) {
-    highScore = score;
-    try { localStorage.setItem('elpadre_tetris_high', highScore.toString()); } catch(e) {}
+
+  // Add to leaderboard
+  let newRank = -1;
+  if (score > 0) {
+    newRank = addToLeaderboard(score, level, lines, comboVal);
+    // Refresh high score from leaderboard
+    const lb = loadLeaderboard();
+    highScore = lb.length > 0 ? lb[0].score : highScore;
   }
 
   const statsDiv = document.getElementById('go-stats');
@@ -965,13 +1034,15 @@ function gameOver() {
     <div class="go-stat">SCORE: <em>${score.toLocaleString()}</em></div>
     <div class="go-stat">LEVEL: <em>${level}</em></div>
     <div class="go-stat">LINES: <em>${lines}</em></div>
-    <div class="go-stat">MAX COMBO: <em>${maxCombo > 0 ? maxCombo + 1 : 0}x</em></div>
-    <div class="go-stat">HIGH SCORE: <em>${highScore.toLocaleString()}</em></div>
+    <div class="go-stat">MAX COMBO: <em>${comboVal}x</em></div>
   `;
 
   const nhEl = document.getElementById('new-high-indicator');
   if (isNewHigh && score > 0) nhEl.classList.remove('hidden');
   else nhEl.classList.add('hidden');
+
+  // Render leaderboard
+  renderLeaderboard(newRank);
 
   document.getElementById('gameover-overlay').classList.remove('hidden');
 }
