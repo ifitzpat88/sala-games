@@ -507,7 +507,7 @@ let seed = 12345;
 function setSeed(s) { seed = s; }
 function rng() {
   seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-  return (seed >> 16) / 32767;
+  return (seed >> 16) / 32768;
 }
 function rngInt(min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 
@@ -1196,6 +1196,7 @@ function spawnCreatures() {
     attempts++;
     const typeId = types[rngInt(0, types.length - 1)];
     const ct = CREATURE_TYPES[typeId];
+    if (!ct) continue;
     const x = rngInt(3, MAP_SIZE - 4) + 0.5;
     const y = rngInt(3, MAP_SIZE - 4) + 0.5;
     // Skip town areas
