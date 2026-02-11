@@ -362,10 +362,33 @@ const NPC_TYPES = {
       {give:{gold_coin:15},get:{boat:1}},
       {give:{gold_coin:5},get:{strength_potion:1}},
     ]},
+  villager:{name:'Villager',color:'#AA9977',size:0.6,
+    trades:[
+      {give:{gold_coin:2},get:{torch:6}},
+      {give:{gold_coin:1},get:{bread:1}},
+      {give:{berries:5},get:{gold_coin:1}},
+      {give:{wood:10},get:{gold_coin:1}},
+    ]},
+  innkeeper:{name:'Innkeeper',color:'#BB7744',size:0.65,
+    trades:[
+      {give:{gold_coin:2},get:{cooked_meat:2}},
+      {give:{gold_coin:3},get:{bread:3}},
+      {give:{gold_coin:5},get:{health_potion:1}},
+      {give:{gold_coin:3},get:{cooked_fish:2}},
+      {give:{gold_coin:8},get:{strength_potion:1}},
+    ]},
+  stablemaster:{name:'Stablemaster',color:'#776644',size:0.7,
+    trades:[
+      {give:{gold_coin:15},get:{horse_whistle:1}},
+      {give:{gold_coin:10},get:{raw_meat:10}},
+      {give:{gold_coin:5},get:{milk:5}},
+      {give:{wool:10},get:{gold_coin:3}},
+      {give:{feathers:20},get:{gold_coin:2}},
+    ]},
 };
 
 // ---- TOWN TEMPLATES ----
-const TOWN_NAMES = ['Hearthville','Ironhaven','Dustwatch','Frostholm','Ashridge'];
+const TOWN_NAMES = ['Hearthville','Dustwatch','Frostholm','Ironhaven','Ashridge'];
 
 // ---- SEASONS ----
 const SEASONS = [
@@ -814,83 +837,89 @@ function generateWorld(worldSeed) {
 function generateTowns(ws) {
   setSeed(ws + 777);
   townPositions = [];
-  // Place towns spread across biomes
+  // One town per biome, well-spaced
+  // Hearthville (capital) in meadow near center
+  // Dustwatch deep in desert (east)
+  // Frostholm deep in tundra (north)
+  // Ironhaven deep in jungle (south)
+  // Ashridge deep in volcanic (northwest)
   const offsets = [
-    {dx: 350, dy: 0},     // east (desert)
-    {dx: 0, dy: 380},     // south (jungle)
-    {dx: -380, dy: -250}, // northwest (tundra)
-    {dx: -400, dy: 180},  // southwest (volcanic edge)
-    {dx: 120, dy: -350},  // north-meadow border
+    {dx: 0, dy: -80},       // meadow center (capital)
+    {dx: 450, dy: 100},     // desert (east)
+    {dx: 100, dy: -450},    // tundra (north)
+    {dx: -200, dy: 450},    // jungle (south)
+    {dx: -350, dy: -350},   // volcanic (northwest)
   ];
   const half = MAP_SIZE / 2;
   for (let i = 0; i < TOWN_COUNT; i++) {
-    const tx = Math.floor(half + offsets[i].dx + rngInt(-30, 30));
-    const ty = Math.floor(half + offsets[i].dy + rngInt(-30, 30));
+    const tx = Math.floor(half + offsets[i].dx + rngInt(-20, 20));
+    const ty = Math.floor(half + offsets[i].dy + rngInt(-20, 20));
     const name = TOWN_NAMES[i];
-    const mega = (i === 0); // Hearthville is the mega capital
-    townPositions.push({x: tx, y: ty, name, mega});
-    if (mega) buildMegaTown(tx, ty);
+    const capital = (i === 0);
+    townPositions.push({x: tx, y: ty, name, mega: capital});
+    if (capital) buildCapital(tx, ty);
     else buildTown(tx, ty);
   }
 }
 
 function buildTown(cx, cy) {
-  const R = 12; // town radius
+  const R = 16;
   // Clear area
   for (let dy = -R; dy <= R; dy++) {
     for (let dx = -R; dx <= R; dx++) {
       const x = cx + dx, y = cy + dy;
-      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1) {
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1)
         worldMap[y * MAP_SIZE + x] = T.AIR;
-      }
     }
   }
-  // Town perimeter wall with gaps
+  // Perimeter wall with 4 gate gaps (3 tiles wide)
   for (let d = -R; d <= R; d++) {
     const positions = [
       {x: cx + d, y: cy - R}, {x: cx + d, y: cy + R},
       {x: cx - R, y: cy + d}, {x: cx + R, y: cy + d},
     ];
     for (const p of positions) {
-      if (p.x > 0 && p.x < MAP_SIZE - 1 && p.y > 0 && p.y < MAP_SIZE - 1) {
-        // Leave gaps for entrances
-        if (Math.abs(p.x - cx) < 2 || Math.abs(p.y - cy) < 2) continue;
-        worldMap[p.y * MAP_SIZE + p.x] = T.HOUSE_WALL;
-      }
+      if (p.x <= 0 || p.x >= MAP_SIZE - 1 || p.y <= 0 || p.y >= MAP_SIZE - 1) continue;
+      if (Math.abs(p.x - cx) <= 1 && (p.y === cy - R || p.y === cy + R)) continue;
+      if (Math.abs(p.y - cy) <= 1 && (p.x === cx - R || p.x === cx + R)) continue;
+      worldMap[p.y * MAP_SIZE + p.x] = T.HOUSE_WALL;
     }
   }
   // Central well
   if (cy > 0 && cy < MAP_SIZE - 1 && cx > 0 && cx < MAP_SIZE - 1)
     worldMap[cy * MAP_SIZE + cx] = T.WELL;
-  // Small houses (3 houses at fixed offsets)
-  const houses = [{dx: -6, dy: -6}, {dx: 5, dy: -5}, {dx: -4, dy: 5}];
+  // 6 houses (5x5 each)
+  const houses = [
+    {dx: -8, dy: -8}, {dx: 2, dy: -8}, {dx: -10, dy: 0},
+    {dx: 6, dy: 0}, {dx: -7, dy: 7}, {dx: 4, dy: 7},
+  ];
   for (const h of houses) {
     const hx = cx + h.dx, hy = cy + h.dy;
-    // 4x4 house shell
-    for (let dy = 0; dy < 4; dy++) {
-      for (let dx = 0; dx < 4; dx++) {
+    for (let dy = 0; dy < 5; dy++) {
+      for (let dx = 0; dx < 5; dx++) {
         const x = hx + dx, y = hy + dy;
         if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
-        if (dy === 0 || dy === 3 || dx === 0 || dx === 3) {
+        if (dy === 0 || dy === 4 || dx === 0 || dx === 4)
           worldMap[y * MAP_SIZE + x] = T.HOUSE_WALL;
-        }
       }
     }
-    // Door
-    const doorX = hx + 2, doorY = hy + 3;
+    const doorX = hx + 2, doorY = hy + 4;
     if (doorX > 0 && doorX < MAP_SIZE - 1 && doorY > 0 && doorY < MAP_SIZE - 1)
       worldMap[doorY * MAP_SIZE + doorX] = T.DOOR;
   }
-  // Torches along paths
-  const torchSpots = [{dx: -2, dy: 0}, {dx: 2, dy: 0}, {dx: 0, dy: -2}, {dx: 0, dy: 2},
-    {dx: -5, dy: -2}, {dx: 5, dy: -2}, {dx: -3, dy: 4}, {dx: 4, dy: 3}];
+  // Torches
+  const torchSpots = [
+    {dx:-3,dy:0},{dx:3,dy:0},{dx:0,dy:-3},{dx:0,dy:3},
+    {dx:-6,dy:-3},{dx:6,dy:-3},{dx:-6,dy:4},{dx:6,dy:4},
+    {dx:-3,dy:-6},{dx:3,dy:-6},{dx:-3,dy:6},{dx:3,dy:6},
+  ];
   for (const ts of torchSpots) {
     const x = cx + ts.dx, y = cy + ts.dy;
     if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
       worldMap[y * MAP_SIZE + x] = T.TORCH;
   }
   // Market stalls
-  const stalls = [{dx: 3, dy: 2}, {dx: -3, dy: 3}];
+  const stalls = [{dx:3,dy:2},{dx:-3,dy:2},{dx:2,dy:-3},{dx:-2,dy:-3}];
   for (const s of stalls) {
     const x = cx + s.dx, y = cy + s.dy;
     if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
@@ -898,18 +927,17 @@ function buildTown(cx, cy) {
   }
 }
 
-function buildMegaTown(cx, cy) {
-  const R = 28; // mega town radius
-  // Clear area
+function buildCapital(cx, cy) {
+  const R = 40;
+  // Clear entire area
   for (let dy = -R; dy <= R; dy++) {
     for (let dx = -R; dx <= R; dx++) {
       const x = cx + dx, y = cy + dy;
-      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1) {
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1)
         worldMap[y * MAP_SIZE + x] = T.AIR;
-      }
     }
   }
-  // Double perimeter wall with gate gaps
+  // Double outer wall with 4 wide gate gaps (5 tiles wide at N/S/E/W)
   for (let layer = 0; layer < 2; layer++) {
     const r = R - layer;
     for (let d = -r; d <= r; d++) {
@@ -918,56 +946,148 @@ function buildMegaTown(cx, cy) {
         {x: cx - r, y: cy + d}, {x: cx + r, y: cy + d},
       ];
       for (const p of positions) {
-        if (p.x > 0 && p.x < MAP_SIZE - 1 && p.y > 0 && p.y < MAP_SIZE - 1) {
-          // Gate gaps at cardinal points
-          if (Math.abs(p.x - cx) < 3 && (p.y === cy - r || p.y === cy + r)) continue;
-          if (Math.abs(p.y - cy) < 3 && (p.x === cx - r || p.x === cx + r)) continue;
-          worldMap[p.y * MAP_SIZE + p.x] = T.STONE_WALL;
-        }
+        if (p.x <= 0 || p.x >= MAP_SIZE - 1 || p.y <= 0 || p.y >= MAP_SIZE - 1) continue;
+        if (Math.abs(p.x - cx) <= 2 && (p.y <= cy - r + 1 || p.y >= cy + r - 1)) continue;
+        if (Math.abs(p.y - cy) <= 2 && (p.x <= cx - r + 1 || p.x >= cx + r - 1)) continue;
+        worldMap[p.y * MAP_SIZE + p.x] = T.STONE_WALL;
       }
     }
   }
-  // Central well
-  if (cy > 0 && cy < MAP_SIZE - 1 && cx > 0 && cx < MAP_SIZE - 1)
-    worldMap[cy * MAP_SIZE + cx] = T.WELL;
-  // 8 market stalls in a square around center
-  const stallOffsets = [{dx:-3,dy:-3},{dx:3,dy:-3},{dx:-3,dy:3},{dx:3,dy:3},
-    {dx:-3,dy:0},{dx:3,dy:0},{dx:0,dy:-3},{dx:0,dy:3}];
-  for (const s of stallOffsets) {
+  // === Central plaza ===
+  worldMap[cy * MAP_SIZE + cx] = T.WELL;
+  // Ring of market stalls around center
+  const stallRing = [
+    {dx:-4,dy:-4},{dx:0,dy:-4},{dx:4,dy:-4},
+    {dx:-4,dy:0},{dx:4,dy:0},
+    {dx:-4,dy:4},{dx:0,dy:4},{dx:4,dy:4},
+  ];
+  for (const s of stallRing) {
     const x = cx + s.dx, y = cy + s.dy;
-    if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+    if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1)
       worldMap[y * MAP_SIZE + x] = T.MARKET_STALL;
   }
-  // 12 houses in grid layout (5x5 each with doors)
-  const houseGrid = [];
-  for (let gy = -2; gy <= 1; gy++) {
-    for (let gx = -2; gx <= 2; gx++) {
-      if (Math.abs(gx) <= 1 && Math.abs(gy) <= 0) continue; // skip center area
-      houseGrid.push({dx: gx * 7, dy: gy * 7 + (gy <= 0 ? -5 : 5)});
-      if (houseGrid.length >= 12) break;
+  // === Town Hall (north, 12x8) ===
+  const thX = cx - 6, thY = cy - 28;
+  for (let dy = 0; dy < 8; dy++) {
+    for (let dx = 0; dx < 12; dx++) {
+      const x = thX + dx, y = thY + dy;
+      if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+      if (dy === 0 || dy === 7 || dx === 0 || dx === 11)
+        worldMap[y * MAP_SIZE + x] = T.STONE_WALL;
     }
-    if (houseGrid.length >= 12) break;
   }
-  for (const h of houseGrid) {
+  worldMap[(thY + 7) * MAP_SIZE + (thX + 5)] = T.DOOR;
+  worldMap[(thY + 7) * MAP_SIZE + (thX + 6)] = T.DOOR;
+  worldMap[(thY + 2) * MAP_SIZE + (thX + 2)] = T.TORCH;
+  worldMap[(thY + 2) * MAP_SIZE + (thX + 9)] = T.TORCH;
+  // === Blacksmith (east, 8x6) ===
+  const bsX = cx + 15, bsY = cy - 3;
+  for (let dy = 0; dy < 6; dy++) {
+    for (let dx = 0; dx < 8; dx++) {
+      const x = bsX + dx, y = bsY + dy;
+      if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+      if (dy === 0 || dy === 5 || dx === 0 || dx === 7)
+        worldMap[y * MAP_SIZE + x] = T.STONE_WALL;
+    }
+  }
+  worldMap[(bsY + 5) * MAP_SIZE + (bsX + 3)] = T.DOOR;
+  worldMap[(bsY + 2) * MAP_SIZE + (bsX + 2)] = T.FURNACE;
+  worldMap[(bsY + 2) * MAP_SIZE + (bsX + 5)] = T.TORCH;
+  // === Tavern (west, 10x7) ===
+  const tavX = cx - 25, tavY = cy - 3;
+  for (let dy = 0; dy < 7; dy++) {
+    for (let dx = 0; dx < 10; dx++) {
+      const x = tavX + dx, y = tavY + dy;
+      if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+      if (dy === 0 || dy === 6 || dx === 0 || dx === 9)
+        worldMap[y * MAP_SIZE + x] = T.HOUSE_WALL;
+    }
+  }
+  worldMap[(tavY + 6) * MAP_SIZE + (tavX + 4)] = T.DOOR;
+  worldMap[(tavY + 6) * MAP_SIZE + (tavX + 5)] = T.DOOR;
+  worldMap[(tavY + 2) * MAP_SIZE + (tavX + 5)] = T.CAMPFIRE;
+  worldMap[(tavY + 2) * MAP_SIZE + (tavX + 2)] = T.TORCH;
+  worldMap[(tavY + 2) * MAP_SIZE + (tavX + 7)] = T.TORCH;
+  // === Stables (south, 14x8, fence walls) ===
+  const stX = cx - 7, stY = cy + 18;
+  for (let dy = 0; dy < 8; dy++) {
+    for (let dx = 0; dx < 14; dx++) {
+      const x = stX + dx, y = stY + dy;
+      if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+      if (dy === 0 || dx === 0 || dx === 13)
+        worldMap[y * MAP_SIZE + x] = T.FENCE;
+    }
+  }
+  // Stall dividers inside
+  for (let dy = 1; dy < 5; dy++) {
+    for (const sdx of [4, 7, 10]) {
+      const x = stX + sdx, y = stY + dy;
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1)
+        worldMap[y * MAP_SIZE + x] = T.FENCE;
+    }
+  }
+  // Water troughs
+  worldMap[(stY + 2) * MAP_SIZE + (stX + 2)] = T.WELL;
+  worldMap[(stY + 2) * MAP_SIZE + (stX + 12)] = T.WELL;
+  // === Wagons near stables (3x2 wood structures) ===
+  const wagonSpots = [{dx: -14, dy: 20}, {dx: 10, dy: 20}];
+  for (const ws2 of wagonSpots) {
+    const wx = cx + ws2.dx, wy = cy + ws2.dy;
+    for (let dy = 0; dy < 2; dy++) {
+      for (let dx = 0; dx < 3; dx++) {
+        const x = wx + dx, y = wy + dy;
+        if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1)
+          worldMap[y * MAP_SIZE + x] = T.WOOD_WALL;
+      }
+    }
+    // Fence hitching post
+    const fx = wx + 1, fy = wy + 2;
+    if (fx > 0 && fx < MAP_SIZE - 1 && fy > 0 && fy < MAP_SIZE - 1)
+      worldMap[fy * MAP_SIZE + fx] = T.FENCE;
+  }
+  // === 20 Residential houses in 4 quadrants (5 per quadrant, 5x5 each) ===
+  const housePositions = [
+    // NE quadrant
+    {dx:8,dy:-18},{dx:16,dy:-18},{dx:24,dy:-18},{dx:8,dy:-12},{dx:16,dy:-12},
+    // NW quadrant
+    {dx:-12,dy:-18},{dx:-20,dy:-18},{dx:-28,dy:-18},{dx:-12,dy:-12},{dx:-20,dy:-12},
+    // SE quadrant
+    {dx:8,dy:8},{dx:16,dy:8},{dx:24,dy:8},{dx:8,dy:14},{dx:16,dy:14},
+    // SW quadrant
+    {dx:-12,dy:8},{dx:-20,dy:8},{dx:-28,dy:8},{dx:-12,dy:14},{dx:-20,dy:14},
+  ];
+  for (const h of housePositions) {
     const hx = cx + h.dx, hy = cy + h.dy;
-    // 5x5 house shell
     for (let dy = 0; dy < 5; dy++) {
       for (let dx = 0; dx < 5; dx++) {
         const x = hx + dx, y = hy + dy;
         if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
-        if (dy === 0 || dy === 4 || dx === 0 || dx === 4) {
+        if (dy === 0 || dy === 4 || dx === 0 || dx === 4)
           worldMap[y * MAP_SIZE + x] = T.HOUSE_WALL;
-        }
       }
     }
-    // Door at front
     const doorX = hx + 2, doorY = hy + 4;
     if (doorX > 0 && doorX < MAP_SIZE - 1 && doorY > 0 && doorY < MAP_SIZE - 1)
       worldMap[doorY * MAP_SIZE + doorX] = T.DOOR;
   }
-  // Torches throughout on a grid
-  for (let dy = -R + 2; dy < R; dy += 4) {
-    for (let dx = -R + 2; dx < R; dx += 4) {
+  // === Torch grid along main roads + scattered ===
+  for (let d = -R + 3; d <= R - 3; d += 5) {
+    // East-west road torches
+    for (const yOff of [2, -2]) {
+      const x = cx + d, y = cy + yOff;
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+        worldMap[y * MAP_SIZE + x] = T.TORCH;
+    }
+    // North-south road torches
+    for (const xOff of [2, -2]) {
+      const x = cx + xOff, y = cy + d;
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+        worldMap[y * MAP_SIZE + x] = T.TORCH;
+    }
+  }
+  // Scatter torches in quadrants
+  for (let dy = -R + 4; dy < R; dy += 8) {
+    for (let dx = -R + 4; dx < R; dx += 8) {
       const x = cx + dx, y = cy + dy;
       if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
         worldMap[y * MAP_SIZE + x] = T.TORCH;
@@ -1119,6 +1239,8 @@ const DAY_LENGTH = 600; // 10 minutes full cycle (0=noon, 0.5=midnight)
 let playerXP = 0;
 let playerLevel = 1;
 let damageFlash = 0; // red tint timer on taking damage
+let damageDirection = 0; // angle of last damage source
+let damageIndicatorTimer = 0; // how long to show directional indicator
 let saplingData = {}; // key: "x,y" -> species string (e.g. 'oak','pine')
 let treeGrowthTimer = 0;
 
@@ -1507,53 +1629,76 @@ function bpClickBackpack(i) {
 // ============================================================
 function spawnNPCs() {
   npcs = [];
-  const standardTypes = ['merchant', 'blacksmith', 'farmer', 'rancher'];
   for (const town of townPositions) {
     if (town.mega) {
-      // Mega town: 4 of each standard type + 10 guards = 26+ NPCs
-      let npcIdx = 0;
-      for (const typeId of standardTypes) {
-        for (let j = 0; j < 4; j++) {
-          const angle2 = (npcIdx / 26) * Math.PI * 2;
-          const r = 6 + (j % 2) * 4;
-          const offsetX = Math.round(Math.cos(angle2) * r);
-          const offsetY = Math.round(Math.sin(angle2) * r);
-          npcs.push({
-            type: typeId,
-            x: town.x + offsetX + 0.5,
-            y: town.y + offsetY + 0.5,
-            town: town.name,
-            angle: 0,
-          });
-          npcIdx++;
-        }
+      // Capital: 27+ NPCs spread across districts
+      const capitalNPCs = [];
+      // 4 merchants near central market
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        capitalNPCs.push({type:'merchant', ox: Math.round(Math.cos(a) * 6), oy: Math.round(Math.sin(a) * 6)});
       }
-      // Guards on patrol radius
-      for (let g = 0; g < 10; g++) {
-        const angle2 = (g / 10) * Math.PI * 2;
-        const offsetX = Math.round(Math.cos(angle2) * 10);
-        const offsetY = Math.round(Math.sin(angle2) * 10);
+      // 2 blacksmiths near smithy (east)
+      capitalNPCs.push({type:'blacksmith', ox: 17, oy: -1});
+      capitalNPCs.push({type:'blacksmith', ox: 19, oy: 1});
+      // 3 farmers wandering
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + 0.5;
+        capitalNPCs.push({type:'farmer', ox: Math.round(Math.cos(a) * (10 + i * 3)), oy: Math.round(Math.sin(a) * (10 + i * 3))});
+      }
+      // 2 ranchers near stables (south)
+      capitalNPCs.push({type:'rancher', ox: -3, oy: 20});
+      capitalNPCs.push({type:'rancher', ox: 3, oy: 22});
+      // 1 innkeeper at tavern (west)
+      capitalNPCs.push({type:'innkeeper', ox: -22, oy: 0});
+      // 1 stablemaster at stables (south)
+      capitalNPCs.push({type:'stablemaster', ox: 0, oy: 22});
+      // 6 villagers wandering throughout
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + 1.0;
+        const r = 8 + i * 4;
+        capitalNPCs.push({type:'villager', ox: Math.round(Math.cos(a) * r), oy: Math.round(Math.sin(a) * r)});
+      }
+      // Place all named NPCs
+      for (const cn of capitalNPCs) {
+        npcs.push({
+          type: cn.type,
+          x: town.x + cn.ox + 0.5,
+          y: town.y + cn.oy + 0.5,
+          town: town.name, angle: 0,
+        });
+      }
+      // 8 guards on outer patrol ring
+      for (let g = 0; g < 8; g++) {
+        const a = (g / 8) * Math.PI * 2;
         npcs.push({
           type: 'guard',
-          x: town.x + offsetX + 0.5,
-          y: town.y + offsetY + 0.5,
-          town: town.name,
-          angle: angle2,
+          x: town.x + Math.round(Math.cos(a) * 30) + 0.5,
+          y: town.y + Math.round(Math.sin(a) * 30) + 0.5,
+          town: town.name, angle: a,
+        });
+      }
+      // Spawn 4 tamed horses at the stables
+      for (let h = 0; h < 4; h++) {
+        const hx = town.x - 5 + h * 3;
+        const hy = town.y + 20;
+        creatures.push({
+          type: 'horse', x: hx + 0.5, y: hy + 0.5,
+          hp: 40, maxHp: 40, state: 'idle', stateTimer: 0,
+          angle: Math.PI, attackTimer: 0, tamed: true, attackAnim: 0,
         });
       }
     } else {
-      // Normal towns: 4 standard NPCs (no guards)
-      for (let i = 0; i < standardTypes.length; i++) {
-        const typeId = standardTypes[i];
-        const angle2 = (i / standardTypes.length) * Math.PI * 2;
-        const offsetX = Math.round(Math.cos(angle2) * 4);
-        const offsetY = Math.round(Math.sin(angle2) * 4);
+      // Normal towns: 8 NPCs (merchant, blacksmith, farmer, rancher, 2 guards, 2 villagers)
+      const townTypes = ['merchant','blacksmith','farmer','rancher','guard','guard','villager','villager'];
+      for (let i = 0; i < townTypes.length; i++) {
+        const a = (i / townTypes.length) * Math.PI * 2;
+        const r = 4 + (i % 2) * 3;
         npcs.push({
-          type: typeId,
-          x: town.x + offsetX + 0.5,
-          y: town.y + offsetY + 0.5,
-          town: town.name,
-          angle: 0,
+          type: townTypes[i],
+          x: town.x + Math.round(Math.cos(a) * r) + 0.5,
+          y: town.y + Math.round(Math.sin(a) * r) + 0.5,
+          town: town.name, angle: 0,
         });
       }
     }
@@ -1708,6 +1853,7 @@ function spawnCreatures() {
       attackTimer: 0,
       age: 120 + Math.random() * 60, // spawn as mature adults
       breedTimer: Math.random() * 120,
+      attackAnim: 0,
     });
     spawned++;
   }
@@ -1734,6 +1880,7 @@ function updateCreatures(dt) {
     }
 
     c.attackTimer = Math.max(0, c.attackTimer - dt);
+    if (c.attackAnim > 0) c.attackAnim = Math.max(0, c.attackAnim - dt);
     c.stateTimer -= dt;
 
     if (c.tamed) {
@@ -1787,6 +1934,9 @@ function updateCreatures(dt) {
       if (dist < 1.5 && c.attackTimer <= 0) {
         player.hp -= ct.dmg;
         damageFlash = 0.3;
+        damageDirection = angleToPlayer + Math.PI; // direction FROM the creature
+        damageIndicatorTimer = 0.8;
+        c.attackAnim = 0.4; // lunge animation timer
         SFX.hurt();
         c.attackTimer = 1.2;
         if (player.hp <= 0) playerDeath();
@@ -1847,7 +1997,7 @@ function updateCreatures(dt) {
         angle: Math.random() * Math.PI * 2, state: 'idle',
         tamed: false, stateTimer: Math.random() * 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
-        age: 0, breedTimer: 120,
+        age: 0, breedTimer: 120, attackAnim: 0,
       });
       c.breedTimer = 120;
       mate.breedTimer = 120;
@@ -2119,7 +2269,9 @@ function renderCreatures() {
     if (Math.abs(normAngle) > fov * 0.7) continue;
 
     const screenX = Math.floor(W / 2 + (normAngle / fov) * W);
-    const spriteHeight = Math.floor((H / dist) * ct.size);
+    // Attack lunge: creature grows larger + shifts toward player
+    const lungeScale = c.attackAnim > 0 ? 1.0 + c.attackAnim * 1.5 : 1.0;
+    const spriteHeight = Math.floor((H / dist) * ct.size * lungeScale);
     const spriteWidth = Math.floor(spriteHeight * 0.8);
     const drawY = Math.floor(halfH - spriteHeight / 2 + (1 - ct.size) * (H / dist) * 0.3);
 
@@ -2133,11 +2285,18 @@ function renderCreatures() {
     }
     if (!visible) continue;
 
-    // Parse color
+    // Parse color (red tint during attack animation)
     const col = ct.color;
-    const r = parseInt(col.slice(1, 3), 16);
-    const g = parseInt(col.slice(3, 5), 16);
-    const b = parseInt(col.slice(5, 7), 16);
+    const isAttacking = c.attackAnim > 0;
+    const atkTint = isAttacking ? c.attackAnim * 2.5 : 0; // 0-1 red tint
+    let r = parseInt(col.slice(1, 3), 16);
+    let g = parseInt(col.slice(3, 5), 16);
+    let b = parseInt(col.slice(5, 7), 16);
+    if (isAttacking) {
+      r = Math.min(255, r + Math.floor(atkTint * (255 - r)));
+      g = Math.floor(g * (1 - atkTint * 0.7));
+      b = Math.floor(b * (1 - atkTint * 0.7));
+    }
 
     const distShade = Math.max(0.2, 1.0 - dist / 20);
 
@@ -2269,6 +2428,35 @@ function renderNPCs() {
 // HUD RENDERING
 // ============================================================
 function renderHUD() {
+  // Directional damage indicator (red wedge showing where hit came from)
+  if (damageIndicatorTimer > 0) {
+    const alpha = Math.min(0.8, damageIndicatorTimer);
+    const indicatorAngle = damageDirection - player.angle;
+    const cx2 = W / 2, cy2 = H / 2;
+    const indicatorDist = 100;
+    const ix = cx2 + Math.cos(indicatorAngle) * indicatorDist;
+    const iy = cy2 + Math.sin(indicatorAngle) * indicatorDist;
+
+    // Draw red damage wedge
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#FF0000';
+    ctx.beginPath();
+    ctx.moveTo(ix + Math.cos(indicatorAngle) * 40, iy + Math.sin(indicatorAngle) * 40);
+    ctx.lineTo(ix + Math.cos(indicatorAngle + 0.5) * 15, iy + Math.sin(indicatorAngle + 0.5) * 15);
+    ctx.lineTo(ix + Math.cos(indicatorAngle - 0.5) * 15, iy + Math.sin(indicatorAngle - 0.5) * 15);
+    ctx.closePath();
+    ctx.fill();
+
+    // Red edge glow on screen border in damage direction
+    const edgeGrad = ctx.createRadialGradient(ix, iy, 0, ix, iy, 200);
+    edgeGrad.addColorStop(0, `rgba(255,0,0,${alpha * 0.5})`);
+    edgeGrad.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = edgeGrad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
   // Crosshair
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
@@ -2920,6 +3108,7 @@ function update(dt) {
 
   // Damage flash decay
   if (damageFlash > 0) damageFlash = Math.max(0, damageFlash - dt);
+  if (damageIndicatorTimer > 0) damageIndicatorTimer = Math.max(0, damageIndicatorTimer - dt);
 
   // Tree growth (every 10 seconds)
   treeGrowthTimer += dt;
@@ -3130,12 +3319,17 @@ function handleMineOrAttack(dt) {
 
   // Mining — dig at feet when looking far down, otherwise raycast
   let mineX, mineY, mineBlock;
+  let virtualDig = false; // digging through AIR ground with shovel
   if (player.pitch < -MAX_PITCH * 0.6) {
     // Dig at feet
     mineX = Math.floor(player.x);
     mineY = Math.floor(player.y);
     mineBlock = getBlock(mineX, mineY);
-    if (mineBlock === T.AIR || mineBlock === T.WATER) {
+    if (mineBlock === T.AIR && player.level === 0 && getShovelTier() > 0) {
+      // Standing on open ground on surface — allow digging down through the "ground"
+      mineBlock = T.DIRT; // treat as virtual dirt
+      virtualDig = true;
+    } else if (mineBlock === T.AIR || mineBlock === T.WATER) {
       player.miningTarget = null;
       player.miningProgress = 0;
       return;
@@ -3172,16 +3366,15 @@ function handleMineOrAttack(dt) {
   if (Math.random() < dt * 8) SFX.mine(); // mining hit sounds
 
   if (player.miningProgress >= 1) {
-    // Dig-to-underground: surface, looking down, holding shovel, soft block
-    const isDiggingDown = player.level === 0 && player.pitch < -MAX_PITCH * 0.6 && getShovelTier() > 0 && isSoftBlock(mineBlock);
+    // Dig-to-underground: surface, looking down, holding shovel, soft block (or virtual dirt ground)
+    const isDiggingDown = player.level === 0 && player.pitch < -MAX_PITCH * 0.6 && getShovelTier() > 0 && (isSoftBlock(mineBlock) || virtualDig);
     if (isDiggingDown) {
       const digKey = mineX + ',' + mineY;
       player.digProgress[digKey] = (player.digProgress[digKey] || 0) + 1;
       SFX.blockBreak();
-      if (info.drop) {
-        const added = addItem(info.drop, info.dropAmt || 1);
-        if (added > 0) notify('+' + (info.dropAmt || 1) + ' ' + ITEMS[info.drop].name);
-      }
+      // Drop dirt when digging
+      const added = addItem('dirt', 1);
+      if (added > 0) notify('+1 Dirt');
       if (player.digProgress[digKey] >= 3) {
         // Create hole on surface
         setBlockOnLayer(mineX, mineY, T.HOLE, 0);
@@ -3190,8 +3383,8 @@ function handleMineOrAttack(dt) {
         delete player.digProgress[digKey];
         notify('Dug a hole to the underground!');
       } else {
-        // Restore the soft block so player can dig again
-        setBlock(mineX, mineY, mineBlock);
+        // Restore the soft block so player can dig again (unless virtual dig — ground stays AIR)
+        if (!virtualDig) setBlock(mineX, mineY, mineBlock);
         notify('Digging deeper... (' + player.digProgress[digKey] + '/3)');
       }
     } else {
