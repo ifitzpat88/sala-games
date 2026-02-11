@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.1</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.2</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -116,7 +116,9 @@ const T = {
   CAMPFIRE:32, CHEST:33,
   SAPLING:34, YOUNG_TREE:35, OAK:36, PINE:37, JUNGLE_TREE:38, PALM:39,
   FURNACE:40, REINFORCED_STONE:41, REINFORCED_IRON:42, STEEL_BLOCK:43, GOLD_BLOCK:44,
-  HOLE:45
+  HOLE:45,
+  CONCRETE:46,
+  FEEDING_TROUGH:47
 };
 
 const TILE_INFO = {
@@ -159,6 +161,8 @@ const TILE_INFO = {
   [T.STEEL_BLOCK]:{name:'Steel Block',color:[0x88,0x88,0x90],hits:40,drop:'iron',dropAmt:3,wh:1.0},
   [T.GOLD_BLOCK]:{name:'Gold Block',color:[0xD4,0xA8,0x20],hits:25,drop:'gold',dropAmt:2,wh:1.0},
   [T.HOLE]:{name:'Hole',color:[0x33,0x22,0x11],hits:999,wh:0.2},
+  [T.CONCRETE]:{name:'Concrete',color:[0x99,0x99,0x99],hits:20,drop:'concrete',dropAmt:1,wh:1.0},
+  [T.FEEDING_TROUGH]:{name:'Feeding Trough',color:[0x8B,0x73,0x55],hits:4,drop:'wood',dropAmt:3,wh:0.4},
 };
 
 // ---- ITEMS ----
@@ -231,6 +235,11 @@ const ITEMS = {
   empty_bucket:{name:'Empty Bucket',color:'#A0A0A0',stack:1},
   water_bucket:{name:'Water Bucket',color:'#4488CC',stack:1},
   matches:{name:'Matches',color:'#CC6633',stack:16},
+  cheese:{name:'Cheese',color:'#DDCC44',stack:16,food:25},
+  bacon:{name:'Bacon',color:'#CC5533',stack:16,food:20},
+  ribs:{name:'Ribs',color:'#AA3322',stack:16,food:30},
+  concrete:{name:'Concrete',color:'#999999',placeTile:T.CONCRETE,stack:64},
+  feeding_trough:{name:'Feeding Trough',color:'#8B7355',placeTile:T.FEEDING_TROUGH,stack:4},
 };
 
 // ---- RECIPES ----
@@ -269,6 +278,9 @@ const RECIPES = [
   {result:'boat',amt:1,cost:{wood:20,iron:5},cat:'Misc'},
   {result:'empty_bucket',amt:1,cost:{iron:3,wood:2},cat:'Tools'},
   {result:'matches',amt:4,cost:{wood:2,stone:1},cat:'Tools'},
+  {result:'cheese',amt:2,cost:{milk:2},cat:'Food'},
+  {result:'concrete',amt:4,cost:{stone:4,sand:4},cat:'Building'},
+  {result:'feeding_trough',amt:1,cost:{wood:6,iron:2},cat:'Building'},
 ];
 
 const SMELT_RECIPES = [
@@ -622,6 +634,8 @@ function initTextures() {
   genTex(T.STEEL_BLOCK, 0x88, 0x88, 0x90, 'steel');
   genTex(T.GOLD_BLOCK, 0xD4, 0xA8, 0x20, 'gold_block');
   genTex(T.HOLE, 0x33, 0x22, 0x11, 'hole');
+  genTex(T.CONCRETE, 0x99, 0x99, 0x99, 'cobble');
+  genTex(T.FEEDING_TROUGH, 0x8B, 0x73, 0x55, 'plank');
 }
 
 // ============================================================
@@ -1715,6 +1729,7 @@ function spawnNPCs() {
           type: 'horse', x: hx + 0.5, y: hy + 0.5,
           hp: 40, maxHp: 40, state: 'idle', stateTimer: 0,
           angle: Math.PI, attackTimer: 0, tamed: true, attackAnim: 0,
+          produceTimer: 0, penned: true,
         });
       }
     } else {
@@ -1883,6 +1898,8 @@ function spawnCreatures() {
       age: 120 + Math.random() * 60, // spawn as mature adults
       breedTimer: Math.random() * 120,
       attackAnim: 0,
+      produceTimer: 0,
+      penned: false,
     });
     spawned++;
   }
@@ -1914,12 +1931,28 @@ function updateCreatures(dt) {
     c.stateTimer -= dt;
 
     if (c.tamed) {
-      // Follow player
-      if (dist > 3) {
-        c.x += Math.cos(angleToPlayer) * ct.speed * dt;
-        c.y += Math.sin(angleToPlayer) * ct.speed * dt;
+      // Produce timer tick
+      if (c.produceTimer > 0) c.produceTimer -= dt;
+      if (c.penned) {
+        // Penned: wander near current position instead of following
+        if (c.stateTimer <= 0) {
+          c.angle += (Math.random() - 0.5) * 2;
+          c.stateTimer = 1 + Math.random() * 3;
+        }
+        const wanderSpeed = ct.speed * 0.15;
+        const wnx = c.x + Math.cos(c.angle) * wanderSpeed * dt;
+        const wny = c.y + Math.sin(c.angle) * wanderSpeed * dt;
+        const wb = getBlock(Math.floor(wnx), Math.floor(wny));
+        if (wb === T.AIR) { c.x = wnx; c.y = wny; }
+        else c.angle += Math.PI * 0.5;
+      } else {
+        // Follow player
+        if (dist > 3) {
+          c.x += Math.cos(angleToPlayer) * ct.speed * dt;
+          c.y += Math.sin(angleToPlayer) * ct.speed * dt;
+        }
       }
-      c.angle = angleToPlayer;
+      c.angle = c.penned ? c.angle : angleToPlayer;
       // Attack nearby hostile creatures
       for (let j = 0; j < creatures.length; j++) {
         if (j === i) continue;
@@ -2028,6 +2061,7 @@ function updateCreatures(dt) {
         tamed: false, stateTimer: Math.random() * 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
         age: 0, breedTimer: 120, attackAnim: 0,
+        produceTimer: 0, penned: false,
       });
       c.breedTimer = 120;
       mate.breedTimer = 120;
@@ -3585,7 +3619,8 @@ function handleRightClick() {
         angle: player.angle, state: 'follow',
         tamed: true, stateTimer: 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
-        age: 120, breedTimer: 0,
+        age: 120, breedTimer: 0, attackAnim: 0,
+        produceTimer: 0, penned: false,
       });
       removeItem(heldId, 1);
       notify('Summoned tame ' + ct.name + '!'); SFX.tame();
@@ -3609,24 +3644,43 @@ function handleRightClick() {
     return;
   }
 
-  // Milk tamed cow (right-click nearby tamed cow)
+  // Farm animal production (right-click tamed animal: collect product or toggle pen/follow)
   for (const c of creatures) {
-    if (!c.tamed || c.type !== 'cow') continue;
+    if (!c.tamed) continue;
     const dx2 = c.x - player.x, dy2 = c.y - player.y;
-    if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
-      addItem('milk', 1);
-      notify('+1 Milk'); SFX.eat();
-      return;
+    if (Math.sqrt(dx2 * dx2 + dy2 * dy2) >= 3) continue;
+    // Check for ready product
+    if (c.produceTimer <= 0) {
+      if (c.type === 'chicken') {
+        addItem('chicken_egg', 1);
+        c.produceTimer = 60; // 60s cooldown
+        notify('+1 Egg'); SFX.eat();
+        return;
+      } else if (c.type === 'cow') {
+        addItem('milk', 1);
+        c.produceTimer = 90;
+        notify('+1 Milk'); SFX.eat();
+        return;
+      } else if (c.type === 'sheep') {
+        addItem('wool', 1);
+        c.produceTimer = 75;
+        notify('+1 Wool'); SFX.eat();
+        return;
+      } else if (c.type === 'pig') {
+        const pigDrops = ['bacon', 'ribs', 'raw_meat'];
+        const drop = pigDrops[Math.floor(Math.random() * pigDrops.length)];
+        addItem(drop, 1);
+        c.produceTimer = 75;
+        notify('+1 ' + ITEMS[drop].name); SFX.eat();
+        return;
+      }
     }
-  }
-
-  // Shear tamed sheep (right-click nearby tamed sheep)
-  for (const c of creatures) {
-    if (!c.tamed || c.type !== 'sheep') continue;
-    const dx2 = c.x - player.x, dy2 = c.y - player.y;
-    if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
-      addItem('wool', 1);
-      notify('+1 Wool'); SFX.eat();
+    // No product ready — toggle penned/follow
+    if (c.type === 'chicken' || c.type === 'cow' || c.type === 'sheep' || c.type === 'pig'
+        || c.type === 'horse' || c.type === 'goat') {
+      c.penned = !c.penned;
+      c.state = c.penned ? 'idle' : 'follow';
+      notify(CREATURE_TYPES[c.type].name + ': ' + (c.penned ? 'Staying (penned)' : 'Following'));
       return;
     }
   }
@@ -3847,6 +3901,7 @@ function saveGame() {
       type: c.type, x: c.x, y: c.y, hp: c.hp,
       tamed: c.tamed, angle: c.angle,
       age: c.age || 0, breedTimer: c.breedTimer || 0,
+      produceTimer: c.produceTimer || 0, penned: c.penned || false,
     })),
     npcs: npcs.map(n => ({ type: n.type, x: n.x, y: n.y, town: n.town })),
     minimapSize,
@@ -3912,13 +3967,15 @@ function loadGame(slot) {
           x: cd.x, y: cd.y,
           hp: cd.hp, maxHp: ct.hp,
           angle: cd.angle || 0,
-          state: cd.tamed ? 'follow' : 'idle',
+          state: (cd.tamed && cd.penned) ? 'idle' : (cd.tamed ? 'follow' : 'idle'),
           tamed: cd.tamed || false,
           stateTimer: Math.random() * 3,
           knockback: 0, kbAngle: 0,
-          attackTimer: 0,
+          attackTimer: 0, attackAnim: 0,
           age: cd.age || 120,
           breedTimer: cd.breedTimer || 0,
+          produceTimer: cd.produceTimer || 0,
+          penned: cd.penned || false,
         });
       }
     }
