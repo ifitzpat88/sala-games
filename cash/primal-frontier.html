@@ -585,6 +585,7 @@ const player = {
   miningProgress: 0,
   attackCooldown: 0,
   sprinting: false,
+  pitch: 0, // horizon offset in pixels (positive = look up)
 };
 
 let creatures = [];
@@ -602,7 +603,10 @@ let tradeNPC = null; // currently trading NPC
 const keys = {};
 let mouseDown = {left: false, right: false};
 let mouseDX = 0;
+let mouseDY = 0;
 let pointerLocked = false;
+const PITCH_SPEED = 0.003;
+const MAX_PITCH = 200; // max pixel offset for horizon
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -644,7 +648,7 @@ C.addEventListener('mouseup', e => {
 });
 C.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('mousemove', e => {
-  if (pointerLocked) mouseDX += e.movementX;
+  if (pointerLocked) { mouseDX += e.movementX; mouseDY += e.movementY; }
 });
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === C;
@@ -1160,24 +1164,25 @@ function castRay(px, py, angle) {
 
 function renderScene() {
   const fov = Math.PI / 3; // 60 degrees
-  const halfH = H / 2;
+  const halfH = H / 2 + player.pitch; // pitch shifts horizon
   const biome = getBiome(Math.floor(player.x), Math.floor(player.y));
   const bd = BIOMES[biome];
 
-  // Draw sky gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, halfH);
+  // Draw sky gradient (shifted by pitch)
+  const horizonY = Math.floor(halfH);
+  const skyGrad = ctx.createLinearGradient(0, Math.min(0, horizonY - H), 0, Math.max(0, horizonY));
   skyGrad.addColorStop(0, bd.sky1);
   skyGrad.addColorStop(1, bd.sky2);
   ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, W, halfH);
+  ctx.fillRect(0, 0, W, Math.max(0, horizonY));
 
-  // Draw floor gradient
-  const flrGrad = ctx.createLinearGradient(0, halfH, 0, H);
+  // Draw floor gradient (shifted by pitch)
   const gc = bd.ground;
+  const flrGrad = ctx.createLinearGradient(0, Math.max(0, horizonY), 0, Math.max(horizonY, H + Math.abs(player.pitch)));
   flrGrad.addColorStop(0, `rgb(${gc[0] >> 1},${gc[1] >> 1},${gc[2] >> 1})`);
   flrGrad.addColorStop(1, `rgb(${gc[0]},${gc[1]},${gc[2]})`);
   ctx.fillStyle = flrGrad;
-  ctx.fillRect(0, halfH, W, halfH);
+  ctx.fillRect(0, Math.max(0, horizonY), W, H - Math.max(0, horizonY));
 
   // Raycast walls
   const imgData = ctx.getImageData(0, 0, W, H);
@@ -1243,7 +1248,7 @@ function renderCreatures() {
   }).sort((a, b) => b.dist - a.dist);
 
   const fov = Math.PI / 3;
-  const halfH = H / 2;
+  const halfH = H / 2 + player.pitch;
 
   for (const s of spriteList) {
     const { creature: c, dist, dx, dy } = s;
@@ -1359,7 +1364,7 @@ function renderCreatures() {
 // ============================================================
 function renderNPCs() {
   const fov = Math.PI / 3;
-  const halfH = H / 2;
+  const halfH = H / 2 + player.pitch;
   for (const n of npcs) {
     const dx = n.x - player.x, dy = n.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1668,7 +1673,9 @@ function update(dt) {
 
   // Mouse look
   player.angle += mouseDX * ROT_SPEED;
+  player.pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, player.pitch - mouseDY * PITCH_SPEED * H * 0.5));
   mouseDX = 0;
+  mouseDY = 0;
 
   // Sprint
   player.sprinting = !!(keys['ShiftLeft'] || keys['ShiftRight']) && player.hunger > 10;
@@ -1914,7 +1921,7 @@ function saveGame() {
     worldSeed,
     blockChanges,
     player: {
-      x: player.x, y: player.y, angle: player.angle,
+      x: player.x, y: player.y, angle: player.angle, pitch: player.pitch,
       hp: player.hp, hunger: player.hunger,
       hotbar: player.hotbar,
       backpack: player.backpack,
@@ -1945,6 +1952,7 @@ function loadGame() {
     player.x = data.player.x;
     player.y = data.player.y;
     player.angle = data.player.angle;
+    player.pitch = data.player.pitch || 0;
     player.hp = data.player.hp;
     player.hunger = data.player.hunger;
     player.hotbar = data.player.hotbar;
@@ -2026,6 +2034,7 @@ function startGame(continueGame) {
     player.x = MAP_SIZE / 2 + 0.5;
     player.y = MAP_SIZE / 2 + 0.5;
     player.angle = 0;
+    player.pitch = 0;
     player.hp = 100;
     player.hunger = 100;
     player.hotbar = new Array(8).fill(null);
