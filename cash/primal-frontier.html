@@ -230,6 +230,7 @@ const ITEMS = {
   cooked_fish:{name:'Cooked Fish',color:'#AA8855',stack:16,food:35},
   empty_bucket:{name:'Empty Bucket',color:'#A0A0A0',stack:1},
   water_bucket:{name:'Water Bucket',color:'#4488CC',stack:1},
+  matches:{name:'Matches',color:'#CC6633',stack:16},
 };
 
 // ---- RECIPES ----
@@ -267,6 +268,7 @@ const RECIPES = [
   {result:'furnace_item',amt:1,cost:{stone:10,iron:5},cat:'Building'},
   {result:'boat',amt:1,cost:{wood:20,iron:5},cat:'Misc'},
   {result:'empty_bucket',amt:1,cost:{iron:3,wood:2},cat:'Tools'},
+  {result:'matches',amt:4,cost:{wood:2,stone:1},cat:'Tools'},
 ];
 
 const SMELT_RECIPES = [
@@ -306,6 +308,7 @@ const CREATURE_TYPES = {
   eagle:{name:'Eagle',hp:20,dmg:6,speed:3.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'feathers',biome:'tundra',size:0.4},
   crow:{name:'Crow',hp:10,dmg:0,speed:2.5,color:'#222222',hostile:false,tameable:false,drop:'feathers',biome:'meadow',size:0.3},
   fish:{name:'Fish',hp:5,dmg:0,speed:1.5,color:'#6688BB',hostile:false,tameable:false,drop:'raw_fish',biome:'meadow',size:0.2,aquatic:true},
+
 };
 
 // ---- BIOME DEFINITIONS ----
@@ -1212,6 +1215,7 @@ const player = {
   treeStealth: false,
   level: 0, // 0=surface, 1=underground
   digProgress: {},
+  riding: null, // reference to mounted creature
 };
 
 let creatures = [];
@@ -1285,8 +1289,18 @@ document.addEventListener('keydown', e => {
       player.selectedSlot = parseInt(e.code[5]) - 1;
       e.preventDefault();
     }
-    // Tree climbing
+    // Dismount horse / Tree climbing
     if (e.code === 'Space') {
+      if (player.riding) {
+        // Dismount horse
+        player.riding.x = player.x + Math.cos(player.angle) * 1.5;
+        player.riding.y = player.y + Math.sin(player.angle) * 1.5;
+        player.riding.state = 'idle';
+        player.riding = null;
+        notify('Dismounted');
+        e.preventDefault();
+        return;
+      }
       if (player.inTree) {
         // Climb down
         player.inTree = false;
@@ -1862,6 +1876,7 @@ function spawnCreatures() {
 function updateCreatures(dt) {
   for (let i = creatures.length - 1; i >= 0; i--) {
     const c = creatures[i];
+    if (c === player.riding) continue; // skip mounted horse AI
     const ct = CREATURE_TYPES[c.type];
     const dx = player.x - c.x;
     const dy = player.y - c.y;
@@ -2254,6 +2269,7 @@ function renderCreatures() {
 
   for (const s of spriteList) {
     const { creature: c, dist, dx, dy } = s;
+    if (c === player.riding) continue; // hide mounted horse
     if (dist < 0.3 || dist > 30) continue;
 
     const ct = CREATURE_TYPES[c.type];
@@ -2714,6 +2730,14 @@ function renderHUD() {
     ctx.fillText('SPRINTING', 12, hunY + barH + 18);
   }
 
+  // Mounted indicator
+  if (player.riding) {
+    ctx.fillStyle = '#CC8844';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('MOUNTED [Space] dismount', 12, hunY + barH + (player.sprinting ? 50 : 34));
+  }
+
   // Tree climbing indicator
   if (player.inTree) {
     ctx.fillStyle = '#88CC44';
@@ -3145,15 +3169,16 @@ function update(dt) {
   }
 
   if (!player.inTree && (moveX !== 0 || moveY !== 0)) {
-    const baseSpeed = player.sprinting ? SPRINT_SPEED : MOVE_SPEED;
+    let baseSpeed = player.sprinting ? SPRINT_SPEED : MOVE_SPEED;
+    if (player.riding) baseSpeed = 5.0; // horse gallop speed
     let speed = speedBoostTimer > 0 ? baseSpeed * 1.6 : baseSpeed;
     // Water: boat = 1.5x, swimming = 0.5x
     const onBlockMove = getBlock(Math.floor(player.x), Math.floor(player.y));
-    if (onBlockMove === T.WATER) {
+    if (onBlockMove === T.WATER && !player.riding) {
       if (hasBoat) speed *= 1.5;
       else speed *= 0.5;
     }
-    if (player.sprinting) player.hunger -= SPRINT_HUNGER * dt;
+    if (player.sprinting && !player.riding) player.hunger -= SPRINT_HUNGER * dt;
     const len = Math.sqrt(moveX * moveX + moveY * moveY);
     moveX = moveX / len * speed * dt;
     moveY = moveY / len * speed * dt;
@@ -3175,13 +3200,25 @@ function update(dt) {
       player.hp -= 20 * dt;
       if (player.hp <= 0) playerDeath();
     }
+
+    // Keep mounted horse at player position
+    if (player.riding) {
+      player.riding.x = player.x;
+      player.riding.y = player.y;
+      player.riding.angle = player.angle;
+    }
+  }
+
+  // Validate mount still exists
+  if (player.riding && !creatures.includes(player.riding)) {
+    player.riding = null;
   }
 
   // Swimming stamina
   const swimBlock = getBlock(Math.floor(player.x), Math.floor(player.y));
   if (swimBlock === T.WATER) {
-    if (hasBoat) {
-      // No stamina drain with boat
+    if (hasBoat || player.riding) {
+      // No stamina drain with boat or horse
     } else {
       player.swimStamina -= 5 * dt;
       if (player.swimStamina <= 0) {
@@ -3277,8 +3314,9 @@ function update(dt) {
 }
 
 function handleMineOrAttack(dt) {
-  // Can't mine or attack while in a tree
+  // Can't mine or attack while in a tree or on a horse
   if (player.inTree) return;
+  if (player.riding) return;
   // First check for creature attack
   if (player.attackCooldown <= 0) {
     const fov = Math.PI / 6; // narrow cone
@@ -3317,10 +3355,23 @@ function handleMineOrAttack(dt) {
     }
   }
 
-  // Mining — dig at feet when looking far down, otherwise raycast
+  // Mining — dig at feet when looking far down, dig up when underground looking up, otherwise raycast
   let mineX, mineY, mineBlock;
   let virtualDig = false; // digging through AIR ground with shovel
-  if (player.pitch < -MAX_PITCH * 0.6) {
+  let digUp = false; // digging upward from underground
+  if (player.pitch > MAX_PITCH * 0.6 && player.level === 1 && getShovelTier() > 0) {
+    // Dig upward from underground — mine ceiling to create exit hole
+    mineX = Math.floor(player.x);
+    mineY = Math.floor(player.y);
+    mineBlock = getBlockOnLayer(mineX, mineY, 1); // underground tile at feet
+    if (mineBlock === T.AIR || mineBlock === T.HOLE) {
+      // Ceiling above is virtual stone
+      mineBlock = T.STONE;
+      digUp = true;
+    } else {
+      // Mine the underground block normally
+    }
+  } else if (player.pitch < -MAX_PITCH * 0.6) {
     // Dig at feet
     mineX = Math.floor(player.x);
     mineY = Math.floor(player.y);
@@ -3366,6 +3417,29 @@ function handleMineOrAttack(dt) {
   if (Math.random() < dt * 8) SFX.mine(); // mining hit sounds
 
   if (player.miningProgress >= 1) {
+    // Dig-up from underground: looking up with shovel
+    if (digUp) {
+      const digKey = 'up_' + mineX + ',' + mineY;
+      player.digProgress[digKey] = (player.digProgress[digKey] || 0) + 1;
+      SFX.blockBreak();
+      const added = addItem('stone', 1);
+      if (added > 0) notify('+1 Stone');
+      if (player.digProgress[digKey] >= 3) {
+        // Create hole on both layers
+        setBlockOnLayer(mineX, mineY, T.HOLE, 1); // underground hole
+        setBlockOnLayer(mineX, mineY, T.HOLE, 0); // surface hole
+        delete player.digProgress[digKey];
+        notify('Dug a hole to the surface!');
+      } else {
+        notify('Digging upward... (' + player.digProgress[digKey] + '/3)');
+      }
+      gainXP(1);
+      player.miningTarget = null;
+      player.miningProgress = 0;
+      updateTorchCache();
+      return;
+    }
+
     // Dig-to-underground: surface, looking down, holding shovel, soft block (or virtual dirt ground)
     const isDiggingDown = player.level === 0 && player.pitch < -MAX_PITCH * 0.6 && getShovelTier() > 0 && (isSoftBlock(mineBlock) || virtualDig);
     if (isDiggingDown) {
@@ -3461,6 +3535,41 @@ function handleRightClick() {
     removeItem('strength_potion', 1);
     notify('Strength Boost active for 30s!'); SFX.potion();
     return;
+  }
+
+  // Mount nearby tamed horse
+  if (!player.riding && !player.inTree) {
+    for (const c of creatures) {
+      if (!c.tamed || c.type !== 'horse') continue;
+      const dx2 = c.x - player.x, dy2 = c.y - player.y;
+      if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
+        player.riding = c;
+        c.state = 'follow';
+        notify('Mounted horse! [Space] to dismount');
+        return;
+      }
+    }
+  }
+
+  // Matches → place campfire
+  if (heldId === 'matches') {
+    let placeX, placeY;
+    if (player.pitch < -MAX_PITCH * 0.5) {
+      placeX = Math.floor(player.x);
+      placeY = Math.floor(player.y);
+    } else {
+      placeX = Math.floor(player.x + Math.cos(player.angle) * 2);
+      placeY = Math.floor(player.y + Math.sin(player.angle) * 2);
+    }
+    if (placeX > 0 && placeX < MAP_SIZE - 1 && placeY > 0 && placeY < MAP_SIZE - 1) {
+      if (getBlock(placeX, placeY) === T.AIR) {
+        setBlock(placeX, placeY, T.CAMPFIRE);
+        removeItem('matches', 1);
+        updateTorchCache();
+        notify('Lit a fire!'); SFX.build();
+        return;
+      }
+    }
   }
 
   // Summon tamed animal from whistle/egg/pup
@@ -3871,6 +3980,10 @@ function playerDeath() {
   player.selectedSlot = 0;
   speedBoostTimer = 0;
   strengthBoostTimer = 0;
+  player.riding = null;
+  player.inTree = false;
+  player.treePos = null;
+  player.treeStealth = false;
   // Lose half XP on death, but keep level
   playerXP = Math.floor(playerXP / 2);
   notify('You lost all your items!');
@@ -3890,6 +4003,7 @@ function respawn() {
   player.inTree = false;
   player.treePos = null;
   player.treeStealth = false;
+  player.riding = null;
   player.digProgress = {};
   // Give minimal starter items
   addItem('wood', 5);
@@ -3962,6 +4076,7 @@ function startGame(slot, isLoad) {
     player.treeStealth = false;
     player.level = 0;
     player.digProgress = {};
+    player.riding = null;
     // Give starter items
     addItem('wood', 10);
     addItem('berries', 8);
