@@ -59,6 +59,12 @@ body::after{width:150px;height:50px;top:80px;right:15%;box-shadow:30px -10px 0 8
 .ach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}.ach-card{padding:12px 8px;border-radius:12px;text-align:center;}.ach-card.earned{background:#e8f5e9;border:2px solid var(--green-light);}.ach-card.locked{background:#f5f5f5;border:2px solid #eee;opacity:.5;}.ach-emoji{font-size:1.6rem;}.ach-name{font-size:.65rem;font-weight:700;margin-top:4px;}
 .adv-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}.adv-icon{font-size:2rem;}.adv-info{flex:1;}.adv-name{font-weight:700;font-size:.9rem;}.adv-desc{font-size:.72rem;color:var(--text-light);}.adv-cost{font-size:.72rem;color:var(--orange);font-weight:600;}
 .biz-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#e3f2fd;border-radius:10px;margin-bottom:6px;font-size:.8rem;}.biz-income{font-weight:700;color:var(--green-dark);margin-left:auto;}
+.mood-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f3e5f5;border-radius:10px;margin-bottom:12px;}.mood-label{font-size:.75rem;font-weight:600;color:#9c27b0;white-space:nowrap;}.mood-track{flex:1;height:12px;background:#f0e0f5;border-radius:6px;overflow:hidden;border:1px solid #e1bee7;}.mood-fill{height:100%;border-radius:6px;transition:width .4s,background .4s;}.mood-val{font-size:.8rem;font-weight:700;color:#9c27b0;white-space:nowrap;}.mood-emoji{font-size:1.2rem;}
+.mood-status{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;font-size:.75rem;font-weight:600;margin-bottom:12px;}.mood-status.joyful{background:#e8f5e9;color:#2e7d32;}.mood-status.happy{background:#f1f8e9;color:#558b2f;}.mood-status.meh{background:#fff8e1;color:#f57f17;}.mood-status.stressed{background:#fce4ec;color:#c62828;}.mood-status.burnout{background:#ffebee;color:#b71c1c;}
+.hangout-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}.hangout-icon{font-size:2rem;}.hangout-info{flex:1;}.hangout-name{font-weight:700;font-size:.9rem;}.hangout-desc{font-size:.72rem;color:var(--text-light);}.hangout-cost{font-size:.72rem;color:var(--orange);font-weight:600;}.hangout-mood{font-size:.72rem;color:#9c27b0;font-weight:600;}
+.friend-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;border:2px solid #eee;transition:all .2s;}.friend-card.met{border-color:#e1bee7;background:#faf5ff;}.friend-avatar{font-size:2rem;}.friend-info{flex:1;}.friend-name{font-weight:700;font-size:.9rem;}.friend-personality{font-size:.72rem;color:var(--text-light);}.friend-level{font-size:.72rem;font-weight:600;color:#9c27b0;}
+.friend-hearts{display:flex;gap:2px;margin-top:3px;}.friend-hearts span{font-size:.7rem;opacity:.25;}.friend-hearts span.filled{opacity:1;}
+.friend-perk{font-size:.68rem;color:var(--green-dark);font-weight:600;margin-top:2px;}
 @media(max-width:420px){.country-grid{grid-template-columns:repeat(2,1fr);}.map-grid{grid-template-columns:repeat(5,1fr);}.wheel-outer{width:240px;height:240px;}.wheel-canvas{width:240px;height:240px;}.ach-grid{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
@@ -69,7 +75,7 @@ body::after{width:150px;height:50px;top:80px;right:15%;box-shadow:30px -10px 0 8
 <div id="country-screen" class="screen"><div class="card"><div class="card-title">🗺️ Choose Your Country</div><div class="country-grid" id="country-grid"></div></div><button class="btn btn-red btn-sm" onclick="showScreen('title-screen');renderPassports();">Back</button></div>
 <div id="wheel-screen" class="screen"><div class="card"><div class="wheel-container"><div style="font-size:.9rem;font-weight:600;margin-bottom:10px;" id="wheel-country-label">🎯 Spinning for your town...</div><div class="wheel-outer"><div class="wheel-pointer">📍</div><canvas class="wheel-canvas" id="wheel-canvas" width="280" height="280"></canvas></div><div class="wheel-result" id="wheel-result"></div><button class="btn btn-orange btn-lg" id="spin-btn" onclick="spinWheel()">🎰 SPIN THE WHEEL!</button></div></div></div>
 <div id="town-screen" class="screen"><div class="card"><div class="town-header"><div class="town-name" id="town-name-display"></div><div class="town-country" id="town-country-display"></div><div style="font-size:.8rem;color:var(--green-dark);font-weight:600;margin-top:4px;">Click a green square to build your house! 🏠</div></div><div class="map-grid" id="town-map"></div><div style="margin-top:12px;text-align:center;"><button class="btn btn-blue" id="confirm-house-btn" style="display:none;" onclick="confirmHouse()">Confirm House Spot ✅</button></div></div></div>
-<div id="hub-screen" class="screen"><div class="hub-header"><div class="hub-avatar">🧑</div><div class="hub-info"><div class="hub-name" id="hub-name"></div><div class="hub-location" id="hub-location"></div></div><div class="hub-money" id="hub-money">$100</div><div class="hub-stage" id="hub-stage"></div></div><div class="energy-bar"><div class="energy-label">⚡ Energy</div><div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div><div class="energy-val" id="energy-val">100</div></div><div class="hub-nav" id="hub-nav"></div><div id="hub-panel"></div></div>
+<div id="hub-screen" class="screen"><div class="hub-header"><div class="hub-avatar">🧑</div><div class="hub-info"><div class="hub-name" id="hub-name"></div><div class="hub-location" id="hub-location"></div></div><div class="hub-money" id="hub-money">$100</div><div class="hub-stage" id="hub-stage"></div></div><div class="energy-bar"><div class="energy-label">⚡ Energy</div><div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div><div class="energy-val" id="energy-val">100</div></div><div class="mood-bar"><div class="mood-label"><span class="mood-emoji" id="mood-emoji">😊</span> Mood</div><div class="mood-track"><div class="mood-fill" id="mood-fill"></div></div><div class="mood-val" id="mood-val">70</div></div><div id="mood-status-bar"></div><div class="hub-nav" id="hub-nav"></div><div id="hub-panel"></div></div>
 </div>
 <div id="minigame-overlay"><div class="minigame-box" id="minigame-box"></div></div>
 <script>
@@ -246,8 +252,41 @@ var ACHIEVEMENTS=[
 {id:'space_bound',emoji:'\U0001F680',name:'Space Bound',check:function(){return G.jobsWorked&&G.jobsWorked.astro;}},
 {id:'famous',emoji:'\U0001F3AC',name:'Famous',check:function(){return G.jobsWorked&&G.jobsWorked.movie_star;}},
 {id:'legend_ach',emoji:'\U0001F30D',name:'Legend',check:function(){return G.totalEarned>=50000;}},
-{id:'maxed',emoji:'\U0001F4AF',name:'Maxed Out',check:function(){return TRAINABLE_STATS.some(function(s){return(G.stats[s.id]||0)>=100;});}}
+{id:'maxed',emoji:'\U0001F4AF',name:'Maxed Out',check:function(){return TRAINABLE_STATS.some(function(s){return(G.stats[s.id]||0)>=100;});}},
+{id:'life_of_party',emoji:'\U0001F389',name:'Life of the Party',check:function(){return(G.mood||0)>=100;}},
+{id:'social_butterfly',emoji:'\U0001F98B',name:'Social Butterfly',check:function(){return G.friends&&G.friends.length>=3;}},
+{id:'bff_ach',emoji:'\U0001F49C',name:'BFF!',check:function(){if(!G.friendLevels)return false;return Object.values(G.friendLevels).some(function(v){return v>=5;});}},
+{id:'chill_master',emoji:'\U0001F9D8',name:'Chill Master',check:function(){return G.hangoutsTotal&&G.hangoutsTotal>=20;}}
 ];
+var MOOD_LEVELS=[
+{id:'joyful',emoji:'\U0001F604',name:'Joyful',min:80,color:'#4caf50',payMult:1.25,trainBonus:1,energyRestore:100},
+{id:'happy',emoji:'\U0001F60A',name:'Happy',min:60,color:'#8bc34a',payMult:1.0,trainBonus:0,energyRestore:100},
+{id:'meh',emoji:'\U0001F610',name:'Meh',min:40,color:'#ff9800',payMult:0.9,trainBonus:0,energyRestore:100},
+{id:'stressed',emoji:'\U0001F61F',name:'Stressed',min:20,color:'#f44336',payMult:0.8,trainBonus:0,energyRestore:85},
+{id:'burnout',emoji:'\U0001F629',name:'Burnout',min:0,color:'#880000',payMult:0.7,trainBonus:0,energyRestore:70}
+];
+function getMoodLevel(mood){for(var i=0;i<MOOD_LEVELS.length;i++){if(mood>=MOOD_LEVELS[i].min)return MOOD_LEVELS[i];}return MOOD_LEVELS[MOOD_LEVELS.length-1];}
+var HANGOUT_SPOTS=[
+{id:'movies',name:'Movies',emoji:'\U0001F3AC',cost:15,moodBoost:15,statBoost:{creativity:1},desc:'Watch a blockbuster hit!',friendId:'luna'},
+{id:'restaurant',name:'Restaurant',emoji:'\U0001F355',cost:25,moodBoost:20,statBoost:{charisma:1},desc:'Enjoy a fancy meal!',friendId:'mia'},
+{id:'park',name:'Amusement Park',emoji:'\U0001F3A2',cost:30,moodBoost:25,statBoost:{jumping:1},desc:'Ride the roller coasters!',friendId:'max'},
+{id:'spa',name:'Spa Day',emoji:'\U0001F9D6',cost:40,moodBoost:30,statBoost:{health:3},desc:'Total relaxation!',friendId:'rex'},
+{id:'concert',name:'Concert',emoji:'\U0001F3B5',cost:20,moodBoost:15,statBoost:{charisma:1},desc:'Rock out to live music!',friendId:'nova'},
+{id:'beach',name:'Beach Day',emoji:'\U0001F3D6\uFE0F',cost:10,moodBoost:12,statBoost:{},desc:'Sun, sand and waves!',friendId:'kai'},
+{id:'arcade',name:'Arcade',emoji:'\U0001F579\uFE0F',cost:15,moodBoost:18,statBoost:{intelligence:1},desc:'High scores and fun!',friendId:'sam'},
+{id:'museum',name:'Museum',emoji:'\U0001F3DB\uFE0F',cost:12,moodBoost:10,statBoost:{intelligence:2},desc:'Discover amazing things!',friendId:'zoe'}
+];
+var FRIENDS_DATA=[
+{id:'luna',name:'Luna',emoji:'\U0001F467',personality:'Creative dreamer who loves art',hangout:'movies',gift:{stat:'creativity',val:1},giftDesc:'+1 Creativity'},
+{id:'max',name:'Max',emoji:'\U0001F466',personality:'Sporty adventurer, always active',hangout:'park',gift:{stat:'strength',val:1},giftDesc:'+1 Strength'},
+{id:'zoe',name:'Zoe',emoji:'\U0001F469\u200D\U0001F393',personality:'Brainy bookworm and puzzle lover',hangout:'museum',gift:{stat:'intelligence',val:1},giftDesc:'+1 Intelligence'},
+{id:'kai',name:'Kai',emoji:'\U0001F3C4',personality:'Chill surfer who loves nature',hangout:'beach',gift:{energy:5},giftDesc:'+5 Energy'},
+{id:'mia',name:'Mia',emoji:'\U0001F478',personality:'Fashionista with great taste',hangout:'restaurant',gift:{money:10},giftDesc:'+$10'},
+{id:'sam',name:'Sam',emoji:'\U0001F9D2',personality:'Class clown, always funny',hangout:'arcade',gift:{stat:'charisma',val:1},giftDesc:'+1 Charisma'},
+{id:'nova',name:'Nova',emoji:'\U0001F469\u200D\U0001F3A4',personality:'Musical genius, plays 5 instruments',hangout:'concert',gift:{stat:'creativity',val:1},giftDesc:'+1 Creativity'},
+{id:'rex',name:'Rex',emoji:'\U0001F9D1\u200D\U0001F33E',personality:'Nature explorer and animal lover',hangout:'spa',gift:{health:3},giftDesc:'+3 Health'}
+];
+var FRIEND_LEVEL_NAMES=['Stranger','Acquaintance','Buddy','Good Friend','Best Friend','BFF \U0001F49C'];
 var SLEEP_POS=[
 function(){var x=rng(15,50);G.money+=x;G.totalEarned+=x;return'Found $'+x+' on the ground! \U0001F4B5';},
 function(){var x=rng(50,100);G.money+=x;G.totalEarned+=x;return'Won a local contest! +$'+x+' \U0001F389';},
@@ -271,8 +310,8 @@ function(){G.stats.creativity=(G.stats.creativity||5)+2;return'Meteor shower! Cr
 var SAVE_KEY='spinalife_saves';
 function loadAllSaves(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||[null,null,null];}catch(e){return[null,null,null];}}
 function saveAllSaves(sv){localStorage.setItem(SAVE_KEY,JSON.stringify(sv));}
-function newGameState(name){return{name:name,money:100,energy:100,maxEnergy:100,country:null,town:null,housePos:null,day:1,stats:{health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5},pets:[],furniture:[],clothing:[],tech:[],vehicles:[],luxury:[],businesses:[],achievements:[],totalEarned:0,totalTrained:0,buffDoubleTrain:false,jobsWorked:{}};}
-function migrateSave(g){if(!g)return g;['pets','furniture','clothing','tech','vehicles','luxury','businesses','achievements'].forEach(function(k){if(!Array.isArray(g[k]))g[k]=[];});if(!g.jobsWorked||typeof g.jobsWorked!=='object')g.jobsWorked={};if(!g.stats||typeof g.stats!=='object')g.stats={};var ds={health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5};Object.keys(ds).forEach(function(k){if(g.stats[k]===undefined)g.stats[k]=ds[k];});if(g.totalEarned===undefined)g.totalEarned=0;if(g.totalTrained===undefined)g.totalTrained=0;if(g.buffDoubleTrain===undefined)g.buffDoubleTrain=false;if(g.maxEnergy===undefined)g.maxEnergy=100;if(g.day===undefined)g.day=1;if(g.money===undefined)g.money=100;if(g.energy===undefined)g.energy=100;return g;}
+function newGameState(name){return{name:name,money:100,energy:100,maxEnergy:100,country:null,town:null,housePos:null,day:1,stats:{health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5},pets:[],furniture:[],clothing:[],tech:[],vehicles:[],luxury:[],businesses:[],achievements:[],totalEarned:0,totalTrained:0,buffDoubleTrain:false,jobsWorked:{},mood:70,friends:[],friendLevels:{},hangoutsTotal:0};}
+function migrateSave(g){if(!g)return g;['pets','furniture','clothing','tech','vehicles','luxury','businesses','achievements'].forEach(function(k){if(!Array.isArray(g[k]))g[k]=[];});if(!g.jobsWorked||typeof g.jobsWorked!=='object')g.jobsWorked={};if(!g.stats||typeof g.stats!=='object')g.stats={};var ds={health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5};Object.keys(ds).forEach(function(k){if(g.stats[k]===undefined)g.stats[k]=ds[k];});if(g.totalEarned===undefined)g.totalEarned=0;if(g.totalTrained===undefined)g.totalTrained=0;if(g.buffDoubleTrain===undefined)g.buffDoubleTrain=false;if(g.maxEnergy===undefined)g.maxEnergy=100;if(g.day===undefined)g.day=1;if(g.money===undefined)g.money=100;if(g.energy===undefined)g.energy=100;if(g.mood===undefined)g.mood=70;if(!Array.isArray(g.friends))g.friends=[];if(!g.friendLevels||typeof g.friendLevels!=='object')g.friendLevels={};if(g.hangoutsTotal===undefined)g.hangoutsTotal=0;return g;}
 var saves=loadAllSaves(),currentSlot=-1,G=null,selectedHouseCell=-1,currentShopTab='pet',minigameData={};
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
 function rng(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
@@ -293,8 +332,8 @@ function renderTownMap(){var country=COUNTRIES.find(function(c){return c.id===G.
 function selectHouseSpot(index,cell){document.querySelectorAll('.map-cell.house').forEach(function(c){c.classList.remove('house');c.classList.add('available');c.textContent='';});cell.classList.remove('available');cell.classList.add('house');cell.textContent='\U0001F3E0';selectedHouseCell=index;document.getElementById('confirm-house-btn').style.display='inline-flex';}
 function confirmHouse(){G.housePos=selectedHouseCell;saveGame();enterHub();}
 function enterHub(){showScreen('hub-screen');renderHub();showPanel('stats');}
-function renderHub(){var country=COUNTRIES.find(function(c){return c.id===G.country;}),stage=getStage(G.totalEarned),progress=getStageProgress(G.totalEarned),si=getStageIndex(G.totalEarned),ns=si<LIFE_STAGES.length-1?LIFE_STAGES[si+1]:null;document.getElementById('hub-name').textContent=G.name;document.getElementById('hub-location').textContent=country.flag+' '+G.town+' | Day '+G.day;document.getElementById('hub-money').textContent='$'+G.money;document.getElementById('energy-fill').style.width=(G.energy/G.maxEnergy*100)+'%';document.getElementById('energy-val').textContent=G.energy;var se=document.getElementById('hub-stage');se.innerHTML='<div class="stage-label"><span>'+stage.emoji+' '+stage.name+'</span>'+(ns?'<span style="font-size:.65rem;color:var(--text-light);">Next: '+ns.emoji+' '+ns.name+'</span>':'<span style="font-size:.65rem;color:var(--text-light);">MAX!</span>')+'</div><div class="stage-bar"><div class="stage-fill" style="width:'+progress+'%;background:'+stage.color+'"></div></div>';var ne=document.getElementById('hub-nav'),w=hasStage('wealthy'),h='';h+='<button class="nav-btn" onclick="showPanel(\'stats\')"><div class="nav-icon">\U0001F4CA</div><div class="nav-label">Stats</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'gym\')"><div class="nav-icon">\U0001F3CB\uFE0F</div><div class="nav-label">Gym</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'jobs\')"><div class="nav-icon">\U0001F4BC</div><div class="nav-label">Jobs</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'shop\')"><div class="nav-icon">\U0001F6D2</div><div class="nav-label">Shop</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'home\')"><div class="nav-icon">\U0001F3E0</div><div class="nav-label">Home</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'achievements\')"><div class="nav-icon">\U0001F3C6</div><div class="nav-label">Awards</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'adventures\')"><div class="nav-icon">\U0001F5FA\uFE0F</div><div class="nav-label">Adventures</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'business\')"><div class="nav-icon">\U0001F4B0</div><div class="nav-label">Business</div></button>';h+='<button class="nav-btn" onclick="doSleep()"><div class="nav-icon">\U0001F634</div><div class="nav-label">Sleep</div></button>';ne.innerHTML=h;}
-function showPanel(panel){var el=document.getElementById('hub-panel');switch(panel){case'stats':renderStatsPanel(el);break;case'gym':renderGymPanel(el);break;case'jobs':renderJobsPanel(el);break;case'shop':renderShopPanel(el);break;case'home':renderHomePanel(el);break;case'achievements':renderAchievementsPanel(el);break;case'adventures':renderAdventuresPanel(el);break;case'business':renderBusinessPanel(el);break;}}
+function renderHub(){var country=COUNTRIES.find(function(c){return c.id===G.country;}),stage=getStage(G.totalEarned),progress=getStageProgress(G.totalEarned),si=getStageIndex(G.totalEarned),ns=si<LIFE_STAGES.length-1?LIFE_STAGES[si+1]:null;document.getElementById('hub-name').textContent=G.name;document.getElementById('hub-location').textContent=country.flag+' '+G.town+' | Day '+G.day;document.getElementById('hub-money').textContent='$'+G.money;document.getElementById('energy-fill').style.width=(G.energy/G.maxEnergy*100)+'%';document.getElementById('energy-val').textContent=G.energy;var ml=getMoodLevel(G.mood);document.getElementById('mood-fill').style.width=Math.min(100,G.mood)+'%';document.getElementById('mood-fill').style.background=ml.color;document.getElementById('mood-val').textContent=Math.round(G.mood);document.getElementById('mood-emoji').textContent=ml.emoji;var msb=document.getElementById('mood-status-bar');msb.innerHTML='<div class="mood-status '+ml.id+'">'+ml.emoji+' '+ml.name+(ml.payMult!==1?' | Job pay '+(ml.payMult>1?'+':'')+Math.round((ml.payMult-1)*100)+'%':'')+(ml.energyRestore<100?' | Sleep energy: '+ml.energyRestore:'')+(ml.trainBonus>0?' | Training +'+ml.trainBonus:'')+'</div>';var se=document.getElementById('hub-stage');se.innerHTML='<div class="stage-label"><span>'+stage.emoji+' '+stage.name+'</span>'+(ns?'<span style="font-size:.65rem;color:var(--text-light);">Next: '+ns.emoji+' '+ns.name+'</span>':'<span style="font-size:.65rem;color:var(--text-light);">MAX!</span>')+'</div><div class="stage-bar"><div class="stage-fill" style="width:'+progress+'%;background:'+stage.color+'"></div></div>';var ne=document.getElementById('hub-nav'),w=hasStage('wealthy'),h='';h+='<button class="nav-btn" onclick="showPanel(\'stats\')"><div class="nav-icon">\U0001F4CA</div><div class="nav-label">Stats</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'gym\')"><div class="nav-icon">\U0001F3CB\uFE0F</div><div class="nav-label">Gym</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'jobs\')"><div class="nav-icon">\U0001F4BC</div><div class="nav-label">Jobs</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'shop\')"><div class="nav-icon">\U0001F6D2</div><div class="nav-label">Shop</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'home\')"><div class="nav-icon">\U0001F3E0</div><div class="nav-label">Home</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'fun\')"><div class="nav-icon">\U0001F389</div><div class="nav-label">Fun</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'friends\')"><div class="nav-icon">\U0001F46B</div><div class="nav-label">Friends</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'achievements\')"><div class="nav-icon">\U0001F3C6</div><div class="nav-label">Awards</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'adventures\')"><div class="nav-icon">\U0001F5FA\uFE0F</div><div class="nav-label">Adventures</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'business\')"><div class="nav-icon">\U0001F4B0</div><div class="nav-label">Business</div></button>';h+='<button class="nav-btn" onclick="doSleep()"><div class="nav-icon">\U0001F634</div><div class="nav-label">Sleep</div></button>';ne.innerHTML=h;}
+function showPanel(panel){var el=document.getElementById('hub-panel');switch(panel){case'stats':renderStatsPanel(el);break;case'gym':renderGymPanel(el);break;case'jobs':renderJobsPanel(el);break;case'shop':renderShopPanel(el);break;case'home':renderHomePanel(el);break;case'achievements':renderAchievementsPanel(el);break;case'adventures':renderAdventuresPanel(el);break;case'business':renderBusinessPanel(el);break;case'fun':renderFunPanel(el);break;case'friends':renderFriendsPanel(el);break;}}
 
 // ============================================================
 //  PANEL RENDERERS
@@ -329,8 +368,10 @@ el.innerHTML=h;
 function startTraining(stat,minigameType){
 if(G.energy<15){showToast('Not enough energy! \uD83D\uDE34');return;}
 G.energy-=15;renderHub();
+G.mood=Math.max(0,G.mood-3);
 startMinigame(minigameType,stat,function(score){
 var gain=Math.max(1,Math.floor(score));
+var moodTB=getMoodLevel(G.mood).trainBonus;if(moodTB>0)gain+=moodTB;
 if(G.buffDoubleTrain){gain*=2;G.buffDoubleTrain=false;}
 G.stats[stat]=Math.min(100,(G.stats[stat]||5)+gain);
 G.totalTrained+=gain;
@@ -365,12 +406,16 @@ var canWork=true;
 Object.keys(j.req).forEach(function(k){if((G.stats[k]||0)<j.req[k])canWork=false;});
 if(!canWork)return;
 G.energy-=j.energyCost;
+var moodLvl=getMoodLevel(G.mood);
 var bonus=rng(0,Math.floor(j.pay*0.3));
-var earned=j.pay+bonus;
+var earned=Math.round((j.pay+bonus)*moodLvl.payMult);
 G.money+=earned;G.totalEarned+=earned;
+var moodLoss=Math.floor(j.energyCost*0.4)+rng(1,3);
+G.mood=Math.max(0,G.mood-moodLoss);
 if(!G.jobsWorked[jobId])G.jobsWorked[jobId]=0;
 G.jobsWorked[jobId]++;
-showToast(j.emoji+' Earned $'+earned+'!'+(bonus>0?' (Bonus: $'+bonus+')':''));
+var moodNote=moodLvl.payMult>1?' \U0001F604 Mood bonus!':moodLvl.payMult<1?' \U0001F61F Mood penalty':'';
+showToast(j.emoji+' Earned $'+earned+'!'+(bonus>0?' (Bonus: $'+bonus+')':'')+moodNote);
 checkAchievements();saveGame();renderHub();showPanel('jobs');
 }
 
@@ -409,7 +454,8 @@ showToast(item.emoji+' Used '+item.name+'!');
 var catMap={pet:'pets',furniture:'furniture',fashion:'clothing',tech:'tech',vehicle:'vehicles',luxury:'luxury',business:'businesses'};
 var arr=catMap[item.category];
 if(arr&&G[arr].indexOf(item.id)===-1)G[arr].push(item.id);
-showToast(item.emoji+' Bought '+item.name+'!');
+G.mood=Math.min(100,(G.mood||70)+3);
+showToast(item.emoji+' Bought '+item.name+'! \U0001F60A +3 mood');
 }
 checkAchievements();saveGame();renderHub();showPanel('shop');
 }
@@ -472,6 +518,7 @@ function doAdventure(advId){
 var a=ADVENTURES.find(function(x){return x.id===advId;});
 if(!a||G.money<a.cost||G.energy<a.energy)return;
 G.money-=a.cost;G.energy-=a.energy;
+G.mood=Math.max(0,(G.mood||70)-5);
 var msgs=[];
 if(a.rewards.all_stats){var v=a.rewards.all_stats;TRAINABLE_STATS.forEach(function(s){G.stats[s.id]=Math.min(100,(G.stats[s.id]||5)+v);});msgs.push('All stats +'+v+'!');}
 if(a.rewards.all_stats_rng){var mn=a.rewards.all_stats_rng[0],mx=a.rewards.all_stats_rng[1];TRAINABLE_STATS.forEach(function(s){var v=rng(mn,mx);G.stats[s.id]=Math.min(100,(G.stats[s.id]||5)+v);});msgs.push('All stats boosted!');}
@@ -502,6 +549,110 @@ el.innerHTML=h;
 }
 
 // ============================================================
+//  HANGOUT SPOTS (FUN PANEL)
+// ============================================================
+
+function renderFunPanel(el){
+var ml=getMoodLevel(G.mood);
+var h='<div class="card"><div class="card-title">\uD83C\uDF89 Hangout Spots</div>';
+h+='<div style="background:#f3e5f5;padding:8px 12px;border-radius:10px;font-size:.82rem;margin-bottom:12px;">'+ml.emoji+' Current mood: <strong>'+ml.name+'</strong> ('+Math.round(G.mood)+'/100) — Go have fun to boost your mood!</div>';
+HANGOUT_SPOTS.forEach(function(spot){
+var canAfford=G.money>=spot.cost;
+var boostParts=[];
+boostParts.push('\uD83D\uDE0A +'+spot.moodBoost+' mood');
+if(spot.statBoost){Object.keys(spot.statBoost).forEach(function(k){var sd=STAT_DEFS.find(function(s){return s.id===k;});if(sd)boostParts.push(sd.emoji+' +'+spot.statBoost[k]+' '+sd.name);});}
+var friendHere=FRIENDS_DATA.find(function(f){return f.hangout===spot.id;});
+var friendMet=G.friends&&G.friends.indexOf(friendHere?friendHere.id:'')===-1;
+h+='<div class="hangout-card"><div class="hangout-icon">'+spot.emoji+'</div><div class="hangout-info"><div class="hangout-name">'+spot.name+'</div><div class="hangout-desc">'+spot.desc+'</div><div class="hangout-mood">'+boostParts.join(' | ')+'</div>';
+if(friendHere&&friendMet)h+='<div style="font-size:.68rem;color:#9c27b0;margin-top:2px;">\u2728 You might meet someone here...</div>';
+if(friendHere&&!friendMet)h+='<div style="font-size:.68rem;color:var(--green-dark);margin-top:2px;">'+friendHere.emoji+' '+friendHere.name+' hangs out here!</div>';
+h+='</div><button class="btn btn-purple btn-sm" onclick="doHangout(\''+spot.id+'\')"'+(canAfford?'':' disabled')+'>$'+spot.cost+'</button></div>';
+});
+h+='</div>';
+el.innerHTML=h;
+}
+
+function doHangout(spotId){
+var spot=HANGOUT_SPOTS.find(function(s){return s.id===spotId;});
+if(!spot||G.money<spot.cost)return;
+G.money-=spot.cost;
+G.mood=Math.min(100,(G.mood||70)+spot.moodBoost);
+if(!G.hangoutsTotal)G.hangoutsTotal=0;
+G.hangoutsTotal++;
+var msgs=[spot.emoji+' '+spot.name+'!','\uD83D\uDE0A Mood +'+spot.moodBoost];
+if(spot.statBoost){
+Object.keys(spot.statBoost).forEach(function(k){
+G.stats[k]=Math.min(100,(G.stats[k]||5)+spot.statBoost[k]);
+var sd=STAT_DEFS.find(function(s){return s.id===k;});
+if(sd)msgs.push(sd.emoji+' '+sd.name+' +'+spot.statBoost[k]);
+});
+}
+var friendHere=FRIENDS_DATA.find(function(f){return f.hangout===spotId;});
+if(friendHere){
+var alreadyMet=G.friends&&G.friends.indexOf(friendHere.id)!==-1;
+if(!alreadyMet){
+var meetChance=0.35;
+if(Math.random()<meetChance){
+if(!G.friends)G.friends=[];
+G.friends.push(friendHere.id);
+if(!G.friendLevels)G.friendLevels={};
+G.friendLevels[friendHere.id]=1;
+msgs.push('\u2728 Met '+friendHere.emoji+' '+friendHere.name+'!');
+}
+}else{
+var lvl=G.friendLevels[friendHere.id]||1;
+if(lvl<5){
+var growChance=0.3+lvl*0.05;
+if(Math.random()<growChance){
+G.friendLevels[friendHere.id]=lvl+1;
+msgs.push(friendHere.emoji+' '+friendHere.name+' — '+FRIEND_LEVEL_NAMES[lvl+1]+'!');
+}
+}
+G.mood=Math.min(100,G.mood+3);
+}
+}
+showToast(msgs.join(' | '));
+checkAchievements();saveGame();renderHub();showPanel('fun');
+}
+
+// ============================================================
+//  FRIENDS PANEL
+// ============================================================
+
+function renderFriendsPanel(el){
+var h='<div class="card"><div class="card-title">\uD83D\uDC6B Your Friends ('+((G.friends&&G.friends.length)||0)+'/'+FRIENDS_DATA.length+')</div>';
+if(!G.friends||G.friends.length===0){
+h+='<div style="text-align:center;padding:20px;color:var(--text-light);">No friends yet! Visit Hangout Spots to meet people \uD83C\uDF89</div>';
+}else{
+G.friends.forEach(function(fid){
+var fd=FRIENDS_DATA.find(function(f){return f.id===fid;});
+if(!fd)return;
+var lvl=G.friendLevels[fid]||0;
+var lvlName=FRIEND_LEVEL_NAMES[Math.min(lvl,5)];
+h+='<div class="friend-card met"><div class="friend-avatar">'+fd.emoji+'</div><div class="friend-info"><div class="friend-name">'+fd.name+'</div><div class="friend-personality">'+fd.personality+'</div><div class="friend-level">'+lvlName+'</div><div class="friend-hearts">';
+for(var i=0;i<5;i++)h+='<span'+(i<lvl?' class="filled"':'')+'>'+'\u2764\uFE0F'+'</span>';
+h+='</div>';
+if(lvl>=4)h+='<div class="friend-perk">\uD83C\uDF81 Daily gift: '+fd.giftDesc+'</div>';
+h+='</div>';
+var hangoutSpot=HANGOUT_SPOTS.find(function(s){return s.id===fd.hangout;});
+if(hangoutSpot)h+='<div style="text-align:center;font-size:.7rem;color:var(--text-light);">Hangs out at<br>'+hangoutSpot.emoji+' '+hangoutSpot.name+'</div>';
+h+='</div>';
+});
+}
+h+='</div>';
+var unmet=FRIENDS_DATA.filter(function(f){return!G.friends||G.friends.indexOf(f.id)===-1;});
+if(unmet.length>0){
+h+='<div class="card"><div class="card-title">\u2753 Undiscovered ('+unmet.length+')</div>';
+unmet.forEach(function(fd){
+var hangoutSpot=HANGOUT_SPOTS.find(function(s){return s.id===fd.hangout;});
+h+='<div class="friend-card"><div class="friend-avatar" style="opacity:.3;">\u2753</div><div class="friend-info"><div class="friend-name" style="color:#aaa;">???</div><div class="friend-personality" style="color:#ccc;">Visit '+hangoutSpot.emoji+' '+hangoutSpot.name+' to meet them!</div></div></div>';
+});
+h+='</div>';
+}
+el.innerHTML=h;
+}
+
+// ============================================================
 //  SLEEP / NEXT DAY
 // ============================================================
 
@@ -515,10 +666,31 @@ if(roll<0.3){eventMsg=SLEEP_POS[rng(0,SLEEP_POS.length-1)]();}
 else if(roll<0.45){eventMsg=SLEEP_NEG[rng(0,SLEEP_NEG.length-1)]();}
 else if(roll<0.65){eventMsg=SLEEP_NEU[rng(0,SLEEP_NEU.length-1)]();}
 else{eventMsg='Peaceful sleep! \uD83D\uDE34';}
-G.energy=G._noisy?80:G.maxEnergy;delete G._noisy;
+var moodLvl=getMoodLevel(G.mood);
+var baseEnergy=G._noisy?80:moodLvl.energyRestore;
+G.energy=Math.min(G.maxEnergy,baseEnergy);delete G._noisy;
+G.mood=Math.min(100,G.mood+rng(8,14));
+var friendGiftMsgs=[];
+if(G.friends&&G.friends.length>0){
+G.friends.forEach(function(fid){
+var lvl=G.friendLevels[fid]||0;
+if(lvl>=4){
+var fd=FRIENDS_DATA.find(function(f){return f.id===fid;});
+if(fd&&fd.gift){
+if(fd.gift.stat)G.stats[fd.gift.stat]=Math.min(100,(G.stats[fd.gift.stat]||5)+fd.gift.val);
+if(fd.gift.energy)G.energy=Math.min(G.maxEnergy,G.energy+fd.gift.energy);
+if(fd.gift.money){G.money+=fd.gift.money;G.totalEarned+=fd.gift.money;}
+if(fd.gift.health)G.stats.health=Math.min(100,(G.stats.health||50)+fd.gift.health);
+friendGiftMsgs.push(fd.emoji+fd.name+': '+fd.giftDesc);
+}
+}
+if(lvl>=1&&lvl<5&&Math.random()<0.08){G.friendLevels[fid]=lvl+1;friendGiftMsgs.push(fd?fd.emoji+' '+fd.name+' friendship grew!':fid+' friendship grew!');}
+});
+}
 var msg='\uD83C\uDF05 Day '+G.day;
 if(bizIncome>0)msg+=' | \uD83D\uDCB0 Business: +$'+bizIncome;
 msg+=' | '+eventMsg;
+if(friendGiftMsgs.length>0)msg+=' | \uD83D\uDC9C Friends: '+friendGiftMsgs.join(', ');
 showToast(msg);
 checkAchievements();saveGame();renderHub();showPanel('stats');
 }
