@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v2.0.0</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v2.1.0</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -115,7 +115,8 @@ const T = {
   HOUSE_WALL:28, THATCH_ROOF:29, MARKET_STALL:30, GLASS:31,
   CAMPFIRE:32, CHEST:33,
   SAPLING:34, YOUNG_TREE:35, OAK:36, PINE:37, JUNGLE_TREE:38, PALM:39,
-  FURNACE:40, REINFORCED_STONE:41, REINFORCED_IRON:42, STEEL_BLOCK:43, GOLD_BLOCK:44
+  FURNACE:40, REINFORCED_STONE:41, REINFORCED_IRON:42, STEEL_BLOCK:43, GOLD_BLOCK:44,
+  HOLE:45
 };
 
 const TILE_INFO = {
@@ -157,6 +158,7 @@ const TILE_INFO = {
   [T.REINFORCED_IRON]:{name:'Reinforced Iron',color:[0x70,0x60,0x55],hits:30,drop:'iron',dropAmt:2,wh:1.0},
   [T.STEEL_BLOCK]:{name:'Steel Block',color:[0x88,0x88,0x90],hits:40,drop:'iron',dropAmt:3,wh:1.0},
   [T.GOLD_BLOCK]:{name:'Gold Block',color:[0xD4,0xA8,0x20],hits:25,drop:'gold',dropAmt:2,wh:1.0},
+  [T.HOLE]:{name:'Hole',color:[0x33,0x22,0x11],hits:999,wh:0.2},
 };
 
 // ---- ITEMS ----
@@ -221,6 +223,13 @@ const ITEMS = {
   gold_block:{name:'Gold Block',color:'#D4A820',placeTile:T.GOLD_BLOCK,stack:64},
   furnace_item:{name:'Furnace',color:'#606060',placeTile:T.FURNACE,stack:16},
   boat:{name:'Boat',color:'#8B6B3B',stack:1,tool:'boat'},
+  milk:{name:'Milk',color:'#EEEEEE',stack:16,food:15},
+  wool:{name:'Wool',color:'#E8E0D0',stack:64},
+  feathers:{name:'Feathers',color:'#CCBBAA',stack:64},
+  raw_fish:{name:'Raw Fish',color:'#6688BB',stack:16,food:8},
+  cooked_fish:{name:'Cooked Fish',color:'#AA8855',stack:16,food:35},
+  empty_bucket:{name:'Empty Bucket',color:'#A0A0A0',stack:1},
+  water_bucket:{name:'Water Bucket',color:'#4488CC',stack:1},
 };
 
 // ---- RECIPES ----
@@ -257,6 +266,7 @@ const RECIPES = [
   {result:'iron_shovel',amt:1,cost:{wood:2,iron:4},cat:'Tools'},
   {result:'furnace_item',amt:1,cost:{stone:10,iron:5},cat:'Building'},
   {result:'boat',amt:1,cost:{wood:20,iron:5},cat:'Misc'},
+  {result:'empty_bucket',amt:1,cost:{iron:3,wood:2},cat:'Tools'},
 ];
 
 const SMELT_RECIPES = [
@@ -267,6 +277,7 @@ const SMELT_RECIPES = [
   {input:{iron_ingot:1,wood:2},fuel:{wood:2},result:'reinforced_iron',amt:2,name:'Reinforced Iron'},
   {input:{steel_ingot:1,wood:2},fuel:{wood:2},result:'steel_block',amt:2,name:'Steel Block'},
   {input:{gold_ingot:1,wood:2},fuel:{wood:2},result:'gold_block',amt:2,name:'Gold Block'},
+  {input:{raw_fish:1},fuel:{wood:1},result:'cooked_fish',amt:1,name:'Cook Fish'},
 ];
 
 // ---- CREATURE TYPES ----
@@ -288,6 +299,13 @@ const CREATURE_TYPES = {
   parrot:{name:'Parrot',hp:12,dmg:0,speed:1.8,color:'#22CC44',hostile:false,tameable:true,drop:'raw_meat',biome:'jungle',size:0.3},
   mountain_lion:{name:'Mountain Lion',hp:45,dmg:14,speed:2.6,color:'#C0A060',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.7},
   camel:{name:'Camel',hp:50,dmg:0,speed:1.6,color:'#D4B478',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.9},
+  cow:{name:'Cow',hp:50,dmg:0,speed:1.0,color:'#8B6B4B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85,specialDrop:'milk'},
+  pig:{name:'Pig',hp:30,dmg:0,speed:1.4,color:'#DDA0A0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6},
+  sheep:{name:'Sheep',hp:25,dmg:0,speed:1.2,color:'#E8E0D0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'wool'},
+  goat:{name:'Goat',hp:30,dmg:3,speed:1.6,color:'#B0A090',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.55},
+  eagle:{name:'Eagle',hp:20,dmg:6,speed:3.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'feathers',biome:'tundra',size:0.4},
+  crow:{name:'Crow',hp:10,dmg:0,speed:2.5,color:'#222222',hostile:false,tameable:false,drop:'feathers',biome:'meadow',size:0.3},
+  fish:{name:'Fish',hp:5,dmg:0,speed:1.5,color:'#6688BB',hostile:false,tameable:false,drop:'raw_fish',biome:'meadow',size:0.2,aquatic:true},
 };
 
 // ---- BIOME DEFINITIONS ----
@@ -522,6 +540,13 @@ function genTex(id, baseR, baseG, baseB, pattern) {
         const gleam = Math.sin(x * 0.6) * Math.cos(y * 0.4) * 20;
         r = Math.min(255, r + gleam); g = Math.min(255, g + gleam * 0.7);
         if ((x + y) % 5 === 0) { r += 15; g += 10; }
+      } else if (pattern === 'hole') {
+        // Dark circular pit
+        const hcx = x - 8, hcy = y - 8;
+        const hdist = Math.sqrt(hcx * hcx + hcy * hcy);
+        if (hdist < 6) { r = 0x11; g = 0x0A; b = 0x05; }
+        else if (hdist < 7) { r = 0x44; g = 0x33; b = 0x22; }
+        else { r = 0; g = 0; b = 0; }
       }
       data[i] = Math.max(0, Math.min(255, r));
       data[i + 1] = Math.max(0, Math.min(255, g));
@@ -570,6 +595,7 @@ function initTextures() {
   genTex(T.REINFORCED_IRON, 0x70, 0x60, 0x55, 'reinforced');
   genTex(T.STEEL_BLOCK, 0x88, 0x88, 0x90, 'steel');
   genTex(T.GOLD_BLOCK, 0xD4, 0xA8, 0x20, 'gold_block');
+  genTex(T.HOLE, 0x33, 0x22, 0x11, 'hole');
 }
 
 // ============================================================
@@ -588,6 +614,8 @@ function rngInt(min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 // ============================================================
 let worldMap = null;
 let blockChanges = {}; // delta storage for save
+let undergroundMap = null;
+let undergroundBlockChanges = {};
 
 function getBiome(x, y) {
   const cx = MAP_SIZE / 2, cy = MAP_SIZE / 2;
@@ -763,11 +791,23 @@ function generateWorld(worldSeed) {
   // Generate towns
   generateTowns(worldSeed);
 
-  // Apply saved block changes
+  // Generate underground
+  generateUnderground(worldSeed);
+
+  // Apply saved block changes (surface)
   for (const key in blockChanges) {
     const [bx, by] = key.split(',').map(Number);
     if (by >= 0 && by < MAP_SIZE && bx >= 0 && bx < MAP_SIZE)
       worldMap[by * MAP_SIZE + bx] = blockChanges[key];
+  }
+
+  // Apply underground block changes
+  if (undergroundMap) {
+    for (const key in undergroundBlockChanges) {
+      const [bx, by] = key.split(',').map(Number);
+      if (by >= 0 && by < MAP_SIZE && bx >= 0 && bx < MAP_SIZE)
+        undergroundMap[by * MAP_SIZE + bx] = undergroundBlockChanges[key];
+    }
   }
 }
 
@@ -935,15 +975,92 @@ function buildMegaTown(cx, cy) {
   }
 }
 
+function generateUnderground(ws) {
+  setSeed(ws + 9999);
+  undergroundMap = new Uint8Array(MAP_SIZE * MAP_SIZE);
+  // Fill with stone
+  for (let i = 0; i < MAP_SIZE * MAP_SIZE; i++) undergroundMap[i] = T.STONE;
+  // Cellular automata caves: seed 45% AIR
+  const tempGrid = new Uint8Array(MAP_SIZE * MAP_SIZE);
+  for (let y = 1; y < MAP_SIZE - 1; y++) {
+    for (let x = 1; x < MAP_SIZE - 1; x++) {
+      tempGrid[y * MAP_SIZE + x] = rng() < 0.45 ? T.AIR : T.STONE;
+    }
+  }
+  // 4 iterations of smoothing
+  for (let iter = 0; iter < 4; iter++) {
+    const next = new Uint8Array(MAP_SIZE * MAP_SIZE);
+    for (let y = 1; y < MAP_SIZE - 1; y++) {
+      for (let x = 1; x < MAP_SIZE - 1; x++) {
+        let stoneCount = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (tempGrid[(y + dy) * MAP_SIZE + (x + dx)] === T.STONE) stoneCount++;
+          }
+        }
+        next[y * MAP_SIZE + x] = stoneCount >= 5 ? T.STONE : T.AIR;
+      }
+    }
+    for (let i = 0; i < MAP_SIZE * MAP_SIZE; i++) tempGrid[i] = next[i];
+  }
+  // Copy smoothed result
+  for (let y = 0; y < MAP_SIZE; y++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      const idx = y * MAP_SIZE + x;
+      if (x === 0 || y === 0 || x === MAP_SIZE - 1 || y === MAP_SIZE - 1) {
+        undergroundMap[idx] = T.STONE;
+      } else {
+        undergroundMap[idx] = tempGrid[idx];
+      }
+    }
+  }
+  // 3x ore density in stone walls
+  setSeed(ws + 10000);
+  for (let y = 1; y < MAP_SIZE - 1; y++) {
+    for (let x = 1; x < MAP_SIZE - 1; x++) {
+      if (undergroundMap[y * MAP_SIZE + x] !== T.STONE) continue;
+      const oreRoll = rng();
+      if (oreRoll < 0.06) undergroundMap[y * MAP_SIZE + x] = T.CRYSTAL;
+      else if (oreRoll < 0.15) undergroundMap[y * MAP_SIZE + x] = T.GOLD;
+      else if (oreRoll < 0.25) undergroundMap[y * MAP_SIZE + x] = T.IRON;
+      else if (oreRoll < 0.32) undergroundMap[y * MAP_SIZE + x] = T.COPPER;
+      else if (oreRoll < 0.38) undergroundMap[y * MAP_SIZE + x] = T.SILVER;
+    }
+  }
+}
+
 function getBlock(x, y) {
   if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return T.STONE;
+  if (player.level === 1 && undergroundMap) return undergroundMap[y * MAP_SIZE + x];
   return worldMap[y * MAP_SIZE + x];
 }
 
 function setBlock(x, y, val) {
   if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return;
-  worldMap[y * MAP_SIZE + x] = val;
-  blockChanges[x + ',' + y] = val;
+  if (player.level === 1 && undergroundMap) {
+    undergroundMap[y * MAP_SIZE + x] = val;
+    undergroundBlockChanges[x + ',' + y] = val;
+  } else {
+    worldMap[y * MAP_SIZE + x] = val;
+    blockChanges[x + ',' + y] = val;
+  }
+}
+
+function getBlockOnLayer(x, y, layer) {
+  if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return T.STONE;
+  if (layer === 1 && undergroundMap) return undergroundMap[y * MAP_SIZE + x];
+  return worldMap[y * MAP_SIZE + x];
+}
+
+function setBlockOnLayer(x, y, val, layer) {
+  if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return;
+  if (layer === 1 && undergroundMap) {
+    undergroundMap[y * MAP_SIZE + x] = val;
+    undergroundBlockChanges[x + ',' + y] = val;
+  } else {
+    worldMap[y * MAP_SIZE + x] = val;
+    blockChanges[x + ',' + y] = val;
+  }
 }
 
 // ============================================================
@@ -968,6 +1085,13 @@ const player = {
   attackCooldown: 0,
   sprinting: false,
   pitch: 0, // horizon offset in pixels (positive = look up)
+  swimStamina: 100,
+  maxSwimStamina: 100,
+  inTree: false,
+  treePos: null,
+  treeStealth: false,
+  level: 0, // 0=surface, 1=underground
+  digProgress: {},
 };
 
 let creatures = [];
@@ -1037,6 +1161,39 @@ document.addEventListener('keydown', e => {
     if (e.code === 'KeyB') { toggleBuildMenu(); e.preventDefault(); }
     if (e.code >= 'Digit1' && e.code <= 'Digit8') {
       player.selectedSlot = parseInt(e.code[5]) - 1;
+      e.preventDefault();
+    }
+    // Tree climbing
+    if (e.code === 'Space') {
+      if (player.inTree) {
+        // Climb down
+        player.inTree = false;
+        player.treePos = null;
+        player.treeStealth = false;
+        notify('Climbed down from tree');
+      } else {
+        // Check for nearby climbable tree (2-unit radius)
+        const px = Math.floor(player.x), py = Math.floor(player.y);
+        let foundTree = false;
+        for (let dy = -2; dy <= 2 && !foundTree; dy++) {
+          for (let dx = -2; dx <= 2 && !foundTree; dx++) {
+            const blk = getBlock(px + dx, py + dy);
+            if (blk === T.OAK || blk === T.PINE || blk === T.JUNGLE_TREE || blk === T.PALM) {
+              player.inTree = true;
+              player.treePos = {x: px + dx, y: py + dy};
+              player.treeStealth = false;
+              notify('Climbed up tree! [Space] down, [S] stealth');
+              foundTree = true;
+            }
+          }
+        }
+      }
+      e.preventDefault();
+    }
+    // Toggle stealth while in tree
+    if (e.code === 'KeyS' && player.inTree) {
+      player.treeStealth = !player.treeStealth;
+      notify(player.treeStealth ? 'Stealth: HIDDEN' : 'Stealth: OFF');
       e.preventDefault();
     }
   }
@@ -1534,7 +1691,9 @@ function spawnCreatures() {
     if (inTown) continue;
     const biome = getBiome(Math.floor(x), Math.floor(y));
     if (biome !== ct.biome) continue;
-    if (getBlock(Math.floor(x), Math.floor(y)) !== T.AIR) continue;
+    const spawnBlock = getBlock(Math.floor(x), Math.floor(y));
+    if (ct.aquatic) { if (spawnBlock !== T.WATER) continue; }
+    else { if (spawnBlock !== T.AIR) continue; }
     creatures.push({
       type: typeId,
       x, y,
@@ -1595,9 +1754,10 @@ function updateCreatures(dt) {
           other.hp -= Math.floor(ct.dmg * 0.6) || 3;
           c.attackTimer = 1.0;
           if (other.hp <= 0) {
-            const drop = CREATURE_TYPES[other.type].drop;
-            if (drop) addItem(drop, 1);
-            notify('Your ' + ct.name + ' killed a ' + CREATURE_TYPES[other.type].name + '!');
+            const otherCt = CREATURE_TYPES[other.type];
+            if (otherCt.drop) addItem(otherCt.drop, 1);
+            if (otherCt.specialDrop) addItem(otherCt.specialDrop, 1);
+            notify('Your ' + ct.name + ' killed a ' + otherCt.name + '!');
             creatures.splice(j, 1);
             if (j < i) i--;
           }
@@ -1607,10 +1767,10 @@ function updateCreatures(dt) {
       continue;
     }
 
-    // AI state machine
-    if (ct.hostile && dist < 8) {
+    // AI state machine (stealth in tree = invisible to hostiles)
+    if (ct.hostile && dist < 8 && !player.treeStealth) {
       c.state = 'chase';
-    } else if (!ct.hostile && dist < 4) {
+    } else if (!ct.hostile && dist < 4 && !player.treeStealth) {
       c.state = 'flee';
       c.stateTimer = 2;
     } else if (c.stateTimer <= 0) {
@@ -1642,7 +1802,9 @@ function updateCreatures(dt) {
       const nx = c.x + Math.cos(c.angle) * speed * dt;
       const ny = c.y + Math.sin(c.angle) * speed * dt;
       const bx = Math.floor(nx), by = Math.floor(ny);
-      if (bx > 0 && bx < MAP_SIZE - 1 && by > 0 && by < MAP_SIZE - 1 && getBlock(bx, by) === T.AIR) {
+      const moveBlock = (bx > 0 && bx < MAP_SIZE - 1 && by > 0 && by < MAP_SIZE - 1) ? getBlock(bx, by) : T.STONE;
+      const canMove = ct.aquatic ? (moveBlock === T.WATER) : (moveBlock === T.AIR);
+      if (canMove) {
         c.x = nx;
         c.y = ny;
       } else {
@@ -1816,41 +1978,52 @@ function castRay(px, py, angle) {
 
 function renderScene() {
   const fov = Math.PI / 3; // 60 degrees
-  const halfH = H / 2 + player.pitch; // pitch shifts horizon
+  const treeElevation = player.inTree ? 300 : 0;
+  const halfH = H / 2 + player.pitch + treeElevation; // pitch shifts horizon
   const biome = getBiome(Math.floor(player.x), Math.floor(player.y));
   const bd = BIOMES[biome];
 
   // Day/night factor
-  const nightF = getDayNightFactor(); // 0=day, 1=night
+  let nightF = getDayNightFactor(); // 0=day, 1=night
+  // Underground: always dark
+  if (player.level === 1) nightF = 0.8;
   const dayBright = 1.0 - nightF * 0.7; // walls get dimmer at night
 
   // Draw sky gradient (shifted by pitch) with day/night
   const horizonY = Math.floor(halfH);
-  const skyGrad = ctx.createLinearGradient(0, Math.min(0, horizonY - H), 0, Math.max(0, horizonY));
-  const nightSky1 = '#0a0a2a', nightSky2 = '#141440';
-  skyGrad.addColorStop(0, lerpColor(bd.sky1, nightSky1, nightF));
-  skyGrad.addColorStop(1, lerpColor(bd.sky2, nightSky2, nightF));
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, W, Math.max(0, horizonY));
+  if (player.level === 1) {
+    // Underground: solid dark cave ceiling and floor
+    ctx.fillStyle = '#0a0808';
+    ctx.fillRect(0, 0, W, Math.max(0, horizonY));
+    ctx.fillStyle = '#1a1210';
+    ctx.fillRect(0, Math.max(0, horizonY), W, H - Math.max(0, horizonY));
+  } else {
+    const skyGrad = ctx.createLinearGradient(0, Math.min(0, horizonY - H), 0, Math.max(0, horizonY));
+    const nightSky1 = '#0a0a2a', nightSky2 = '#141440';
+    skyGrad.addColorStop(0, lerpColor(bd.sky1, nightSky1, nightF));
+    skyGrad.addColorStop(1, lerpColor(bd.sky2, nightSky2, nightF));
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, Math.max(0, horizonY));
 
-  // Stars at night
-  if (nightF > 0.3) {
-    ctx.fillStyle = `rgba(255,255,255,${(nightF - 0.3) * 1.2})`;
-    for (let i = 0; i < 60; i++) {
-      const sx = ((i * 137 + 42) % W);
-      const sy = ((i * 97 + 13) % Math.max(1, horizonY));
-      ctx.fillRect(sx, sy, 1 + (i % 2), 1 + (i % 2));
+    // Stars at night
+    if (nightF > 0.3) {
+      ctx.fillStyle = `rgba(255,255,255,${(nightF - 0.3) * 1.2})`;
+      for (let i = 0; i < 60; i++) {
+        const sx = ((i * 137 + 42) % W);
+        const sy = ((i * 97 + 13) % Math.max(1, horizonY));
+        ctx.fillRect(sx, sy, 1 + (i % 2), 1 + (i % 2));
+      }
     }
-  }
 
-  // Draw floor gradient (shifted by pitch) with day/night
-  const gc = bd.ground;
-  const gDim = dayBright;
-  const flrGrad = ctx.createLinearGradient(0, Math.max(0, horizonY), 0, Math.max(horizonY, H + Math.abs(player.pitch)));
-  flrGrad.addColorStop(0, `rgb(${Math.floor(gc[0]*gDim*0.5)},${Math.floor(gc[1]*gDim*0.5)},${Math.floor(gc[2]*gDim*0.5)})`);
-  flrGrad.addColorStop(1, `rgb(${Math.floor(gc[0]*gDim)},${Math.floor(gc[1]*gDim)},${Math.floor(gc[2]*gDim)})`);
-  ctx.fillStyle = flrGrad;
-  ctx.fillRect(0, Math.max(0, horizonY), W, H - Math.max(0, horizonY));
+    // Draw floor gradient (shifted by pitch) with day/night
+    const gc = bd.ground;
+    const gDim = dayBright;
+    const flrGrad = ctx.createLinearGradient(0, Math.max(0, horizonY), 0, Math.max(horizonY, H + Math.abs(player.pitch)));
+    flrGrad.addColorStop(0, `rgb(${Math.floor(gc[0]*gDim*0.5)},${Math.floor(gc[1]*gDim*0.5)},${Math.floor(gc[2]*gDim*0.5)})`);
+    flrGrad.addColorStop(1, `rgb(${Math.floor(gc[0]*gDim)},${Math.floor(gc[1]*gDim)},${Math.floor(gc[2]*gDim)})`);
+    ctx.fillStyle = flrGrad;
+    ctx.fillRect(0, Math.max(0, horizonY), W, H - Math.max(0, horizonY));
+  }
 
   // Raycast walls
   const imgData = ctx.getImageData(0, 0, W, H);
@@ -1887,7 +2060,7 @@ function renderScene() {
     // Transparency for tree/torch/fence blocks — skip pure-black pixels
     const isTransparent = hit.block === T.OAK || hit.block === T.PINE || hit.block === T.JUNGLE_TREE ||
       hit.block === T.PALM || hit.block === T.YOUNG_TREE || hit.block === T.SAPLING ||
-      hit.block === T.TORCH || hit.block === T.CAMPFIRE || hit.block === T.FENCE;
+      hit.block === T.TORCH || hit.block === T.CAMPFIRE || hit.block === T.FENCE || hit.block === T.HOLE;
 
     for (let y = drawStart; y <= drawEnd; y++) {
       const texY = Math.floor((y - drawStart) / lineHeight * TEX_SIZE) & (TEX_SIZE - 1);
@@ -1926,7 +2099,8 @@ function renderCreatures() {
   }).sort((a, b) => b.dist - a.dist);
 
   const fov = Math.PI / 3;
-  const halfH = H / 2 + player.pitch;
+  const treeElev = player.inTree ? 300 : 0;
+  const halfH = H / 2 + player.pitch + treeElev;
 
   for (const s of spriteList) {
     const { creature: c, dist, dx, dy } = s;
@@ -2042,7 +2216,8 @@ function renderCreatures() {
 // ============================================================
 function renderNPCs() {
   const fov = Math.PI / 3;
-  const halfH = H / 2 + player.pitch;
+  const treeElevNPC = player.inTree ? 300 : 0;
+  const halfH = H / 2 + player.pitch + treeElevNPC;
   for (const n of npcs) {
     const dx = n.x - player.x, dy = n.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2180,8 +2355,28 @@ function renderHUD() {
   ctx.fillStyle = '#fff';
   ctx.fillText(`Hunger ${Math.ceil(player.hunger)}/${player.maxHunger}`, hpX + barW / 2, hunY + 11);
 
+  // Swim stamina bar (only in water)
+  const inWaterHud = getBlock(Math.floor(player.x), Math.floor(player.y)) === T.WATER;
+  const heldBoatHud = getHeldItem();
+  const hasBoatHud = heldBoatHud && heldBoatHud.tool === 'boat';
+  if (inWaterHud && !hasBoatHud) {
+    const swimY = hunY + barH + 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(hpX - 2, swimY - 2, barW + 4, barH + 4);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(hpX, swimY, barW, barH);
+    const swimPct = Math.max(0, player.swimStamina / player.maxSwimStamina);
+    ctx.fillStyle = swimPct > 0.2 ? '#2288DD' : '#FF2222';
+    ctx.fillRect(hpX, swimY, barW * swimPct, barH);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    const swimLabel = player.swimStamina <= 10 ? 'DROWNING!' : `Swim ${Math.ceil(player.swimStamina)}/${player.maxSwimStamina}`;
+    ctx.fillText(swimLabel, hpX + barW / 2, swimY + 11);
+  }
+
   // XP bar
-  const xpY = hunY + barH + 6;
+  const xpY = hunY + barH + (inWaterHud && !hasBoatHud ? barH + 12 : 6);
   const xpBarH = 10;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(hpX - 2, xpY - 2, barW + 4, xpBarH + 4);
@@ -2316,7 +2511,7 @@ function renderHUD() {
   }
 
   // Near campfire hint
-  if (isNearCampfire() && getHeldItemId() === 'raw_meat') {
+  if (isNearCampfire() && (getHeldItemId() === 'raw_meat' || getHeldItemId() === 'raw_fish')) {
     ctx.fillStyle = '#FFA500';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
@@ -2329,6 +2524,27 @@ function renderHUD() {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('SPRINTING', 12, hunY + barH + 18);
+  }
+
+  // Tree climbing indicator
+  if (player.inTree) {
+    ctx.fillStyle = '#88CC44';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('IN TREE [Space] down [S] stealth', 12, hunY + barH + (player.sprinting ? 50 : 34));
+    if (player.treeStealth) {
+      ctx.fillStyle = '#44FF88';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('HIDDEN', 12, hunY + barH + (player.sprinting ? 66 : 50));
+    }
+  }
+
+  // Underground indicator
+  if (player.level === 1) {
+    ctx.fillStyle = '#AA8855';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('UNDERGROUND', W / 2, 50);
   }
 
   // Sailing indicator
@@ -2460,7 +2676,8 @@ function renderMinimap() {
   ctx.fillStyle = '#888';
   ctx.font = '9px sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText(`${Math.floor(player.x)}, ${Math.floor(player.y)}`, mx + size, my + size + 12);
+  const levelLabel = player.level === 1 ? ' [UNDERGROUND]' : '';
+  ctx.fillText(`${Math.floor(player.x)}, ${Math.floor(player.y)}${levelLabel}`, mx + size, my + size + 12);
 
   // Border
   ctx.strokeStyle = '#555';
@@ -2733,16 +2950,20 @@ function update(dt) {
   const hasBoat = heldForMove && heldForMove.tool === 'boat';
   function isPassable(block) {
     if (block === T.AIR || block === T.DOOR) return true;
-    if (block === T.WATER) return hasBoat;
+    if (block === T.WATER) return true;
+    if (block === T.HOLE) return true;
     return false;
   }
 
-  if (moveX !== 0 || moveY !== 0) {
+  if (!player.inTree && (moveX !== 0 || moveY !== 0)) {
     const baseSpeed = player.sprinting ? SPRINT_SPEED : MOVE_SPEED;
     let speed = speedBoostTimer > 0 ? baseSpeed * 1.6 : baseSpeed;
-    // Boat speed boost on water
+    // Water: boat = 1.5x, swimming = 0.5x
     const onBlockMove = getBlock(Math.floor(player.x), Math.floor(player.y));
-    if (onBlockMove === T.WATER && hasBoat) speed *= 1.5;
+    if (onBlockMove === T.WATER) {
+      if (hasBoat) speed *= 1.5;
+      else speed *= 0.5;
+    }
     if (player.sprinting) player.hunger -= SPRINT_HUNGER * dt;
     const len = Math.sqrt(moveX * moveX + moveY * moveY);
     moveX = moveX / len * speed * dt;
@@ -2764,6 +2985,43 @@ function update(dt) {
     if (onBlock === T.LAVA) {
       player.hp -= 20 * dt;
       if (player.hp <= 0) playerDeath();
+    }
+  }
+
+  // Swimming stamina
+  const swimBlock = getBlock(Math.floor(player.x), Math.floor(player.y));
+  if (swimBlock === T.WATER) {
+    if (hasBoat) {
+      // No stamina drain with boat
+    } else {
+      player.swimStamina -= 5 * dt;
+      if (player.swimStamina <= 0) {
+        player.swimStamina = 0;
+        player.hp -= 3 * dt; // drowning
+        if (player.hp <= 0) playerDeath();
+      }
+    }
+  } else {
+    // Recharge on land
+    player.swimStamina = Math.min(player.maxSwimStamina, player.swimStamina + 15 * dt);
+  }
+
+  // Layer transitions (underground holes)
+  // Check HOLE on current layer
+  const holeCheck = getBlockOnLayer(Math.floor(player.x), Math.floor(player.y), player.level);
+  if (holeCheck === T.HOLE) {
+    if (player.level === 0) {
+      // Check underground has air at this spot
+      const ugBlock = getBlockOnLayer(Math.floor(player.x), Math.floor(player.y), 1);
+      if (ugBlock === T.AIR || ugBlock === T.HOLE) {
+        player.level = 1;
+        notify('Descended underground!');
+        updateTorchCache();
+      }
+    } else {
+      player.level = 0;
+      notify('Returned to surface!');
+      updateTorchCache();
     }
   }
 
@@ -2830,6 +3088,8 @@ function update(dt) {
 }
 
 function handleMineOrAttack(dt) {
+  // Can't mine or attack while in a tree
+  if (player.inTree) return;
   // First check for creature attack
   if (player.attackCooldown <= 0) {
     const fov = Math.PI / 6; // narrow cone
@@ -2854,6 +3114,10 @@ function handleMineOrAttack(dt) {
           if (ct.drop) {
             const added = addItem(ct.drop, 1);
             if (added > 0) notify('+1 ' + ITEMS[ct.drop].name);
+          }
+          if (ct.specialDrop) {
+            const sa = addItem(ct.specialDrop, 1);
+            if (sa > 0) notify('+1 ' + ITEMS[ct.specialDrop].name);
           }
           const killXP = Math.ceil(ct.hp / 10);
           gainXP(killXP);
@@ -2908,29 +3172,58 @@ function handleMineOrAttack(dt) {
   if (Math.random() < dt * 8) SFX.mine(); // mining hit sounds
 
   if (player.miningProgress >= 1) {
-    // Mine the block
-    setBlock(mineX, mineY, T.AIR);
-    SFX.blockBreak();
-    if (info.drop) {
-      const added = addItem(info.drop, info.dropAmt || 1);
-      if (added > 0) notify('+' + (info.dropAmt || 1) + ' ' + ITEMS[info.drop].name);
-    }
-    // Drop seeds from tree tiles
-    const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed'};
-    if (treeSeedMap[mineBlock]) {
-      const seedAdded = addItem(treeSeedMap[mineBlock], 1);
-      if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[mineBlock]].name);
-    }
-    // Return seed when breaking sapling
-    if (mineBlock === T.SAPLING) {
-      const sapKey = mineX + ',' + mineY;
-      const species = saplingData[sapKey] || 'oak';
-      const seedId = species + '_seed';
-      if (ITEMS[seedId]) {
-        const sa = addItem(seedId, 1);
-        if (sa > 0) notify('+1 ' + ITEMS[seedId].name);
+    // Dig-to-underground: surface, looking down, holding shovel, soft block
+    const isDiggingDown = player.level === 0 && player.pitch < -MAX_PITCH * 0.6 && getShovelTier() > 0 && isSoftBlock(mineBlock);
+    if (isDiggingDown) {
+      const digKey = mineX + ',' + mineY;
+      player.digProgress[digKey] = (player.digProgress[digKey] || 0) + 1;
+      SFX.blockBreak();
+      if (info.drop) {
+        const added = addItem(info.drop, info.dropAmt || 1);
+        if (added > 0) notify('+' + (info.dropAmt || 1) + ' ' + ITEMS[info.drop].name);
       }
-      delete saplingData[sapKey];
+      if (player.digProgress[digKey] >= 3) {
+        // Create hole on surface
+        setBlockOnLayer(mineX, mineY, T.HOLE, 0);
+        // Clear underground tile below for entry
+        setBlockOnLayer(mineX, mineY, T.AIR, 1);
+        delete player.digProgress[digKey];
+        notify('Dug a hole to the underground!');
+      } else {
+        // Restore the soft block so player can dig again
+        setBlock(mineX, mineY, mineBlock);
+        notify('Digging deeper... (' + player.digProgress[digKey] + '/3)');
+      }
+    } else {
+      // Normal mining — break the block
+      setBlock(mineX, mineY, T.AIR);
+      SFX.blockBreak();
+      if (info.drop) {
+        const added = addItem(info.drop, info.dropAmt || 1);
+        if (added > 0) notify('+' + (info.dropAmt || 1) + ' ' + ITEMS[info.drop].name);
+      }
+      // Force climb-down if player's tree was mined
+      if (player.inTree && player.treePos && mineX === player.treePos.x && mineY === player.treePos.y) {
+        player.inTree = false; player.treePos = null; player.treeStealth = false;
+        notify('Tree destroyed — fell down!');
+      }
+      // Drop seeds from tree tiles
+      const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed'};
+      if (treeSeedMap[mineBlock]) {
+        const seedAdded = addItem(treeSeedMap[mineBlock], 1);
+        if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[mineBlock]].name);
+      }
+      // Return seed when breaking sapling
+      if (mineBlock === T.SAPLING) {
+        const sapKey = mineX + ',' + mineY;
+        const species = saplingData[sapKey] || 'oak';
+        const seedId = species + '_seed';
+        if (ITEMS[seedId]) {
+          const sa = addItem(seedId, 1);
+          if (sa > 0) notify('+1 ' + ITEMS[seedId].name);
+        }
+        delete saplingData[sapKey];
+      }
     }
     gainXP(1);
     player.miningTarget = null;
@@ -3003,6 +3296,71 @@ function handleRightClick() {
     addItem('cooked_meat', 1);
     notify('Cooked meat on campfire!'); SFX.craft();
     return;
+  }
+
+  // Cook raw fish on campfire
+  if (heldId === 'raw_fish' && isNearCampfire()) {
+    removeItem('raw_fish', 1);
+    addItem('cooked_fish', 1);
+    notify('Cooked fish on campfire!'); SFX.craft();
+    return;
+  }
+
+  // Milk tamed cow (right-click nearby tamed cow)
+  for (const c of creatures) {
+    if (!c.tamed || c.type !== 'cow') continue;
+    const dx2 = c.x - player.x, dy2 = c.y - player.y;
+    if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
+      addItem('milk', 1);
+      notify('+1 Milk'); SFX.eat();
+      return;
+    }
+  }
+
+  // Shear tamed sheep (right-click nearby tamed sheep)
+  for (const c of creatures) {
+    if (!c.tamed || c.type !== 'sheep') continue;
+    const dx2 = c.x - player.x, dy2 = c.y - player.y;
+    if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
+      addItem('wool', 1);
+      notify('+1 Wool'); SFX.eat();
+      return;
+    }
+  }
+
+  // Empty bucket + water → fill bucket
+  if (heldId === 'empty_bucket') {
+    // Check if looking at water (raycast) or standing in water (look down)
+    const bucketHit = castRay(player.x, player.y, player.angle);
+    const standBlock = getBlock(Math.floor(player.x), Math.floor(player.y));
+    if ((bucketHit.block === T.WATER && bucketHit.dist < MINE_RANGE) || (player.pitch < -MAX_PITCH * 0.5 && standBlock === T.WATER)) {
+      removeItem('empty_bucket', 1);
+      addItem('water_bucket', 1);
+      notify('Filled bucket with water!'); SFX.build();
+      return;
+    }
+  }
+
+  // Water bucket → pour water on ground
+  if (heldId === 'water_bucket') {
+    let pourX, pourY;
+    if (player.pitch < -MAX_PITCH * 0.5) {
+      pourX = Math.floor(player.x);
+      pourY = Math.floor(player.y);
+    } else {
+      pourX = Math.floor(player.x + Math.cos(player.angle) * PLACE_DIST);
+      pourY = Math.floor(player.y + Math.sin(player.angle) * PLACE_DIST);
+    }
+    if (pourX > 0 && pourX < MAP_SIZE - 1 && pourY > 0 && pourY < MAP_SIZE - 1) {
+      const pourBlock = getBlock(pourX, pourY);
+      if (pourBlock === T.AIR) {
+        setBlock(pourX, pourY, T.WATER);
+        removeItem('water_bucket', 1);
+        addItem('empty_bucket', 1);
+        notify('Placed water!'); SFX.build();
+        return;
+      }
+    }
   }
 
   // Try to eat food
@@ -3174,7 +3532,14 @@ function saveGame() {
       hotbar: player.hotbar,
       backpack: player.backpack,
       selectedSlot: player.selectedSlot,
+      swimStamina: player.swimStamina,
+      inTree: player.inTree,
+      treePos: player.treePos,
+      treeStealth: player.treeStealth,
+      level: player.level,
+      digProgress: player.digProgress,
     },
+    undergroundBlockChanges,
     creatures: creatures.map(c => ({
       type: c.type, x: c.x, y: c.y, hp: c.hp,
       tamed: c.tamed, angle: c.angle,
@@ -3206,6 +3571,7 @@ function loadGame(slot) {
 
     worldSeed = data.worldSeed;
     blockChanges = data.blockChanges || {};
+    undergroundBlockChanges = data.undergroundBlockChanges || {};
     generateWorld(worldSeed);
 
     player.x = data.player.x;
@@ -3217,6 +3583,12 @@ function loadGame(slot) {
     player.hotbar = data.player.hotbar;
     player.backpack = data.player.backpack || new Array(BACKPACK_SIZE).fill(null);
     player.selectedSlot = data.player.selectedSlot || 0;
+    player.swimStamina = data.player.swimStamina || 100;
+    player.inTree = data.player.inTree || false;
+    player.treePos = data.player.treePos || null;
+    player.treeStealth = data.player.treeStealth || false;
+    player.level = data.player.level || 0;
+    player.digProgress = data.player.digProgress || {};
     minimapSize = data.minimapSize || 0;
     currentSeason = data.currentSeason || 0;
     seasonTimer = data.seasonTimer || 0;
@@ -3320,6 +3692,12 @@ function respawn() {
   player.y = MAP_SIZE / 2 + 0.5;
   player.hp = player.maxHp;
   player.hunger = player.maxHunger;
+  player.swimStamina = player.maxSwimStamina;
+  player.level = 0;
+  player.inTree = false;
+  player.treePos = null;
+  player.treeStealth = false;
+  player.digProgress = {};
   // Give minimal starter items
   addItem('wood', 5);
   addItem('berries', 4);
@@ -3362,6 +3740,7 @@ function startGame(slot, isLoad) {
   } else {
     worldSeed = Math.floor(Math.random() * 999999) + 1;
     blockChanges = {};
+    undergroundBlockChanges = {};
     chestInventories = {};
     saplingData = {};
     generateWorld(worldSeed);
@@ -3384,6 +3763,12 @@ function startGame(slot, isLoad) {
     playerLevel = 1;
     player.maxHp = 100;
     dayTimer = 0;
+    player.swimStamina = 100;
+    player.inTree = false;
+    player.treePos = null;
+    player.treeStealth = false;
+    player.level = 0;
+    player.digProgress = {};
     // Give starter items
     addItem('wood', 10);
     addItem('berries', 8);
