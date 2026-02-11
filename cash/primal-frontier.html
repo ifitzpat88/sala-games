@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Primal Frontier</title>
+<title>Alone</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#000;overflow:hidden;font-family:'Segoe UI',Tahoma,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;}
@@ -43,7 +43,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <canvas id="game"></canvas>
 <div id="ui"></div>
 <div id="title-screen">
-  <h1>PRIMAL FRONTIER</h1>
+  <h1>ALONE</h1>
   <div class="subtitle">FIRST-PERSON SURVIVAL</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
@@ -70,7 +70,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 
 <script>
 // ============================================================
-// PRIMAL FRONTIER - First-Person Survival Game
+// ALONE - First-Person Survival Game
 // DDA Raycasting Engine + Mining + Building + Creatures + Taming
 // ============================================================
 
@@ -780,21 +780,7 @@ const MAX_PITCH = 200; // max pixel offset for horizon
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (gameRunning && !craftingOpen && !backpackOpen && !tradeOpen) {
-    if (e.code === 'KeyE') {
-      // Check for nearby NPC first
-      const nearNPC = findNearbyNPC();
-      if (nearNPC) { openTrade(nearNPC); e.preventDefault(); return; }
-      toggleCrafting(); e.preventDefault();
-    }
-    if (e.code === 'KeyM') { toggleFullscreenMap(); e.preventDefault(); }
-    if (e.code === 'Tab') { toggleBackpack(); e.preventDefault(); }
-    if (e.code === 'KeyB') { toggleBuildMenu(); e.preventDefault(); }
-    if (e.code >= 'Digit1' && e.code <= 'Digit8') {
-      player.selectedSlot = parseInt(e.code[5]) - 1;
-      e.preventDefault();
-    }
-  } else if (buildMenuOpen) {
+  if (buildMenuOpen) {
     if (e.code === 'KeyB' || e.code === 'Escape') { toggleBuildMenu(); e.preventDefault(); }
     // Number keys 1-9 select build item
     if (e.code >= 'Digit1' && e.code <= 'Digit9') {
@@ -809,6 +795,19 @@ document.addEventListener('keydown', e => {
     if (e.code === 'Tab' || e.code === 'Escape') { toggleBackpack(); e.preventDefault(); }
   } else if (tradeOpen) {
     if (e.code === 'KeyE' || e.code === 'Escape') { closeTrade(); e.preventDefault(); }
+  } else if (gameRunning) {
+    if (e.code === 'KeyE') {
+      const nearNPC = findNearbyNPC();
+      if (nearNPC) { openTrade(nearNPC); e.preventDefault(); return; }
+      toggleCrafting(); e.preventDefault();
+    }
+    if (e.code === 'KeyM') { toggleFullscreenMap(); e.preventDefault(); }
+    if (e.code === 'Tab') { toggleBackpack(); e.preventDefault(); }
+    if (e.code === 'KeyB') { toggleBuildMenu(); e.preventDefault(); }
+    if (e.code >= 'Digit1' && e.code <= 'Digit8') {
+      player.selectedSlot = parseInt(e.code[5]) - 1;
+      e.preventDefault();
+    }
   }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -2684,20 +2683,23 @@ function handleRightClick() {
 
   // Try to place block
   if (held && held.placeTile) {
-    const maxDist = buildMode ? BUILD_PLACE_DIST : PLACE_DIST;
+    const placeDist = buildMode ? BUILD_PLACE_DIST : PLACE_DIST;
+    // If looking at a wall, place adjacent to it; otherwise place at fixed distance
     let placeX, placeY;
-
-    // If looking at a wall within range, place block on the near side of that wall
-    if (hit.block !== T.AIR && hit.dist <= maxDist + 1) {
-      // Step back from the hit wall to find the air tile in front of it
+    if (hit.block !== T.AIR && hit.dist <= placeDist + 1) {
       placeX = hit.mapX;
       placeY = hit.mapY;
-      if (hit.side === 0) placeX -= (Math.cos(player.angle) > 0 ? 1 : -1);
-      else placeY -= (Math.sin(player.angle) > 0 ? 1 : -1);
+      // Step back one tile from the wall on the hit side
+      if (hit.side === 0) placeX += (Math.cos(player.angle) > 0 ? -1 : 1);
+      else placeY += (Math.sin(player.angle) > 0 ? -1 : 1);
+      // Fallback if adjacent tile isn't air
+      if (placeX < 1 || placeX >= MAP_SIZE - 1 || placeY < 1 || placeY >= MAP_SIZE - 1 || getBlock(placeX, placeY) !== T.AIR) {
+        placeX = Math.floor(player.x + Math.cos(player.angle) * placeDist);
+        placeY = Math.floor(player.y + Math.sin(player.angle) * placeDist);
+      }
     } else {
-      // No wall nearby — place at fixed distance
-      placeX = Math.floor(player.x + Math.cos(player.angle) * maxDist);
-      placeY = Math.floor(player.y + Math.sin(player.angle) * maxDist);
+      placeX = Math.floor(player.x + Math.cos(player.angle) * placeDist);
+      placeY = Math.floor(player.y + Math.sin(player.angle) * placeDist);
     }
 
     // Don't place on self
