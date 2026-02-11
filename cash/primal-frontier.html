@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.3</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.4</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -118,7 +118,9 @@ const T = {
   FURNACE:40, REINFORCED_STONE:41, REINFORCED_IRON:42, STEEL_BLOCK:43, GOLD_BLOCK:44,
   HOLE:45,
   CONCRETE:46,
-  FEEDING_TROUGH:47
+  FEEDING_TROUGH:47,
+  CROP:48,
+  MATURE_CROP:49
 };
 
 const TILE_INFO = {
@@ -163,6 +165,8 @@ const TILE_INFO = {
   [T.HOLE]:{name:'Hole',color:[0x33,0x22,0x11],hits:999,wh:0.2},
   [T.CONCRETE]:{name:'Concrete',color:[0x99,0x99,0x99],hits:20,drop:'concrete',dropAmt:1,wh:1.0},
   [T.FEEDING_TROUGH]:{name:'Feeding Trough',color:[0x8B,0x73,0x55],hits:4,drop:'wood',dropAmt:3,wh:0.4},
+  [T.CROP]:{name:'Crop',color:[0x44,0x88,0x22],hits:1,drop:null,dropAmt:0,wh:0.25},
+  [T.MATURE_CROP]:{name:'Mature Crop',color:[0x66,0xAA,0x22],hits:1,drop:null,dropAmt:0,wh:0.6},
 };
 
 // ---- ITEMS ----
@@ -240,6 +244,17 @@ const ITEMS = {
   ribs:{name:'Ribs',color:'#AA3322',stack:16,food:30},
   concrete:{name:'Concrete',color:'#999999',placeTile:T.CONCRETE,stack:64},
   feeding_trough:{name:'Feeding Trough',color:'#8B7355',placeTile:T.FEEDING_TROUGH,stack:4},
+  apple:{name:'Apple',color:'#DD3333',stack:32,food:15},
+  coconut:{name:'Coconut',color:'#8B6B3B',stack:32,food:20},
+  banana:{name:'Banana',color:'#DDCC33',stack:32,food:18},
+  carrot:{name:'Carrot',color:'#DD7722',stack:32,food:12},
+  potato:{name:'Potato',color:'#C0A060',stack:32,food:15},
+  corn:{name:'Corn',color:'#DDCC44',stack:32,food:14},
+  tomato:{name:'Tomato',color:'#DD3322',stack:32,food:10},
+  carrot_seed:{name:'Carrot Seed',color:'#AA6622',stack:16,seedSpecies:'carrot'},
+  potato_seed:{name:'Potato Seed',color:'#998855',stack:16,seedSpecies:'potato'},
+  corn_seed:{name:'Corn Seed',color:'#BBAA33',stack:16,seedSpecies:'corn'},
+  tomato_seed:{name:'Tomato Seed',color:'#AA3322',stack:16,seedSpecies:'tomato'},
 };
 
 // ---- RECIPES ----
@@ -360,6 +375,11 @@ const NPC_TYPES = {
       {give:{gold_coin:2},get:{cooked_meat:1}},
       {give:{berries:10},get:{gold_coin:1}},
       {give:{raw_meat:5},get:{gold_coin:2}},
+      {give:{gold_coin:2},get:{carrot_seed:3}},
+      {give:{gold_coin:2},get:{potato_seed:3}},
+      {give:{gold_coin:2},get:{corn_seed:3}},
+      {give:{gold_coin:2},get:{tomato_seed:3}},
+      {give:{gold_coin:3},get:{apple:2}},
     ]},
   rancher:{name:'Rancher',color:'#886644',size:0.65,
     trades:[
@@ -636,6 +656,8 @@ function initTextures() {
   genTex(T.HOLE, 0x33, 0x22, 0x11, 'hole');
   genTex(T.CONCRETE, 0x99, 0x99, 0x99, 'cobble');
   genTex(T.FEEDING_TROUGH, 0x8B, 0x73, 0x55, 'plank');
+  genTex(T.CROP, 0x44, 0x88, 0x22, 'sapling');
+  genTex(T.MATURE_CROP, 0x66, 0xAA, 0x22, 'leaves');
 }
 
 // ============================================================
@@ -2102,6 +2124,12 @@ function updateTreeGrowth() {
           setBlock(x, y, matureMap[species] || T.OAK);
           delete saplingData[key];
         }
+      } else if (tile === T.CROP) {
+        // Crops grow to mature: 25% chance per tick (~1.5 min avg)
+        if (Math.random() < 0.25) {
+          setBlock(x, y, T.MATURE_CROP);
+          // Keep saplingData — species needed for harvest
+        }
       } else if (tile === T.OAK || tile === T.PINE || tile === T.JUNGLE_TREE || tile === T.PALM) {
         // Mature trees can spread: 2% chance to spawn sapling nearby
         if (Math.random() < 0.02) {
@@ -3268,6 +3296,7 @@ function update(dt) {
     if (block === T.AIR || block === T.DOOR) return true;
     if (block === T.WATER) return true;
     if (block === T.HOLE) return true;
+    if (block === T.CROP || block === T.MATURE_CROP) return true;
     return false;
   }
 
@@ -3588,6 +3617,49 @@ function handleMineOrAttack(dt) {
         const seedAdded = addItem(treeSeedMap[mineBlock], 1);
         if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[mineBlock]].name);
       }
+      // Drop fruit from certain trees
+      const treeFruitMap = {[T.OAK]:'apple',[T.PALM]:'coconut',[T.JUNGLE_TREE]:'banana'};
+      if (treeFruitMap[mineBlock] && Math.random() < 0.5) {
+        const fruit = treeFruitMap[mineBlock];
+        const fa = addItem(fruit, 1);
+        if (fa > 0) notify('+1 ' + ITEMS[fruit].name);
+      }
+      // Leaves sometimes drop vegetable seeds
+      if (mineBlock === T.LEAVES && Math.random() < 0.15) {
+        const vegSeeds = ['carrot_seed','potato_seed','corn_seed','tomato_seed'];
+        const rs = vegSeeds[Math.floor(Math.random() * vegSeeds.length)];
+        const sa = addItem(rs, 1);
+        if (sa > 0) notify('+1 ' + ITEMS[rs].name);
+      }
+      // Harvest mature crop → drop vegetable + 1-2 seeds
+      if (mineBlock === T.MATURE_CROP) {
+        const cropKey = mineX + ',' + mineY;
+        const cropSpecies = saplingData[cropKey];
+        if (cropSpecies && ITEMS[cropSpecies]) {
+          const ca = addItem(cropSpecies, Math.random() < 0.5 ? 2 : 3);
+          if (ca > 0) notify('+' + ca + ' ' + ITEMS[cropSpecies].name);
+          const seedId = cropSpecies + '_seed';
+          if (ITEMS[seedId]) {
+            const seedAmt = 1 + Math.floor(Math.random() * 2);
+            const sa = addItem(seedId, seedAmt);
+            if (sa > 0) notify('+' + sa + ' ' + ITEMS[seedId].name);
+          }
+        }
+        delete saplingData[cropKey];
+      }
+      // Return seed when breaking immature crop
+      if (mineBlock === T.CROP) {
+        const cropKey = mineX + ',' + mineY;
+        const cropSpecies = saplingData[cropKey];
+        if (cropSpecies) {
+          const seedId = cropSpecies + '_seed';
+          if (ITEMS[seedId]) {
+            const sa = addItem(seedId, 1);
+            if (sa > 0) notify('+1 ' + ITEMS[seedId].name);
+          }
+        }
+        delete saplingData[cropKey];
+      }
       // Return seed when breaking sapling
       if (mineBlock === T.SAPLING) {
         const sapKey = mineX + ',' + mineY;
@@ -3819,21 +3891,27 @@ function handleRightClick() {
     return;
   }
 
-  // Plant seed → creates sapling with species tracking
+  // Plant seed → creates sapling (trees) or crop (vegetables) with species tracking
   if (held && held.seedSpecies) {
     const dist = PLACE_DIST;
-    const placeX = Math.floor(player.x + Math.cos(player.angle) * dist);
-    const placeY = Math.floor(player.y + Math.sin(player.angle) * dist);
-    if (placeX !== Math.floor(player.x) || placeY !== Math.floor(player.y)) {
-      if (placeX > 0 && placeX < MAP_SIZE - 1 && placeY > 0 && placeY < MAP_SIZE - 1) {
-        if (getBlock(placeX, placeY) === T.AIR) {
-          setBlock(placeX, placeY, T.SAPLING);
-          saplingData[placeX + ',' + placeY] = held.seedSpecies;
-          removeItem(heldId, 1);
-          notify('Planted ' + held.name + '!');
-          SFX.build();
-          return;
-        }
+    let placeX, placeY;
+    if (player.pitch < -MAX_PITCH * 0.5) {
+      placeX = Math.floor(player.x);
+      placeY = Math.floor(player.y);
+    } else {
+      placeX = Math.floor(player.x + Math.cos(player.angle) * dist);
+      placeY = Math.floor(player.y + Math.sin(player.angle) * dist);
+    }
+    if (placeX > 0 && placeX < MAP_SIZE - 1 && placeY > 0 && placeY < MAP_SIZE - 1) {
+      if (getBlock(placeX, placeY) === T.AIR) {
+        const cropTypes = ['carrot','potato','corn','tomato'];
+        const isCrop = cropTypes.includes(held.seedSpecies);
+        setBlock(placeX, placeY, isCrop ? T.CROP : T.SAPLING);
+        saplingData[placeX + ',' + placeY] = held.seedSpecies;
+        removeItem(heldId, 1);
+        notify('Planted ' + held.name + '!');
+        SFX.build();
+        return;
       }
     }
   }
