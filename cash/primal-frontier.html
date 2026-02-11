@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v2.1.0</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.1</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -1289,8 +1289,8 @@ document.addEventListener('keydown', e => {
       player.selectedSlot = parseInt(e.code[5]) - 1;
       e.preventDefault();
     }
-    // Dismount horse / Tree climbing
-    if (e.code === 'Space') {
+    // R key — mount/dismount horse
+    if (e.code === 'KeyR') {
       if (player.riding) {
         // Dismount horse
         player.riding.x = player.x + Math.cos(player.angle) * 1.5;
@@ -1298,9 +1298,24 @@ document.addEventListener('keydown', e => {
         player.riding.state = 'idle';
         player.riding = null;
         notify('Dismounted');
-        e.preventDefault();
-        return;
+      } else if (!player.inTree) {
+        // Try to mount a nearby tamed horse
+        for (const c of creatures) {
+          if (!c.tamed || c.type !== 'horse') continue;
+          const dx2 = c.x - player.x, dy2 = c.y - player.y;
+          if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
+            player.riding = c;
+            c.state = 'follow';
+            notify('Mounted horse! [R] to dismount');
+            break;
+          }
+        }
       }
+      e.preventDefault();
+      return;
+    }
+    // Tree climbing
+    if (e.code === 'Space') {
       if (player.inTree) {
         // Climb down
         player.inTree = false;
@@ -2735,7 +2750,7 @@ function renderHUD() {
     ctx.fillStyle = '#CC8844';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('MOUNTED [Space] dismount', 12, hunY + barH + (player.sprinting ? 50 : 34));
+    ctx.fillText('MOUNTED [R] dismount', 12, hunY + barH + (player.sprinting ? 50 : 34));
   }
 
   // Tree climbing indicator
@@ -3535,20 +3550,6 @@ function handleRightClick() {
     removeItem('strength_potion', 1);
     notify('Strength Boost active for 30s!'); SFX.potion();
     return;
-  }
-
-  // Mount nearby tamed horse
-  if (!player.riding && !player.inTree) {
-    for (const c of creatures) {
-      if (!c.tamed || c.type !== 'horse') continue;
-      const dx2 = c.x - player.x, dy2 = c.y - player.y;
-      if (Math.sqrt(dx2 * dx2 + dy2 * dy2) < 3) {
-        player.riding = c;
-        c.state = 'follow';
-        notify('Mounted horse! [Space] to dismount');
-        return;
-      }
-    }
   }
 
   // Matches → place campfire
