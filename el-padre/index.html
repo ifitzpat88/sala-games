@@ -633,12 +633,12 @@ const LB_NAME_KEY = 'elpadre_tetris_name';
 const LB_MAX = 10;
 const LB_SEED = [{name:'EL PADRE',score:80776,level:11,lines:103,combo:4,date:'2026-02-09'}];
 
-// API base — works both when served from spr-launcher (:9000) or standalone
+// API base — works when served from sala server (:9001) or standalone
 const API_BASE = (() => {
-  // If we're served from port 9000, use relative paths
-  if (location.port === '9000') return '';
-  // Otherwise try localhost:9000
-  return 'http://localhost:9000';
+  // If we're served from the sala game server, use relative paths
+  if (location.port === '9001') return '';
+  // Otherwise try the sala game server
+  return 'http://localhost:9001';
 })();
 
 let cachedServerLB = null; // last fetched server leaderboard
