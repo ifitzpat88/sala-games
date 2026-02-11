@@ -2961,8 +2961,8 @@ function startGame(slot, isLoad) {
   document.getElementById('title-screen').style.display = 'none';
   activeSlot = slot;
 
-  if (isLoad) {
-    loadGame(slot);
+  if (isLoad && loadGame(slot)) {
+    // Loaded successfully
   } else {
     worldSeed = Math.floor(Math.random() * 999999) + 1;
     blockChanges = {};
