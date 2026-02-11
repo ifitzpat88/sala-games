@@ -315,6 +315,149 @@ body {
   z-index: 99;
   pointer-events: none;
 }
+
+/* Name input on title screen */
+.name-entry {
+  z-index: 101;
+  position: relative;
+  margin-top: 30px;
+  text-align: center;
+}
+
+.name-entry label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  color: rgba(200, 200, 255, 0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.name-entry input {
+  display: block;
+  margin: 6px auto 0;
+  background: rgba(10, 10, 40, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #00e5ff;
+  text-align: center;
+  width: 180px;
+  outline: none;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+}
+
+.name-entry input:focus {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
+/* Title leaderboard hint */
+.title-lb-hint {
+  z-index: 101;
+  position: relative;
+  margin-top: 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(8px, 1.2vw, 11px);
+  color: rgba(0, 229, 255, 0.5);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.title-lb-hint:hover {
+  color: rgba(0, 229, 255, 0.9);
+}
+
+/* Leaderboard overlay (full screen) */
+#leaderboard-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  background: rgba(5, 5, 15, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+#leaderboard-overlay.hidden { display: none; }
+
+#leaderboard-overlay h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(20px, 3.5vw, 36px);
+  font-weight: 900;
+  color: #00e5ff;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 24px;
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+}
+
+.lb-full-table {
+  width: 90%;
+  max-width: 520px;
+}
+
+.lb-full-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: rgba(200, 200, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lb-full-row.lb-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: rgba(200, 200, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+}
+
+.lb-full-row .lb-f-rank { width: 36px; color: #00e5ff; }
+.lb-full-row .lb-f-name { flex: 1; color: #ff6ec7; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lb-full-row .lb-f-score { width: 90px; text-align: right; color: #fff; }
+.lb-full-row .lb-f-level { width: 50px; text-align: right; color: #39ff14; }
+.lb-full-row .lb-f-lines { width: 50px; text-align: right; color: #ffe44d; }
+.lb-full-row .lb-f-date { width: 80px; text-align: right; color: rgba(200, 200, 255, 0.35); font-size: 8px; }
+
+.lb-back-hint {
+  margin-top: 30px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(8px, 1.2vw, 11px);
+  color: rgba(255, 228, 77, 0.6);
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.lb-back-btn {
+  margin-top: 16px;
+  background: none;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  padding: 8px 24px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  color: #00e5ff;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.lb-back-btn:hover {
+  border-color: rgba(0, 229, 255, 0.7);
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+}
 </style>
 </head>
 <body>
@@ -327,6 +470,19 @@ body {
   <h1 style="z-index:101;position:relative;"><span class="el">El</span> <span class="padre">Padre's</span> <span class="tetris-word">Tetris</span></h1>
   <div class="subtitle" style="z-index:101;position:relative;">THE ULTIMATE CHALLENGE</div>
   <div class="blink" style="z-index:101;position:relative;">PRESS ENTER TO START</div>
+  <div class="title-lb-hint" id="title-lb-btn" onclick="window._openLeaderboard && window._openLeaderboard()">L &mdash; VIEW LEADERBOARD</div>
+  <div class="name-entry">
+    <label for="player-name-input">Your Name</label>
+    <input type="text" id="player-name-input" maxlength="16" placeholder="???" spellcheck="false" autocomplete="off">
+  </div>
+</div>
+
+<!-- Leaderboard Overlay -->
+<div class="hidden" id="leaderboard-overlay">
+  <h2>Leaderboard</h2>
+  <div class="lb-full-table" id="lb-full-table"></div>
+  <div class="lb-back-hint">PRESS ESCAPE TO GO BACK</div>
+  <button class="lb-back-btn" id="lb-back-btn">Back</button>
 </div>
 
 <!-- Pause Overlay -->
@@ -471,13 +627,38 @@ let lines = 0;
 let combo = -1;
 let maxCombo = 0;
 
-// --- Leaderboard (top 5) ---
+// --- Leaderboard (top 10, shared via server) ---
 const LB_KEY = 'elpadre_tetris_leaderboard';
-const LB_MAX = 5;
-// Seed: El Padre's legendary first score
-const LB_SEED = [{score:80776,level:11,lines:103,combo:4,date:'2026-02-09'}];
+const LB_NAME_KEY = 'elpadre_tetris_name';
+const LB_MAX = 10;
+const LB_SEED = [{name:'EL PADRE',score:80776,level:11,lines:103,combo:4,date:'2026-02-09'}];
+
+// API base — works both when served from spr-launcher (:9000) or standalone
+const API_BASE = (() => {
+  // If we're served from port 9000, use relative paths
+  if (location.port === '9000') return '';
+  // Otherwise try localhost:9000
+  return 'http://localhost:9000';
+})();
+
+let cachedServerLB = null; // last fetched server leaderboard
+
+function getPlayerName() {
+  const input = document.getElementById('player-name-input');
+  const stored = localStorage.getItem(LB_NAME_KEY) || '';
+  if (input && !input.value && stored) input.value = stored;
+  return (input && input.value.trim()) || stored || '???';
+}
+
+function savePlayerName(name) {
+  try { localStorage.setItem(LB_NAME_KEY, name); } catch(e) {}
+  const input = document.getElementById('player-name-input');
+  if (input && !input.value) input.value = name;
+}
 
 function loadLeaderboard() {
+  // If we have server data cached, prefer that
+  if (cachedServerLB && cachedServerLB.length > 0) return cachedServerLB;
   try {
     const raw = localStorage.getItem(LB_KEY);
     if (raw) {
@@ -485,7 +666,6 @@ function loadLeaderboard() {
       if (Array.isArray(lb) && lb.length > 0) return lb;
     }
   } catch(e) {}
-  // First time: seed with El Padre's score
   saveLeaderboard(LB_SEED);
   return [...LB_SEED];
 }
@@ -494,15 +674,58 @@ function saveLeaderboard(lb) {
   try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch(e) {}
 }
 
-function addToLeaderboard(s, lv, ln, cmb) {
+async function fetchLeaderboard() {
+  try {
+    const res = await fetch(`${API_BASE}/api/tetris-leaderboard`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.success && Array.isArray(data.leaderboard)) {
+      cachedServerLB = data.leaderboard;
+      saveLeaderboard(data.leaderboard);
+      return data.leaderboard;
+    }
+  } catch(e) {
+    // Server unreachable — fall back to localStorage
+  }
+  return loadLeaderboard();
+}
+
+async function submitScore(s, lv, ln, cmb) {
+  const name = getPlayerName();
+  savePlayerName(name);
+  const entry = { name, score: s, level: lv, lines: ln, combo: cmb };
+  try {
+    const res = await fetch(`${API_BASE}/api/tetris-leaderboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.success && Array.isArray(data.leaderboard)) {
+      cachedServerLB = data.leaderboard;
+      saveLeaderboard(data.leaderboard);
+      return data.rank;
+    }
+  } catch(e) {
+    // Server unreachable — save locally only
+  }
+  return addToLeaderboardLocal(s, lv, ln, cmb, name);
+}
+
+function addToLeaderboardLocal(s, lv, ln, cmb, name) {
   const lb = loadLeaderboard();
-  const entry = {score:s, level:lv, lines:ln, combo:cmb, date:new Date().toISOString().slice(0,10)};
+  const entry = {name: name || '???', score:s, level:lv, lines:ln, combo:cmb, date:new Date().toISOString().slice(0,10)};
   lb.push(entry);
   lb.sort((a,b) => b.score - a.score);
   while (lb.length > LB_MAX) lb.pop();
   saveLeaderboard(lb);
-  // Return rank (0-indexed) or -1 if not on board
   return lb.findIndex(e => e === entry);
+}
+
+function addToLeaderboard(s, lv, ln, cmb) {
+  // This is now async — we call submitScore and return a promise
+  return submitScore(s, lv, ln, cmb);
 }
 
 function renderLeaderboard(newRank) {
@@ -510,14 +733,59 @@ function renderLeaderboard(newRank) {
   let html = '<h4>Top Scores</h4>';
   lb.forEach((e, i) => {
     const isNew = i === newRank;
+    const name = e.name || '???';
     html += `<div class="lb-row ${isNew ? 'lb-new' : ''}">
       <span class="lb-rank">#${i+1}</span>
       <span class="lb-score">${e.score.toLocaleString()}</span>
-      <span class="lb-detail">Lv${e.level} · ${e.lines}L · ${e.date}</span>
+      <span class="lb-detail">${name} · Lv${e.level} · ${e.lines}L</span>
     </div>`;
   });
   document.getElementById('leaderboard').innerHTML = html;
 }
+
+function renderFullLeaderboard() {
+  const lb = loadLeaderboard();
+  let html = `<div class="lb-full-row lb-header">
+    <span class="lb-f-rank">#</span>
+    <span class="lb-f-name">Name</span>
+    <span class="lb-f-score">Score</span>
+    <span class="lb-f-level">Lvl</span>
+    <span class="lb-f-lines">Lines</span>
+    <span class="lb-f-date">Date</span>
+  </div>`;
+  lb.forEach((e, i) => {
+    const name = e.name || '???';
+    html += `<div class="lb-full-row">
+      <span class="lb-f-rank">${i+1}</span>
+      <span class="lb-f-name">${name}</span>
+      <span class="lb-f-score">${e.score.toLocaleString()}</span>
+      <span class="lb-f-level">${e.level}</span>
+      <span class="lb-f-lines">${e.lines}</span>
+      <span class="lb-f-date">${e.date || ''}</span>
+    </div>`;
+  });
+  document.getElementById('lb-full-table').innerHTML = html;
+}
+
+function openLeaderboard() {
+  fetchLeaderboard().then(() => {
+    renderFullLeaderboard();
+    document.getElementById('leaderboard-overlay').classList.remove('hidden');
+    gameState = 'leaderboard';
+  });
+}
+
+function closeLeaderboard() {
+  document.getElementById('leaderboard-overlay').classList.add('hidden');
+  gameState = _returnFromLeaderboard || 'title';
+}
+
+let _returnFromLeaderboard = 'title';
+// Expose for inline onclick
+window._openLeaderboard = () => {
+  _returnFromLeaderboard = gameState;
+  openLeaderboard();
+};
 let backToBack = false;
 let gameState = 'title'; // title, playing, paused, gameover
 let dropTimer = 0;
@@ -578,9 +846,32 @@ function init() {
   titleCtx = titleCanvas.getContext('2d');
   resizeTitle();
 
-  // Load high score from leaderboard
+  // Load player name from localStorage
+  const savedName = localStorage.getItem(LB_NAME_KEY) || '';
+  const nameInput = document.getElementById('player-name-input');
+  if (nameInput && savedName) nameInput.value = savedName;
+  // Save name on change
+  if (nameInput) {
+    nameInput.addEventListener('change', () => {
+      const n = nameInput.value.trim();
+      if (n) savePlayerName(n);
+    });
+  }
+
+  // Wire up leaderboard back button
+  document.getElementById('lb-back-btn').addEventListener('click', closeLeaderboard);
+
+  // Load high score from leaderboard (local first, then fetch from server)
   const lb = loadLeaderboard();
   highScore = lb.length > 0 ? lb[0].score : 0;
+
+  // Pre-fetch server leaderboard in background
+  fetchLeaderboard().then(serverLB => {
+    if (serverLB.length > 0 && serverLB[0].score > highScore) {
+      highScore = serverLB[0].score;
+    }
+    updateHUD();
+  });
 
   updateHUD();
   window.addEventListener('resize', () => { resizeBg(); resizeTitle(); scaleGame(); });
@@ -1004,10 +1295,15 @@ function startGame() {
   dasTimer = 0;
   dasActive = false;
 
+  // Save player name before starting
+  const pName = getPlayerName();
+  if (pName && pName !== '???') savePlayerName(pName);
+
   gameState = 'playing';
   document.getElementById('title-overlay').classList.add('hidden');
   document.getElementById('gameover-overlay').classList.add('hidden');
   document.getElementById('pause-overlay').classList.add('hidden');
+  document.getElementById('leaderboard-overlay').classList.add('hidden');
   document.getElementById('game-wrapper').style.display = 'flex';
   scaleGame();
   updateHUD();
@@ -1019,15 +1315,6 @@ function gameOver() {
 
   const comboVal = maxCombo > 0 ? maxCombo + 1 : 0;
   const isNewHigh = score >= highScore && score > 0;
-
-  // Add to leaderboard
-  let newRank = -1;
-  if (score > 0) {
-    newRank = addToLeaderboard(score, level, lines, comboVal);
-    // Refresh high score from leaderboard
-    const lb = loadLeaderboard();
-    highScore = lb.length > 0 ? lb[0].score : highScore;
-  }
 
   const statsDiv = document.getElementById('go-stats');
   statsDiv.innerHTML = `
@@ -1041,10 +1328,18 @@ function gameOver() {
   if (isNewHigh && score > 0) nhEl.classList.remove('hidden');
   else nhEl.classList.add('hidden');
 
-  // Render leaderboard
-  renderLeaderboard(newRank);
-
+  // Show overlay immediately with local data, then update when server responds
+  renderLeaderboard(-1);
   document.getElementById('gameover-overlay').classList.remove('hidden');
+
+  // Submit score async and refresh leaderboard when done
+  if (score > 0) {
+    addToLeaderboard(score, level, lines, comboVal).then(newRank => {
+      const lb = loadLeaderboard();
+      highScore = lb.length > 0 ? lb[0].score : highScore;
+      renderLeaderboard(newRank);
+    });
+  }
 }
 
 function togglePause() {
@@ -1060,10 +1355,36 @@ function togglePause() {
 
 // --- Input ---
 function onKeyDown(e) {
+  // Don't capture keys while typing in the name input
+  if (document.activeElement && document.activeElement.id === 'player-name-input') {
+    if (e.key === 'Enter') {
+      document.activeElement.blur();
+      e.preventDefault();
+    }
+    return;
+  }
+
   if (e.repeat && (e.key === 'ArrowUp' || e.key === 'z' || e.key === 'Z' ||
                     e.key === ' ' || e.key === 'c' || e.key === 'C')) return;
 
   const key = e.key;
+
+  // Leaderboard overlay controls
+  if (gameState === 'leaderboard') {
+    if (key === 'Escape' || key === 'l' || key === 'L') {
+      closeLeaderboard();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  // Open leaderboard from title or gameover
+  if ((key === 'l' || key === 'L') && (gameState === 'title' || gameState === 'gameover')) {
+    _returnFromLeaderboard = gameState;
+    openLeaderboard();
+    e.preventDefault();
+    return;
+  }
 
   if (key === 'Enter') {
     if (gameState === 'title' || gameState === 'gameover') {
@@ -1073,7 +1394,15 @@ function onKeyDown(e) {
     }
   }
 
-  if (key === 'p' || key === 'P' || key === 'Escape') {
+  if (key === 'Escape') {
+    if (gameState === 'playing' || gameState === 'paused') {
+      togglePause();
+      e.preventDefault();
+      return;
+    }
+  }
+
+  if (key === 'p' || key === 'P') {
     if (gameState === 'playing' || gameState === 'paused') {
       togglePause();
       e.preventDefault();
@@ -1576,7 +1905,7 @@ function gameLoop(timestamp) {
 
   drawBackground(dt);
 
-  if (gameState === 'title') {
+  if (gameState === 'title' || gameState === 'leaderboard') {
     updateTitlePieces(dt);
     drawTitlePieces();
   }

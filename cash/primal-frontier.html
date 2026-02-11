@@ -46,7 +46,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
   <h1>PRIMAL FRONTIER</h1>
   <div class="subtitle">FIRST-PERSON SURVIVAL</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
-  <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E craft/trade &bull; Tab backpack &bull; B build menu &bull; M map &bull; 1-8 hotbar</div>
+  <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
 <div id="death-screen">
   <h2>YOU DIED</h2>
@@ -1992,13 +1992,18 @@ function renderHUD() {
     ctx.fillText('SPRINTING', 12, hunY + barH + 18);
   }
 
-  // Currently held item info
+  // Currently held item info + placement hint
   const held = getHeldItem();
   if (held) {
     ctx.fillStyle = '#ddd';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(held.name, W / 2, hotbarY - 8);
+    if (held.placeTile || held.seedSpecies) {
+      ctx.fillStyle = 'rgba(200,200,200,0.6)';
+      ctx.font = '10px sans-serif';
+      ctx.fillText('Right-click to place', W / 2, hotbarY - 20);
+    }
   }
 
   // Mining progress
@@ -2135,6 +2140,7 @@ function toggleBuildMenu() {
     buildMode = true;
     document.exitPointerLock();
   } else {
+    buildMode = false;
     if (gameRunning) C.requestPointerLock();
   }
 }
@@ -2678,9 +2684,21 @@ function handleRightClick() {
 
   // Try to place block
   if (held && held.placeTile) {
-    const dist = buildMode ? BUILD_PLACE_DIST : PLACE_DIST;
-    const placeX = Math.floor(player.x + Math.cos(player.angle) * dist);
-    const placeY = Math.floor(player.y + Math.sin(player.angle) * dist);
+    const maxDist = buildMode ? BUILD_PLACE_DIST : PLACE_DIST;
+    let placeX, placeY;
+
+    // If looking at a wall within range, place block on the near side of that wall
+    if (hit.block !== T.AIR && hit.dist <= maxDist + 1) {
+      // Step back from the hit wall to find the air tile in front of it
+      placeX = hit.mapX;
+      placeY = hit.mapY;
+      if (hit.side === 0) placeX -= (Math.cos(player.angle) > 0 ? 1 : -1);
+      else placeY -= (Math.sin(player.angle) > 0 ? 1 : -1);
+    } else {
+      // No wall nearby — place at fixed distance
+      placeX = Math.floor(player.x + Math.cos(player.angle) * maxDist);
+      placeY = Math.floor(player.y + Math.sin(player.angle) * maxDist);
+    }
 
     // Don't place on self
     if (placeX === Math.floor(player.x) && placeY === Math.floor(player.y)) return;
