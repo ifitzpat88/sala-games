@@ -1289,8 +1289,13 @@ function update() {
   worldMouseX = mouse.x + camera.x;
   worldMouseY = mouse.y + camera.y;
 
-  // Skip gameplay during upgrade screen
-  if (showingUpgrades) return;
+  // Skip gameplay during upgrade screen — but keep syncing state to client
+  if (showingUpgrades) {
+    if (isHost && isCoop && conn && conn.open && frameCount % NET_SEND_INTERVAL === 0) {
+      conn.send({ type: 'state', state: packGameState() });
+    }
+    return;
+  }
 
   // -- Player movement --
   const effectiveSpeed = PLAYER_SPEED + playerUpgrades.speed * 0.5;
