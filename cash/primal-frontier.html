@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v2.0.0</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -65,6 +65,11 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 </div>
 <div id="trade-menu">
   <div id="trade-list"></div>
+  <div style="text-align:center;margin-top:10px;color:#666;font-size:12px;">Press E or Escape to close</div>
+</div>
+<div id="smelt-menu" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,15,30,.95);border:2px solid #FF6600;border-radius:12px;padding:20px;z-index:80;display:none;min-width:480px;max-height:80vh;overflow-y:auto;pointer-events:auto;cursor:default;">
+  <h3 style="color:#FF6600;font-size:20px;margin-bottom:14px;text-align:center;">Furnace — Smelting</h3>
+  <div id="smelt-list"></div>
   <div style="text-align:center;margin-top:10px;color:#666;font-size:12px;">Press E or Escape to close</div>
 </div>
 
@@ -109,43 +114,49 @@ const T = {
   COPPER:12, SILVER:13,
   HOUSE_WALL:28, THATCH_ROOF:29, MARKET_STALL:30, GLASS:31,
   CAMPFIRE:32, CHEST:33,
-  SAPLING:34, YOUNG_TREE:35, OAK:36, PINE:37, JUNGLE_TREE:38, PALM:39
+  SAPLING:34, YOUNG_TREE:35, OAK:36, PINE:37, JUNGLE_TREE:38, PALM:39,
+  FURNACE:40, REINFORCED_STONE:41, REINFORCED_IRON:42, STEEL_BLOCK:43, GOLD_BLOCK:44
 };
 
 const TILE_INFO = {
-  [T.DIRT]:{name:'Dirt',color:[0x8B,0x6B,0x4B],hits:3,drop:'dirt',dropAmt:1},
-  [T.STONE]:{name:'Stone',color:[0x80,0x80,0x80],hits:6,drop:'stone',dropAmt:1},
-  [T.IRON]:{name:'Iron Ore',color:[0x90,0x70,0x50],hits:8,drop:'iron',dropAmt:1},
-  [T.GOLD]:{name:'Gold Ore',color:[0xD4,0xA0,0x17],hits:10,drop:'gold',dropAmt:1},
-  [T.CRYSTAL]:{name:'Crystal',color:[0x80,0x40,0xD0],hits:12,drop:'crystal',dropAmt:1},
-  [T.WOOD]:{name:'Wood',color:[0x6B,0x4B,0x2B],hits:4,drop:'wood',dropAmt:2},
-  [T.LEAVES]:{name:'Leaves',color:[0x22,0x8B,0x22],hits:1,drop:'berries',dropAmt:2},
-  [T.SAND]:{name:'Sand',color:[0xD2,0xB4,0x8C],hits:2,drop:'sand',dropAmt:1},
-  [T.SNOW]:{name:'Snow',color:[0xE8,0xE8,0xF0],hits:2,drop:'snow',dropAmt:1},
-  [T.OBSIDIAN]:{name:'Obsidian',color:[0x20,0x10,0x30],hits:15,drop:'obsidian',dropAmt:1},
-  [T.LAVA]:{name:'Lava',color:[0xFF,0x44,0x00],hits:999},
-  [T.WOOD_WALL]:{name:'Wood Wall',color:[0x8B,0x6B,0x3B],hits:5,drop:'wood',dropAmt:1},
-  [T.STONE_WALL]:{name:'Stone Wall',color:[0x70,0x70,0x70],hits:8,drop:'stone',dropAmt:1},
-  [T.FENCE]:{name:'Fence',color:[0x9B,0x7B,0x4B],hits:3,drop:'wood',dropAmt:1},
-  [T.DOOR]:{name:'Door',color:[0x6B,0x4B,0x1B],hits:3,drop:'wood',dropAmt:1},
-  [T.TORCH]:{name:'Torch',color:[0xFF,0xA5,0x00],hits:1,drop:'wood',dropAmt:1},
-  [T.WELL]:{name:'Well',color:[0x40,0x60,0x90],hits:8,drop:'stone',dropAmt:2},
-  [T.BRICK]:{name:'Brick',color:[0xA0,0x50,0x30],hits:10,drop:'stone',dropAmt:1},
-  [T.WATER]:{name:'Water',color:[0x20,0x60,0xC0],hits:999},
-  [T.HOUSE_WALL]:{name:'House Wall',color:[0xE0,0xD8,0xC0],hits:10,drop:'stone',dropAmt:2},
-  [T.THATCH_ROOF]:{name:'Thatch Roof',color:[0xAA,0x88,0x44],hits:4,drop:'wood',dropAmt:2},
-  [T.MARKET_STALL]:{name:'Market Stall',color:[0xBB,0x66,0x22],hits:5,drop:'wood',dropAmt:3},
-  [T.GLASS]:{name:'Glass',color:[0x88,0xCC,0xEE],hits:1,drop:null,dropAmt:0},
-  [T.COPPER]:{name:'Copper Ore',color:[0xB0,0x60,0x30],hits:7,drop:'copper',dropAmt:1},
-  [T.SILVER]:{name:'Silver Ore',color:[0xC0,0xC0,0xC8],hits:9,drop:'silver',dropAmt:1},
-  [T.CAMPFIRE]:{name:'Campfire',color:[0xFF,0x66,0x00],hits:3,drop:'wood',dropAmt:1},
-  [T.CHEST]:{name:'Chest',color:[0x8B,0x6B,0x2B],hits:5,drop:'wood',dropAmt:3},
-  [T.SAPLING]:{name:'Sapling',color:[0x44,0x88,0x22],hits:1,drop:null,dropAmt:0},
-  [T.YOUNG_TREE]:{name:'Young Tree',color:[0x55,0x77,0x33],hits:3,drop:'wood',dropAmt:1},
-  [T.OAK]:{name:'Oak Tree',color:[0x6B,0x4B,0x2B],hits:5,drop:'wood',dropAmt:3},
-  [T.PINE]:{name:'Pine Tree',color:[0x2B,0x55,0x2B],hits:5,drop:'wood',dropAmt:3},
-  [T.JUNGLE_TREE]:{name:'Jungle Tree',color:[0x33,0x66,0x11],hits:6,drop:'wood',dropAmt:4},
-  [T.PALM]:{name:'Palm Tree',color:[0x8B,0x7B,0x3B],hits:4,drop:'wood',dropAmt:2},
+  [T.DIRT]:{name:'Dirt',color:[0x8B,0x6B,0x4B],hits:3,drop:'dirt',dropAmt:1,wh:1.0},
+  [T.STONE]:{name:'Stone',color:[0x80,0x80,0x80],hits:6,drop:'stone',dropAmt:1,wh:1.0},
+  [T.IRON]:{name:'Iron Ore',color:[0x90,0x70,0x50],hits:8,drop:'iron',dropAmt:1,wh:1.0},
+  [T.GOLD]:{name:'Gold Ore',color:[0xD4,0xA0,0x17],hits:10,drop:'gold',dropAmt:1,wh:1.0},
+  [T.CRYSTAL]:{name:'Crystal',color:[0x80,0x40,0xD0],hits:12,drop:'crystal',dropAmt:1,wh:1.0},
+  [T.WOOD]:{name:'Wood',color:[0x6B,0x4B,0x2B],hits:4,drop:'wood',dropAmt:2,wh:1.0},
+  [T.LEAVES]:{name:'Leaves',color:[0x22,0x8B,0x22],hits:1,drop:'berries',dropAmt:2,wh:1.0},
+  [T.SAND]:{name:'Sand',color:[0xD2,0xB4,0x8C],hits:2,drop:'sand',dropAmt:1,wh:1.0},
+  [T.SNOW]:{name:'Snow',color:[0xE8,0xE8,0xF0],hits:2,drop:'snow',dropAmt:1,wh:1.0},
+  [T.OBSIDIAN]:{name:'Obsidian',color:[0x20,0x10,0x30],hits:15,drop:'obsidian',dropAmt:1,wh:1.0},
+  [T.LAVA]:{name:'Lava',color:[0xFF,0x44,0x00],hits:999,wh:0.3},
+  [T.WOOD_WALL]:{name:'Wood Wall',color:[0x8B,0x6B,0x3B],hits:5,drop:'wood',dropAmt:1,wh:0.8},
+  [T.STONE_WALL]:{name:'Stone Wall',color:[0x70,0x70,0x70],hits:8,drop:'stone',dropAmt:1,wh:0.8},
+  [T.FENCE]:{name:'Fence',color:[0x9B,0x7B,0x4B],hits:3,drop:'wood',dropAmt:1,wh:0.5},
+  [T.DOOR]:{name:'Door',color:[0x6B,0x4B,0x1B],hits:3,drop:'wood',dropAmt:1,wh:0.85},
+  [T.TORCH]:{name:'Torch',color:[0xFF,0xA5,0x00],hits:1,drop:'wood',dropAmt:1,wh:0.4},
+  [T.WELL]:{name:'Well',color:[0x40,0x60,0x90],hits:8,drop:'stone',dropAmt:2,wh:0.6},
+  [T.BRICK]:{name:'Brick',color:[0xA0,0x50,0x30],hits:10,drop:'stone',dropAmt:1,wh:1.0},
+  [T.WATER]:{name:'Water',color:[0x20,0x60,0xC0],hits:999,wh:0.15},
+  [T.HOUSE_WALL]:{name:'House Wall',color:[0xE0,0xD8,0xC0],hits:10,drop:'stone',dropAmt:2,wh:1.0},
+  [T.THATCH_ROOF]:{name:'Thatch Roof',color:[0xAA,0x88,0x44],hits:4,drop:'wood',dropAmt:2,wh:0.9},
+  [T.MARKET_STALL]:{name:'Market Stall',color:[0xBB,0x66,0x22],hits:5,drop:'wood',dropAmt:3,wh:0.7},
+  [T.GLASS]:{name:'Glass',color:[0x88,0xCC,0xEE],hits:1,drop:null,dropAmt:0,wh:0.85},
+  [T.COPPER]:{name:'Copper Ore',color:[0xB0,0x60,0x30],hits:7,drop:'copper',dropAmt:1,wh:1.0},
+  [T.SILVER]:{name:'Silver Ore',color:[0xC0,0xC0,0xC8],hits:9,drop:'silver',dropAmt:1,wh:1.0},
+  [T.CAMPFIRE]:{name:'Campfire',color:[0xFF,0x66,0x00],hits:3,drop:'wood',dropAmt:1,wh:0.25},
+  [T.CHEST]:{name:'Chest',color:[0x8B,0x6B,0x2B],hits:5,drop:'wood',dropAmt:3,wh:0.45},
+  [T.SAPLING]:{name:'Sapling',color:[0x44,0x88,0x22],hits:1,drop:null,dropAmt:0,wh:0.15},
+  [T.YOUNG_TREE]:{name:'Young Tree',color:[0x55,0x77,0x33],hits:3,drop:'wood',dropAmt:1,wh:0.6},
+  [T.OAK]:{name:'Oak Tree',color:[0x6B,0x4B,0x2B],hits:5,drop:'wood',dropAmt:3,wh:1.3},
+  [T.PINE]:{name:'Pine Tree',color:[0x2B,0x55,0x2B],hits:5,drop:'wood',dropAmt:3,wh:1.5},
+  [T.JUNGLE_TREE]:{name:'Jungle Tree',color:[0x33,0x66,0x11],hits:6,drop:'wood',dropAmt:4,wh:1.4},
+  [T.PALM]:{name:'Palm Tree',color:[0x8B,0x7B,0x3B],hits:4,drop:'wood',dropAmt:2,wh:1.2},
+  [T.FURNACE]:{name:'Furnace',color:[0x60,0x60,0x60],hits:10,drop:'stone',dropAmt:5,wh:0.7},
+  [T.REINFORCED_STONE]:{name:'Reinforced Stone',color:[0x60,0x65,0x70],hits:20,drop:'stone',dropAmt:2,wh:1.0},
+  [T.REINFORCED_IRON]:{name:'Reinforced Iron',color:[0x70,0x60,0x55],hits:30,drop:'iron',dropAmt:2,wh:1.0},
+  [T.STEEL_BLOCK]:{name:'Steel Block',color:[0x88,0x88,0x90],hits:40,drop:'iron',dropAmt:3,wh:1.0},
+  [T.GOLD_BLOCK]:{name:'Gold Block',color:[0xD4,0xA8,0x20],hits:25,drop:'gold',dropAmt:2,wh:1.0},
 };
 
 // ---- ITEMS ----
@@ -198,6 +209,18 @@ const ITEMS = {
   pine_seed:{name:'Pine Seed',color:'#3B6B3B',stack:16,placeTile:T.SAPLING,seedSpecies:'pine'},
   jungle_seed:{name:'Jungle Seed',color:'#228B22',stack:16,placeTile:T.SAPLING,seedSpecies:'jungle'},
   palm_seed:{name:'Palm Seed',color:'#8B7B2B',stack:16,placeTile:T.SAPLING,seedSpecies:'palm'},
+  wood_shovel:{name:'Wood Shovel',color:'#8B6B3B',stack:1,tool:'shovel',tier:1},
+  stone_shovel:{name:'Stone Shovel',color:'#808080',stack:1,tool:'shovel',tier:2},
+  iron_shovel:{name:'Iron Shovel',color:'#B08050',stack:1,tool:'shovel',tier:3},
+  iron_ingot:{name:'Iron Ingot',color:'#A0A0A0',stack:64},
+  gold_ingot:{name:'Gold Ingot',color:'#FFD700',stack:64},
+  steel_ingot:{name:'Steel Ingot',color:'#B0B0B8',stack:64},
+  reinforced_stone:{name:'Reinforced Stone',color:'#606570',placeTile:T.REINFORCED_STONE,stack:64},
+  reinforced_iron:{name:'Reinforced Iron',color:'#706055',placeTile:T.REINFORCED_IRON,stack:64},
+  steel_block:{name:'Steel Block',color:'#888890',placeTile:T.STEEL_BLOCK,stack:64},
+  gold_block:{name:'Gold Block',color:'#D4A820',placeTile:T.GOLD_BLOCK,stack:64},
+  furnace_item:{name:'Furnace',color:'#606060',placeTile:T.FURNACE,stack:16},
+  boat:{name:'Boat',color:'#8B6B3B',stack:1,tool:'boat'},
 };
 
 // ---- RECIPES ----
@@ -229,6 +252,21 @@ const RECIPES = [
   {result:'bread',amt:2,cost:{berries:4,wood:1},cat:'Food'},
   {result:'fur_coat',amt:1,cost:{raw_meat:3,wood:2},cat:'Misc'},
   {result:'gold_coin',amt:1,cost:{gold:2},cat:'Misc'},
+  {result:'wood_shovel',amt:1,cost:{wood:5},cat:'Tools'},
+  {result:'stone_shovel',amt:1,cost:{wood:3,stone:4},cat:'Tools'},
+  {result:'iron_shovel',amt:1,cost:{wood:2,iron:4},cat:'Tools'},
+  {result:'furnace_item',amt:1,cost:{stone:10,iron:5},cat:'Building'},
+  {result:'boat',amt:1,cost:{wood:20,iron:5},cat:'Misc'},
+];
+
+const SMELT_RECIPES = [
+  {input:{iron:1},fuel:{wood:2},result:'iron_ingot',amt:1,name:'Smelt Iron Ingot'},
+  {input:{gold:1},fuel:{wood:3},result:'gold_ingot',amt:1,name:'Smelt Gold Ingot'},
+  {input:{iron_ingot:1},fuel:{wood:4},result:'steel_ingot',amt:1,name:'Forge Steel Ingot'},
+  {input:{stone:2,iron_ingot:1},fuel:{wood:2},result:'reinforced_stone',amt:2,name:'Reinforced Stone'},
+  {input:{iron_ingot:1,wood:2},fuel:{wood:2},result:'reinforced_iron',amt:2,name:'Reinforced Iron'},
+  {input:{steel_ingot:1,wood:2},fuel:{wood:2},result:'steel_block',amt:2,name:'Steel Block'},
+  {input:{gold_ingot:1,wood:2},fuel:{wood:2},result:'gold_block',amt:2,name:'Gold Block'},
 ];
 
 // ---- CREATURE TYPES ----
@@ -271,6 +309,7 @@ const NPC_TYPES = {
       {give:{gold_coin:8},get:{iron:5}},
       {give:{wood:20},get:{gold_coin:2}},
       {give:{stone:20},get:{gold_coin:2}},
+      {give:{gold_coin:15},get:{boat:1}},
     ]},
   blacksmith:{name:'Blacksmith',color:'#AA6644',size:0.7,
     trades:[
@@ -296,6 +335,14 @@ const NPC_TYPES = {
       {give:{gold_coin:12},get:{wolf_pup:1}},
       {give:{gold_coin:4},get:{raw_meat:5}},
       {give:{raw_meat:10},get:{gold_coin:3}},
+    ]},
+  guard:{name:'Guard',color:'#4466AA',size:0.7,
+    trades:[
+      {give:{gold_coin:15},get:{iron_sword:1}},
+      {give:{gold_coin:10},get:{iron_pickaxe:1}},
+      {give:{gold_coin:8},get:{health_potion:1}},
+      {give:{gold_coin:15},get:{boat:1}},
+      {give:{gold_coin:5},get:{strength_potion:1}},
     ]},
 };
 
@@ -455,6 +502,26 @@ function genTex(id, baseR, baseG, baseB, pattern) {
         if (Math.abs(x - 8 + (y > 8 ? (y - 8) * 0.2 : 0)) < 1.5 && y > 6) { r = 0x8B; g = 0x7B; b = 0x3B; }
         else if (y < 7 && (Math.abs(x - 8 + (y - 3) * 1.2) < 2 || Math.abs(x - 8 - (y - 3) * 1.2) < 2)) { r = 0x22; g = 0x88 + ((x + y) % 15); b = 0x11; }
         else { r = 0; g = 0; b = 0; }
+      } else if (pattern === 'furnace') {
+        // Stone base with fire opening
+        if (y < 3 || y > 13 || x < 2 || x > 13) { r = 0x55; g = 0x55; b = 0x55; }
+        else if (y > 6 && y < 12 && x > 5 && x < 11) { r = 0xFF; g = 0x66 + ((x * y) % 30); b = 0x10; }
+        else { r = 0x70; g = 0x70; b = 0x70; const spk = ((x * 7 + y * 11) % 9) - 4; r += spk; g += spk; b += spk; }
+      } else if (pattern === 'reinforced') {
+        // Metal-banded stone
+        const bx2 = ((x + ((y >> 3) * 4)) % 8); const by2 = y % 4;
+        if (bx2 === 0 || by2 === 0) { r -= 25; g -= 25; b -= 20; }
+        if (y === 4 || y === 11) { r += 30; g += 25; b += 20; }
+      } else if (pattern === 'steel') {
+        // Polished metal look
+        const shine2 = Math.sin(x * 0.4 + y * 0.3) * 15;
+        r += shine2; g += shine2; b += shine2 + 5;
+        if (x === 0 || x === 15 || y === 0 || y === 15) { r -= 20; g -= 20; b -= 15; }
+      } else if (pattern === 'gold_block') {
+        // Shiny gold
+        const gleam = Math.sin(x * 0.6) * Math.cos(y * 0.4) * 20;
+        r = Math.min(255, r + gleam); g = Math.min(255, g + gleam * 0.7);
+        if ((x + y) % 5 === 0) { r += 15; g += 10; }
       }
       data[i] = Math.max(0, Math.min(255, r));
       data[i + 1] = Math.max(0, Math.min(255, g));
@@ -498,6 +565,11 @@ function initTextures() {
   genTex(T.PINE, 0x2B, 0x55, 0x2B, 'pine');
   genTex(T.JUNGLE_TREE, 0x33, 0x66, 0x11, 'jungle_tree');
   genTex(T.PALM, 0x8B, 0x7B, 0x3B, 'palm');
+  genTex(T.FURNACE, 0x60, 0x60, 0x60, 'furnace');
+  genTex(T.REINFORCED_STONE, 0x60, 0x65, 0x70, 'reinforced');
+  genTex(T.REINFORCED_IRON, 0x70, 0x60, 0x55, 'reinforced');
+  genTex(T.STEEL_BLOCK, 0x88, 0x88, 0x90, 'steel');
+  genTex(T.GOLD_BLOCK, 0xD4, 0xA8, 0x20, 'gold_block');
 }
 
 // ============================================================
@@ -611,6 +683,83 @@ function generateWorld(worldSeed) {
     }
   }
 
+  // Lakes (25 total, all non-volcanic biomes)
+  setSeed(worldSeed + 300);
+  for (let i = 0; i < 25; i++) {
+    const lx = rngInt(100, MAP_SIZE - 100);
+    const ly = rngInt(100, MAP_SIZE - 100);
+    const biome = getBiome(lx, ly);
+    if (biome === 'volcanic') continue;
+    const radius = rngInt(5, 15);
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const dist2 = dx * dx + dy * dy;
+        const edge = radius + Math.sin(dx * 0.7) * 2 + Math.cos(dy * 0.5) * 2;
+        if (dist2 < edge * edge) {
+          const wx = lx + dx, wy = ly + dy;
+          if (wx > 1 && wx < MAP_SIZE - 2 && wy > 1 && wy < MAP_SIZE - 2) {
+            const blk = worldMap[wy * MAP_SIZE + wx];
+            if (blk === T.AIR || blk === T.DIRT || blk === T.SAND || blk === T.SNOW) {
+              worldMap[wy * MAP_SIZE + wx] = T.WATER;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Rivers (6 total)
+  setSeed(worldSeed + 400);
+  for (let i = 0; i < 6; i++) {
+    const sx = rngInt(200, MAP_SIZE - 200);
+    const sy = rngInt(200, MAP_SIZE - 200);
+    const angle = rng() * Math.PI * 2;
+    const len = rngInt(150, 400);
+    const width = rngInt(2, 4);
+    const amp = rngInt(10, 30);
+    const freq = 0.02 + rng() * 0.03;
+    for (let t = 0; t < len; t++) {
+      const drift = Math.sin(t * freq) * amp;
+      const px = Math.floor(sx + Math.cos(angle) * t + Math.cos(angle + Math.PI / 2) * drift);
+      const py = Math.floor(sy + Math.sin(angle) * t + Math.sin(angle + Math.PI / 2) * drift);
+      for (let w = -width; w <= width; w++) {
+        const rx = px + Math.floor(Math.cos(angle + Math.PI / 2) * w);
+        const ry = py + Math.floor(Math.sin(angle + Math.PI / 2) * w);
+        if (rx > 1 && rx < MAP_SIZE - 2 && ry > 1 && ry < MAP_SIZE - 2) {
+          if (getBiome(rx, ry) !== 'volcanic') {
+            const blk = worldMap[ry * MAP_SIZE + rx];
+            if (blk === T.AIR || blk === T.DIRT || blk === T.SAND || blk === T.SNOW) {
+              worldMap[ry * MAP_SIZE + rx] = T.WATER;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Creeks (12 total)
+  setSeed(worldSeed + 450);
+  for (let i = 0; i < 12; i++) {
+    let cx2 = rngInt(100, MAP_SIZE - 100);
+    let cy2 = rngInt(100, MAP_SIZE - 100);
+    let cAngle = rng() * Math.PI * 2;
+    const cLen = rngInt(80, 200);
+    for (let t = 0; t < cLen; t++) {
+      cAngle += (rng() - 0.5) * 0.5;
+      cx2 += Math.cos(cAngle);
+      cy2 += Math.sin(cAngle);
+      const rx = Math.floor(cx2), ry = Math.floor(cy2);
+      if (rx > 1 && rx < MAP_SIZE - 2 && ry > 1 && ry < MAP_SIZE - 2) {
+        if (getBiome(rx, ry) !== 'volcanic') {
+          const blk = worldMap[ry * MAP_SIZE + rx];
+          if (blk === T.AIR || blk === T.DIRT || blk === T.SAND || blk === T.SNOW) {
+            worldMap[ry * MAP_SIZE + rx] = T.WATER;
+          }
+        }
+      }
+    }
+  }
+
   // Generate towns
   generateTowns(worldSeed);
 
@@ -627,19 +776,21 @@ function generateTowns(ws) {
   townPositions = [];
   // Place towns spread across biomes
   const offsets = [
-    {dx: 180, dy: 0},     // east (desert)
-    {dx: 0, dy: 180},     // south (jungle)
-    {dx: -180, dy: -120}, // northwest (tundra)
-    {dx: -200, dy: 80},   // southwest (volcanic edge)
-    {dx: 60, dy: -160},   // north-meadow border
+    {dx: 350, dy: 0},     // east (desert)
+    {dx: 0, dy: 380},     // south (jungle)
+    {dx: -380, dy: -250}, // northwest (tundra)
+    {dx: -400, dy: 180},  // southwest (volcanic edge)
+    {dx: 120, dy: -350},  // north-meadow border
   ];
   const half = MAP_SIZE / 2;
   for (let i = 0; i < TOWN_COUNT; i++) {
     const tx = Math.floor(half + offsets[i].dx + rngInt(-30, 30));
     const ty = Math.floor(half + offsets[i].dy + rngInt(-30, 30));
     const name = TOWN_NAMES[i];
-    townPositions.push({x: tx, y: ty, name});
-    buildTown(tx, ty);
+    const mega = (i === 0); // Hearthville is the mega capital
+    townPositions.push({x: tx, y: ty, name, mega});
+    if (mega) buildMegaTown(tx, ty);
+    else buildTown(tx, ty);
   }
 }
 
@@ -707,6 +858,83 @@ function buildTown(cx, cy) {
   }
 }
 
+function buildMegaTown(cx, cy) {
+  const R = 28; // mega town radius
+  // Clear area
+  for (let dy = -R; dy <= R; dy++) {
+    for (let dx = -R; dx <= R; dx++) {
+      const x = cx + dx, y = cy + dy;
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1) {
+        worldMap[y * MAP_SIZE + x] = T.AIR;
+      }
+    }
+  }
+  // Double perimeter wall with gate gaps
+  for (let layer = 0; layer < 2; layer++) {
+    const r = R - layer;
+    for (let d = -r; d <= r; d++) {
+      const positions = [
+        {x: cx + d, y: cy - r}, {x: cx + d, y: cy + r},
+        {x: cx - r, y: cy + d}, {x: cx + r, y: cy + d},
+      ];
+      for (const p of positions) {
+        if (p.x > 0 && p.x < MAP_SIZE - 1 && p.y > 0 && p.y < MAP_SIZE - 1) {
+          // Gate gaps at cardinal points
+          if (Math.abs(p.x - cx) < 3 && (p.y === cy - r || p.y === cy + r)) continue;
+          if (Math.abs(p.y - cy) < 3 && (p.x === cx - r || p.x === cx + r)) continue;
+          worldMap[p.y * MAP_SIZE + p.x] = T.STONE_WALL;
+        }
+      }
+    }
+  }
+  // Central well
+  if (cy > 0 && cy < MAP_SIZE - 1 && cx > 0 && cx < MAP_SIZE - 1)
+    worldMap[cy * MAP_SIZE + cx] = T.WELL;
+  // 8 market stalls in a square around center
+  const stallOffsets = [{dx:-3,dy:-3},{dx:3,dy:-3},{dx:-3,dy:3},{dx:3,dy:3},
+    {dx:-3,dy:0},{dx:3,dy:0},{dx:0,dy:-3},{dx:0,dy:3}];
+  for (const s of stallOffsets) {
+    const x = cx + s.dx, y = cy + s.dy;
+    if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+      worldMap[y * MAP_SIZE + x] = T.MARKET_STALL;
+  }
+  // 12 houses in grid layout (5x5 each with doors)
+  const houseGrid = [];
+  for (let gy = -2; gy <= 1; gy++) {
+    for (let gx = -2; gx <= 2; gx++) {
+      if (Math.abs(gx) <= 1 && Math.abs(gy) <= 0) continue; // skip center area
+      houseGrid.push({dx: gx * 7, dy: gy * 7 + (gy <= 0 ? -5 : 5)});
+      if (houseGrid.length >= 12) break;
+    }
+    if (houseGrid.length >= 12) break;
+  }
+  for (const h of houseGrid) {
+    const hx = cx + h.dx, hy = cy + h.dy;
+    // 5x5 house shell
+    for (let dy = 0; dy < 5; dy++) {
+      for (let dx = 0; dx < 5; dx++) {
+        const x = hx + dx, y = hy + dy;
+        if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+        if (dy === 0 || dy === 4 || dx === 0 || dx === 4) {
+          worldMap[y * MAP_SIZE + x] = T.HOUSE_WALL;
+        }
+      }
+    }
+    // Door at front
+    const doorX = hx + 2, doorY = hy + 4;
+    if (doorX > 0 && doorX < MAP_SIZE - 1 && doorY > 0 && doorY < MAP_SIZE - 1)
+      worldMap[doorY * MAP_SIZE + doorX] = T.DOOR;
+  }
+  // Torches throughout on a grid
+  for (let dy = -R + 2; dy < R; dy += 4) {
+    for (let dx = -R + 2; dx < R; dx += 4) {
+      const x = cx + dx, y = cy + dy;
+      if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+        worldMap[y * MAP_SIZE + x] = T.TORCH;
+    }
+  }
+}
+
 function getBlock(x, y) {
   if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return T.STONE;
   return worldMap[y * MAP_SIZE + x];
@@ -753,6 +981,7 @@ let buildMenuOpen = false;
 let backpackOpen = false;
 let tradeOpen = false;
 let tradeNPC = null; // currently trading NPC
+let smeltOpen = false;
 let fullscreenMapOpen = false;
 let currentSeason = 0;
 let seasonTimer = 0;
@@ -775,8 +1004,8 @@ let mouseDown = {left: false, right: false};
 let mouseDX = 0;
 let mouseDY = 0;
 let pointerLocked = false;
-const PITCH_SPEED = 0.003;
-const MAX_PITCH = 200; // max pixel offset for horizon
+const PITCH_SPEED = 0.004;
+const MAX_PITCH = 600; // max pixel offset for horizon
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -795,6 +1024,8 @@ document.addEventListener('keydown', e => {
     if (e.code === 'Tab' || e.code === 'Escape') { toggleBackpack(); e.preventDefault(); }
   } else if (tradeOpen) {
     if (e.code === 'KeyE' || e.code === 'Escape') { closeTrade(); e.preventDefault(); }
+  } else if (smeltOpen) {
+    if (e.code === 'KeyE' || e.code === 'Escape') { closeSmeltMenu(); e.preventDefault(); }
   } else if (gameRunning) {
     if (e.code === 'KeyE') {
       const nearNPC = findNearbyNPC();
@@ -813,7 +1044,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
 C.addEventListener('mousedown', e => {
-  const anyMenuOpen = craftingOpen || buildMenuOpen || fullscreenMapOpen || backpackOpen || tradeOpen;
+  const anyMenuOpen = craftingOpen || buildMenuOpen || fullscreenMapOpen || backpackOpen || tradeOpen || smeltOpen;
   if (!pointerLocked && gameRunning && !anyMenuOpen) {
     C.requestPointerLock();
     return;
@@ -936,6 +1167,21 @@ function getPickaxeTier() {
     }
   }
   return 0; // bare hands
+}
+
+function getShovelTier() {
+  for (let i = 0; i < 8; i++) {
+    const slot = player.hotbar[i];
+    if (slot) {
+      const item = ITEMS[slot.id];
+      if (item && item.tool === 'shovel') return item.tier;
+    }
+  }
+  return 0;
+}
+
+function isSoftBlock(block) {
+  return block === T.DIRT || block === T.SAND || block === T.SNOW;
 }
 
 function getSwordDmg() {
@@ -1104,21 +1350,55 @@ function bpClickBackpack(i) {
 // ============================================================
 function spawnNPCs() {
   npcs = [];
-  const npcTypes = Object.keys(NPC_TYPES);
+  const standardTypes = ['merchant', 'blacksmith', 'farmer', 'rancher'];
   for (const town of townPositions) {
-    // 4 NPCs per town (merchant, blacksmith, farmer, rancher)
-    for (let i = 0; i < npcTypes.length; i++) {
-      const typeId = npcTypes[i];
-      const angle2 = (i / npcTypes.length) * Math.PI * 2;
-      const offsetX = Math.round(Math.cos(angle2) * 4);
-      const offsetY = Math.round(Math.sin(angle2) * 4);
-      npcs.push({
-        type: typeId,
-        x: town.x + offsetX + 0.5,
-        y: town.y + offsetY + 0.5,
-        town: town.name,
-        angle: 0,
-      });
+    if (town.mega) {
+      // Mega town: 4 of each standard type + 10 guards = 26+ NPCs
+      let npcIdx = 0;
+      for (const typeId of standardTypes) {
+        for (let j = 0; j < 4; j++) {
+          const angle2 = (npcIdx / 26) * Math.PI * 2;
+          const r = 6 + (j % 2) * 4;
+          const offsetX = Math.round(Math.cos(angle2) * r);
+          const offsetY = Math.round(Math.sin(angle2) * r);
+          npcs.push({
+            type: typeId,
+            x: town.x + offsetX + 0.5,
+            y: town.y + offsetY + 0.5,
+            town: town.name,
+            angle: 0,
+          });
+          npcIdx++;
+        }
+      }
+      // Guards on patrol radius
+      for (let g = 0; g < 10; g++) {
+        const angle2 = (g / 10) * Math.PI * 2;
+        const offsetX = Math.round(Math.cos(angle2) * 10);
+        const offsetY = Math.round(Math.sin(angle2) * 10);
+        npcs.push({
+          type: 'guard',
+          x: town.x + offsetX + 0.5,
+          y: town.y + offsetY + 0.5,
+          town: town.name,
+          angle: angle2,
+        });
+      }
+    } else {
+      // Normal towns: 4 standard NPCs (no guards)
+      for (let i = 0; i < standardTypes.length; i++) {
+        const typeId = standardTypes[i];
+        const angle2 = (i / standardTypes.length) * Math.PI * 2;
+        const offsetX = Math.round(Math.cos(angle2) * 4);
+        const offsetY = Math.round(Math.sin(angle2) * 4);
+        npcs.push({
+          type: typeId,
+          x: town.x + offsetX + 0.5,
+          y: town.y + offsetY + 0.5,
+          town: town.name,
+          angle: 0,
+        });
+      }
     }
   }
 }
@@ -1181,6 +1461,55 @@ function doTrade(idx) {
   for (const [id, n] of Object.entries(t.get)) { addItem(id, n); }
   notify('Traded!'); SFX.trade();
   renderTradeMenu();
+}
+
+// ============================================================
+// SMELTING SYSTEM
+// ============================================================
+function openSmeltMenu() {
+  smeltOpen = true;
+  document.exitPointerLock();
+  document.getElementById('smelt-menu').style.display = 'block';
+  renderSmeltMenu();
+}
+
+function closeSmeltMenu() {
+  smeltOpen = false;
+  document.getElementById('smelt-menu').style.display = 'none';
+  if (gameRunning) C.requestPointerLock();
+}
+
+function renderSmeltMenu() {
+  const el = document.getElementById('smelt-list');
+  let html = '';
+  SMELT_RECIPES.forEach((r, i) => {
+    const inputStr = Object.entries(r.input).map(([id, n]) => `${ITEMS[id].name} x${n}`).join(', ');
+    const fuelStr = Object.entries(r.fuel).map(([id, n]) => `${ITEMS[id].name} x${n}`).join(', ');
+    const resultStr = `${ITEMS[r.result].name} x${r.amt}`;
+    let canSmelt = true;
+    for (const [id, n] of Object.entries(r.input)) { if (countItem(id) < n) canSmelt = false; }
+    for (const [id, n] of Object.entries(r.fuel)) { if (countItem(id) < n) canSmelt = false; }
+    html += `<div class="recipe-row">
+      <span class="recipe-name" style="color:#FF8800;">${r.name}</span>
+      <span class="recipe-cost" style="color:#aaa;font-size:11px;">${inputStr} + ${fuelStr}</span>
+      <span style="color:#666;margin:0 6px;">→</span>
+      <span style="color:#88ff88;font-size:12px;min-width:80px;">${resultStr}</span>
+      <button class="recipe-craft ${canSmelt ? '' : 'cannot'}" onclick="doSmelt(${i})">${canSmelt ? 'Smelt' : 'Need'}</button>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function doSmelt(idx) {
+  const r = SMELT_RECIPES[idx];
+  for (const [id, n] of Object.entries(r.input)) { if (countItem(id) < n) return; }
+  for (const [id, n] of Object.entries(r.fuel)) { if (countItem(id) < n) return; }
+  for (const [id, n] of Object.entries(r.input)) { removeItem(id, n); }
+  for (const [id, n] of Object.entries(r.fuel)) { removeItem(id, n); }
+  addItem(r.result, r.amt);
+  notify('Smelted ' + ITEMS[r.result].name + (r.amt > 1 ? ' x' + r.amt : '') + '!');
+  SFX.craft();
+  renderSmeltMenu();
 }
 
 // ============================================================
@@ -1535,9 +1864,12 @@ function renderScene() {
 
     if (hit.block === T.AIR) continue;
 
-    const lineHeight = Math.floor(H / perpDist);
-    const drawStart = Math.max(0, Math.floor(halfH - lineHeight / 2));
-    const drawEnd = Math.min(H - 1, Math.floor(halfH + lineHeight / 2));
+    const fullLineHeight = Math.floor(H / perpDist);
+    const wallH = (TILE_INFO[hit.block] && TILE_INFO[hit.block].wh) || 1.0;
+    const lineHeight = Math.floor(fullLineHeight * wallH);
+    // Bottom-aligned: floor stays fixed, top varies by height
+    const drawEnd = Math.min(H - 1, Math.floor(halfH + fullLineHeight / 2));
+    const drawStart = Math.max(0, drawEnd - lineHeight);
 
     const tex = textures[hit.block];
     const texX = Math.floor(hit.wallX * TEX_SIZE) & (TEX_SIZE - 1);
@@ -1552,13 +1884,20 @@ function renderScene() {
       if (td < 6) torchLight = Math.max(torchLight, (1 - td / 6) * 0.5);
     }
 
+    // Transparency for tree/torch/fence blocks — skip pure-black pixels
+    const isTransparent = hit.block === T.OAK || hit.block === T.PINE || hit.block === T.JUNGLE_TREE ||
+      hit.block === T.PALM || hit.block === T.YOUNG_TREE || hit.block === T.SAPLING ||
+      hit.block === T.TORCH || hit.block === T.CAMPFIRE || hit.block === T.FENCE;
+
     for (let y = drawStart; y <= drawEnd; y++) {
-      const texY = Math.floor((y - (halfH - lineHeight / 2)) / lineHeight * TEX_SIZE) & (TEX_SIZE - 1);
+      const texY = Math.floor((y - drawStart) / lineHeight * TEX_SIZE) & (TEX_SIZE - 1);
       const ti = (texY * TEX_SIZE + texX) * 3;
       const pi = (y * W + col) * 4;
       const s = Math.min(1, finalShade + torchLight);
 
       if (tex) {
+        // Skip transparent (pure black) pixels on tree-type blocks
+        if (isTransparent && tex[ti] === 0 && tex[ti + 1] === 0 && tex[ti + 2] === 0) continue;
         pixels[pi] = Math.floor(tex[ti] * s);
         pixels[pi + 1] = Math.floor(tex[ti + 1] * s);
         pixels[pi + 2] = Math.floor(tex[ti + 2] * s);
@@ -1992,6 +2331,16 @@ function renderHUD() {
     ctx.fillText('SPRINTING', 12, hunY + barH + 18);
   }
 
+  // Sailing indicator
+  const onBlockHud = getBlock(Math.floor(player.x), Math.floor(player.y));
+  const heldHud = getHeldItem();
+  if (onBlockHud === T.WATER && heldHud && heldHud.tool === 'boat') {
+    ctx.fillStyle = '#44CCFF';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('SAILING', 12, hunY + barH + (player.sprinting ? 34 : 18));
+  }
+
   // Currently held item info + placement hint
   const held = getHeldItem();
   if (held) {
@@ -2132,6 +2481,7 @@ const BUILD_ITEMS = [
   {id:'campfire_item',name:'Campfire',cost:'Wood x5, Stone x3'},
   {id:'chest_item',name:'Chest',cost:'Wood x8, Iron x2'},
   {id:'glass',name:'Glass',cost:'Sand x4, Crystal x1 → 2'},
+  {id:'furnace_item',name:'Furnace',cost:'Stone x10, Iron x5'},
 ];
 
 function toggleBuildMenu() {
@@ -2342,7 +2692,7 @@ function updateSeason(dt) {
 // GAME UPDATE
 // ============================================================
 function update(dt) {
-  if (!gameRunning || craftingOpen || buildMenuOpen || fullscreenMapOpen || backpackOpen || tradeOpen) return;
+  if (!gameRunning || craftingOpen || buildMenuOpen || fullscreenMapOpen || backpackOpen || tradeOpen || smeltOpen) return;
 
   // Update seasons and temperature
   updateSeason(dt);
@@ -2378,9 +2728,21 @@ function update(dt) {
   if (keys['KeyA']) { moveX += sinA; moveY -= cosA; }
   if (keys['KeyD']) { moveX -= sinA; moveY += cosA; }
 
+  // Check if holding boat
+  const heldForMove = getHeldItem();
+  const hasBoat = heldForMove && heldForMove.tool === 'boat';
+  function isPassable(block) {
+    if (block === T.AIR || block === T.DOOR) return true;
+    if (block === T.WATER) return hasBoat;
+    return false;
+  }
+
   if (moveX !== 0 || moveY !== 0) {
     const baseSpeed = player.sprinting ? SPRINT_SPEED : MOVE_SPEED;
-    const speed = speedBoostTimer > 0 ? baseSpeed * 1.6 : baseSpeed;
+    let speed = speedBoostTimer > 0 ? baseSpeed * 1.6 : baseSpeed;
+    // Boat speed boost on water
+    const onBlockMove = getBlock(Math.floor(player.x), Math.floor(player.y));
+    if (onBlockMove === T.WATER && hasBoat) speed *= 1.5;
     if (player.sprinting) player.hunger -= SPRINT_HUNGER * dt;
     const len = Math.sqrt(moveX * moveX + moveY * moveY);
     moveX = moveX / len * speed * dt;
@@ -2394,8 +2756,8 @@ function update(dt) {
     const bx = getBlock(Math.floor(nx + (moveX > 0 ? margin : -margin)), Math.floor(player.y));
     const by = getBlock(Math.floor(player.x), Math.floor(ny + (moveY > 0 ? margin : -margin)));
 
-    if (bx === T.AIR || bx === T.WATER || bx === T.DOOR) player.x = nx;
-    if (by === T.AIR || by === T.WATER || by === T.DOOR) player.y = ny;
+    if (isPassable(bx)) player.x = nx;
+    if (isPassable(by)) player.y = ny;
 
     // Lava damage
     const onBlock = getBlock(Math.floor(player.x), Math.floor(player.y));
@@ -2502,32 +2864,52 @@ function handleMineOrAttack(dt) {
     }
   }
 
-  // Mining
-  const hit = castRay(player.x, player.y, player.angle);
-  if (hit.dist > MINE_RANGE || hit.block === T.AIR) {
-    player.miningTarget = null;
-    player.miningProgress = 0;
-    return;
+  // Mining — dig at feet when looking far down, otherwise raycast
+  let mineX, mineY, mineBlock;
+  if (player.pitch < -MAX_PITCH * 0.6) {
+    // Dig at feet
+    mineX = Math.floor(player.x);
+    mineY = Math.floor(player.y);
+    mineBlock = getBlock(mineX, mineY);
+    if (mineBlock === T.AIR || mineBlock === T.WATER) {
+      player.miningTarget = null;
+      player.miningProgress = 0;
+      return;
+    }
+  } else {
+    const hit = castRay(player.x, player.y, player.angle);
+    if (hit.dist > MINE_RANGE || hit.block === T.AIR) {
+      player.miningTarget = null;
+      player.miningProgress = 0;
+      return;
+    }
+    mineX = hit.mapX;
+    mineY = hit.mapY;
+    mineBlock = hit.block;
   }
 
-  const key = hit.mapX + ',' + hit.mapY;
+  const key = mineX + ',' + mineY;
   if (player.miningTarget !== key) {
     player.miningTarget = key;
     player.miningProgress = 0;
   }
 
-  const info = TILE_INFO[hit.block];
+  const info = TILE_INFO[mineBlock];
   if (!info || info.hits >= 999) return;
 
-  // Mining speed based on pickaxe tier
+  // Mining speed based on pickaxe tier + shovel bonus on soft blocks
   const tier = getPickaxeTier();
-  const speedMult = 1 + tier * 0.6;
+  const shovelTier = getShovelTier();
+  let speedMult = 1 + tier * 0.6;
+  if (isSoftBlock(mineBlock) && shovelTier > 0) {
+    speedMult = Math.max(speedMult, 1 + shovelTier * 1.2);
+  }
   player.miningProgress += (dt * speedMult) / info.hits * 2;
   if (Math.random() < dt * 8) SFX.mine(); // mining hit sounds
 
   if (player.miningProgress >= 1) {
     // Mine the block
-    setBlock(hit.mapX, hit.mapY, T.AIR);
+    setBlock(mineX, mineY, T.AIR);
     SFX.blockBreak();
     if (info.drop) {
       const added = addItem(info.drop, info.dropAmt || 1);
@@ -2535,13 +2917,13 @@ function handleMineOrAttack(dt) {
     }
     // Drop seeds from tree tiles
     const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed'};
-    if (treeSeedMap[hit.block]) {
-      const seedAdded = addItem(treeSeedMap[hit.block], 1);
-      if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[hit.block]].name);
+    if (treeSeedMap[mineBlock]) {
+      const seedAdded = addItem(treeSeedMap[mineBlock], 1);
+      if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[mineBlock]].name);
     }
     // Return seed when breaking sapling
-    if (hit.block === T.SAPLING) {
-      const sapKey = hit.mapX + ',' + hit.mapY;
+    if (mineBlock === T.SAPLING) {
+      const sapKey = mineX + ',' + mineY;
       const species = saplingData[sapKey] || 'oak';
       const seedId = species + '_seed';
       if (ITEMS[seedId]) {
@@ -2656,6 +3038,13 @@ function handleRightClick() {
     }
   }
 
+  // Open furnace if looking at one
+  const hitF = castRay(player.x, player.y, player.angle);
+  if (hitF.block === T.FURNACE && hitF.dist < 3) {
+    openSmeltMenu();
+    return;
+  }
+
   // Open chest if looking at one
   const hit = castRay(player.x, player.y, player.angle);
   if (hit.block === T.CHEST && hit.dist < 3) {
@@ -2703,15 +3092,21 @@ function handleRightClick() {
       placeY = Math.floor(player.y + Math.sin(player.angle) * placeDist);
     }
 
-    // Don't place on self
-    if (placeX === Math.floor(player.x) && placeY === Math.floor(player.y)) return;
+    // Place under self when looking far down
+    if (player.pitch < -MAX_PITCH * 0.5) {
+      placeX = Math.floor(player.x);
+      placeY = Math.floor(player.y);
+    }
+
+    // Don't place on self (unless looking down — already overridden above)
+    if (player.pitch >= -MAX_PITCH * 0.5 && placeX === Math.floor(player.x) && placeY === Math.floor(player.y)) return;
 
     if (placeX > 0 && placeX < MAP_SIZE - 1 && placeY > 0 && placeY < MAP_SIZE - 1) {
-      if (getBlock(placeX, placeY) === T.AIR) {
+      if (getBlock(placeX, placeY) === T.AIR || (player.pitch < -MAX_PITCH * 0.5 && getBlock(placeX, placeY) === T.WATER)) {
         setBlock(placeX, placeY, held.placeTile);
         removeItem(heldId, 1);
         SFX.build();
-        if (held.placeTile === T.TORCH || held.placeTile === T.CAMPFIRE) updateTorchCache();
+        if (held.placeTile === T.TORCH || held.placeTile === T.CAMPFIRE || held.placeTile === T.FURNACE) updateTorchCache();
         return;
       }
     }
@@ -2758,7 +3153,7 @@ function updateTorchCache() {
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       const blk = getBlock(px + dx, py + dy);
-      if (blk === T.TORCH || blk === T.CAMPFIRE) {
+      if (blk === T.TORCH || blk === T.CAMPFIRE || blk === T.FURNACE) {
         torchPositions.push([px + dx, py + dy]);
       }
     }
