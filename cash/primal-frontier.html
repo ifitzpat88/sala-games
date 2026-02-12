@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.5</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.1.0</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -120,7 +120,9 @@ const T = {
   CONCRETE:46,
   FEEDING_TROUGH:47,
   CROP:48,
-  MATURE_CROP:49
+  MATURE_CROP:49,
+  APPLE_TREE:50, BANANA_TREE:51, COCONUT_TREE:52,
+  ROOF:53, STAIRS:54
 };
 
 const TILE_INFO = {
@@ -167,6 +169,11 @@ const TILE_INFO = {
   [T.FEEDING_TROUGH]:{name:'Feeding Trough',color:[0x8B,0x73,0x55],hits:4,drop:'wood',dropAmt:3,wh:0.4},
   [T.CROP]:{name:'Crop',color:[0x44,0x88,0x22],hits:1,drop:null,dropAmt:0,wh:0.25},
   [T.MATURE_CROP]:{name:'Mature Crop',color:[0x66,0xAA,0x22],hits:1,drop:null,dropAmt:0,wh:0.6},
+  [T.APPLE_TREE]:{name:'Apple Tree',color:[0x6B,0x5B,0x2B],hits:5,drop:'wood',dropAmt:3,wh:1.3},
+  [T.BANANA_TREE]:{name:'Banana Tree',color:[0x5B,0x6B,0x2B],hits:5,drop:'wood',dropAmt:3,wh:1.3},
+  [T.COCONUT_TREE]:{name:'Coconut Tree',color:[0x7B,0x5B,0x3B],hits:5,drop:'wood',dropAmt:3,wh:1.3},
+  [T.ROOF]:{name:'Roof',color:[0x8B,0x55,0x22],hits:3,drop:'roof',dropAmt:1,wh:1.0},
+  [T.STAIRS]:{name:'Stairs',color:[0x90,0x80,0x70],hits:4,drop:'stone',dropAmt:2,wh:0.5},
 };
 
 // ---- ITEMS ----
@@ -255,6 +262,12 @@ const ITEMS = {
   potato_seed:{name:'Potato Seed',color:'#998855',stack:16,seedSpecies:'potato'},
   corn_seed:{name:'Corn Seed',color:'#BBAA33',stack:16,seedSpecies:'corn'},
   tomato_seed:{name:'Tomato Seed',color:'#AA3322',stack:16,seedSpecies:'tomato'},
+  apple_seed:{name:'Apple Seed',color:'#DD4444',stack:16,seedSpecies:'apple_tree'},
+  banana_seed:{name:'Banana Seed',color:'#CCBB33',stack:16,seedSpecies:'banana_tree'},
+  coconut_seed:{name:'Coconut Seed',color:'#8B7744',stack:16,seedSpecies:'coconut_tree'},
+  rope:{name:'Rope',color:'#AA8855',stack:16},
+  roof:{name:'Roof',color:'#8B5522',placeTile:T.ROOF,stack:64},
+  stairs:{name:'Stairs',color:'#908070',placeTile:T.STAIRS,stack:64},
 };
 
 // ---- RECIPES ----
@@ -296,6 +309,9 @@ const RECIPES = [
   {result:'cheese',amt:2,cost:{milk:2},cat:'Food'},
   {result:'concrete',amt:4,cost:{stone:4,sand:4},cat:'Building'},
   {result:'feeding_trough',amt:1,cost:{wood:6,iron:2},cat:'Building'},
+  {result:'rope',amt:2,cost:{wool:3},cat:'Tools'},
+  {result:'roof',amt:4,cost:{wood:6,sand:2},cat:'Building'},
+  {result:'stairs',amt:2,cost:{stone:4,wood:2},cat:'Building'},
 ];
 
 const SMELT_RECIPES = [
@@ -311,7 +327,7 @@ const SMELT_RECIPES = [
 
 // ---- CREATURE TYPES ----
 const CREATURE_TYPES = {
-  rabbit:{name:'Rabbit',hp:10,dmg:0,speed:1.8,color:'#C0A080',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.4,quadruped:true},
+  rabbit:{name:'Rabbit',hp:10,dmg:0,speed:1.8,color:'#C0A080',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.25,quadruped:true},
   chicken:{name:'Chicken',hp:8,dmg:0,speed:1.2,color:'#FFFFFF',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.18},
   wolf:{name:'Wolf',hp:35,dmg:8,speed:2.2,color:'#808080',hostile:true,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,quadruped:true},
   lizard:{name:'Lizard',hp:15,dmg:3,speed:1.5,color:'#669944',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.4,quadruped:true},
@@ -329,9 +345,9 @@ const CREATURE_TYPES = {
   mountain_lion:{name:'Mountain Lion',hp:45,dmg:14,speed:2.6,color:'#C0A060',hostile:true,tameable:true,drop:'raw_meat',biome:'tundra',size:0.7,quadruped:true},
   camel:{name:'Camel',hp:50,dmg:0,speed:1.6,color:'#D4B478',hostile:false,tameable:true,drop:'raw_meat',biome:'desert',size:0.9,quadruped:true},
   cow:{name:'Cow',hp:50,dmg:0,speed:1.0,color:'#8B6B4B',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.85,specialDrop:'milk',quadruped:true},
-  pig:{name:'Pig',hp:30,dmg:0,speed:1.4,color:'#DDA0A0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'bacon',quadruped:true},
-  sheep:{name:'Sheep',hp:25,dmg:0,speed:1.2,color:'#E8E0D0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.6,specialDrop:'wool',quadruped:true},
-  goat:{name:'Goat',hp:30,dmg:3,speed:1.6,color:'#B0A090',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.55,quadruped:true},
+  pig:{name:'Pig',hp:30,dmg:0,speed:1.4,color:'#DDA0A0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.45,specialDrop:'bacon',quadruped:true},
+  sheep:{name:'Sheep',hp:25,dmg:0,speed:1.2,color:'#E8E0D0',hostile:false,tameable:true,drop:'raw_meat',biome:'meadow',size:0.5,specialDrop:'wool',quadruped:true},
+  goat:{name:'Goat',hp:30,dmg:3,speed:1.6,color:'#B0A090',hostile:false,tameable:true,drop:'raw_meat',biome:'tundra',size:0.45,quadruped:true},
   eagle:{name:'Eagle',hp:20,dmg:6,speed:3.0,color:'#6B4B2B',hostile:true,tameable:false,drop:'feathers',biome:'tundra',size:0.4},
   crow:{name:'Crow',hp:10,dmg:0,speed:2.5,color:'#222222',hostile:false,tameable:false,drop:'feathers',biome:'meadow',size:0.3},
   fish:{name:'Fish',hp:5,dmg:0,speed:1.5,color:'#6688BB',hostile:false,tameable:false,drop:'raw_fish',biome:'meadow',size:0.2,aquatic:true},
@@ -358,6 +374,7 @@ const NPC_TYPES = {
       {give:{wood:20},get:{gold_coin:2}},
       {give:{stone:20},get:{gold_coin:2}},
       {give:{gold_coin:15},get:{boat:1}},
+      {give:{gold_coin:3},get:{rope:2}},
     ]},
   blacksmith:{name:'Blacksmith',color:'#AA6644',size:0.7,
     trades:[
@@ -380,6 +397,9 @@ const NPC_TYPES = {
       {give:{gold_coin:2},get:{corn_seed:3}},
       {give:{gold_coin:2},get:{tomato_seed:3}},
       {give:{gold_coin:3},get:{apple:2}},
+      {give:{gold_coin:3},get:{apple_seed:2}},
+      {give:{gold_coin:3},get:{banana_seed:2}},
+      {give:{gold_coin:3},get:{coconut_seed:2}},
     ]},
   rancher:{name:'Rancher',color:'#886644',size:0.65,
     trades:[
@@ -420,6 +440,8 @@ const NPC_TYPES = {
       {give:{wool:10},get:{gold_coin:3}},
       {give:{feathers:20},get:{gold_coin:2}},
     ]},
+  townsperson:{name:'Townsperson',color:'#998877',size:0.6,trades:[]},
+  child:{name:'Child',color:'#CC9988',size:0.35,trades:[]},
 };
 
 // ---- TOWN TEMPLATES ----
@@ -658,6 +680,11 @@ function initTextures() {
   genTex(T.FEEDING_TROUGH, 0x8B, 0x73, 0x55, 'plank');
   genTex(T.CROP, 0x44, 0x88, 0x22, 'sapling');
   genTex(T.MATURE_CROP, 0x66, 0xAA, 0x22, 'leaves');
+  genTex(T.APPLE_TREE, 0x6B, 0x5B, 0x2B, 'tree');
+  genTex(T.BANANA_TREE, 0x5B, 0x6B, 0x2B, 'tree');
+  genTex(T.COCONUT_TREE, 0x7B, 0x5B, 0x3B, 'tree');
+  genTex(T.ROOF, 0x8B, 0x55, 0x22, 'plank');
+  genTex(T.STAIRS, 0x90, 0x80, 0x70, 'cobble');
 }
 
 // ============================================================
@@ -727,9 +754,10 @@ function generateWorld(worldSeed) {
         else worldMap[idx] = bd.wall;
       } else if (density > 0.15 && bd.tree && rng() < 0.08) {
         const treeRoll = rng();
-        if (biome === 'meadow') worldMap[idx] = treeRoll < 0.7 ? T.OAK : T.YOUNG_TREE;
+        if (biome === 'meadow') worldMap[idx] = treeRoll < 0.55 ? T.OAK : treeRoll < 0.7 ? T.APPLE_TREE : T.YOUNG_TREE;
         else if (biome === 'tundra') worldMap[idx] = treeRoll < 0.7 ? T.PINE : T.YOUNG_TREE;
-        else if (biome === 'jungle') worldMap[idx] = treeRoll < 0.7 ? T.JUNGLE_TREE : T.YOUNG_TREE;
+        else if (biome === 'jungle') worldMap[idx] = treeRoll < 0.5 ? T.JUNGLE_TREE : treeRoll < 0.65 ? T.BANANA_TREE : T.YOUNG_TREE;
+        else if (biome === 'desert') worldMap[idx] = treeRoll < 0.5 ? T.PALM : treeRoll < 0.7 ? T.COCONUT_TREE : T.LEAVES;
         else worldMap[idx] = treeRoll < 0.5 ? T.WOOD : T.LEAVES;
       } else {
         worldMap[idx] = T.AIR;
@@ -945,6 +973,16 @@ function buildTown(cx, cy) {
     const doorX = hx + 2, doorY = hy + 4;
     if (doorX > 0 && doorX < MAP_SIZE - 1 && doorY > 0 && doorY < MAP_SIZE - 1)
       worldMap[doorY * MAP_SIZE + doorX] = T.DOOR;
+    // Roof ring around house
+    for (let rdy = -1; rdy <= 5; rdy++) {
+      for (let rdx = -1; rdx <= 5; rdx++) {
+        if (rdx >= 0 && rdx <= 4 && rdy >= 0 && rdy <= 4) continue;
+        const x = hx + rdx, y = hy + rdy;
+        if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+        if (worldMap[y * MAP_SIZE + x] === T.AIR)
+          worldMap[y * MAP_SIZE + x] = T.ROOF;
+      }
+    }
   }
   // Torches
   const torchSpots = [
@@ -1108,6 +1146,23 @@ function buildCapital(cx, cy) {
     const doorX = hx + 2, doorY = hy + 4;
     if (doorX > 0 && doorX < MAP_SIZE - 1 && doorY > 0 && doorY < MAP_SIZE - 1)
       worldMap[doorY * MAP_SIZE + doorX] = T.DOOR;
+    // Roof ring around house (1 tile outside walls)
+    for (let dy = -1; dy <= 5; dy++) {
+      for (let dx = -1; dx <= 5; dx++) {
+        if (dx >= 0 && dx <= 4 && dy >= 0 && dy <= 4) continue; // inside/walls, skip
+        const x = hx + dx, y = hy + dy;
+        if (x <= 0 || x >= MAP_SIZE - 1 || y <= 0 || y >= MAP_SIZE - 1) continue;
+        if (worldMap[y * MAP_SIZE + x] === T.AIR)
+          worldMap[y * MAP_SIZE + x] = T.ROOF;
+      }
+    }
+  }
+  // Stairs near town hall entrance
+  const stairX = cx - 1, stairY = cy - 20;
+  for (let sx = 0; sx < 3; sx++) {
+    const x = stairX + sx, y = stairY;
+    if (x > 0 && x < MAP_SIZE - 1 && y > 0 && y < MAP_SIZE - 1 && worldMap[y * MAP_SIZE + x] === T.AIR)
+      worldMap[y * MAP_SIZE + x] = T.STAIRS;
   }
   // === Torch grid along main roads + scattered ===
   for (let d = -R + 3; d <= R - 3; d += 5) {
@@ -1365,7 +1420,7 @@ document.addEventListener('keydown', e => {
         for (let dy = -2; dy <= 2 && !foundTree; dy++) {
           for (let dx = -2; dx <= 2 && !foundTree; dx++) {
             const blk = getBlock(px + dx, py + dy);
-            if (blk === T.OAK || blk === T.PINE || blk === T.JUNGLE_TREE || blk === T.PALM) {
+            if (blk === T.OAK || blk === T.PINE || blk === T.JUNGLE_TREE || blk === T.PALM || blk === T.APPLE_TREE || blk === T.BANANA_TREE || blk === T.COCONUT_TREE) {
               player.inTree = true;
               player.treePos = {x: px + dx, y: py + dy};
               player.treeStealth = false;
@@ -1381,6 +1436,69 @@ document.addEventListener('keydown', e => {
     if (e.code === 'KeyS' && player.inTree) {
       player.treeStealth = !player.treeStealth;
       notify(player.treeStealth ? 'Stealth: HIDDEN' : 'Stealth: OFF');
+      e.preventDefault();
+    }
+    // T key — tame nearby creature
+    if (e.code === 'KeyT' && !player.inTree) {
+      for (const c of creatures) {
+        if (c.tamed) continue;
+        const ct = CREATURE_TYPES[c.type];
+        if (!ct.tameable) continue;
+        const dx = c.x - player.x, dy = c.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist >= 3) continue;
+        // Farm animals: always tameable
+        const farmAnimals = ['cow','pig','sheep','goat','chicken','horse','rabbit','deer','camel','lizard','snow_fox','parrot','triceratops'];
+        // Predators: only babies (age < 120)
+        const predators = ['wolf','bear','mountain_lion','raptor','fire_drake'];
+        if (farmAnimals.includes(c.type)) {
+          c.tamed = true;
+          c.state = 'follow';
+          c.hp = c.maxHp;
+          notify('Tamed ' + ct.name + '!'); SFX.tame();
+        } else if (predators.includes(c.type)) {
+          if ((c.age || 120) < 120) {
+            c.tamed = true;
+            c.state = 'follow';
+            c.hp = c.maxHp;
+            notify('Tamed baby ' + ct.name + '!'); SFX.tame();
+          } else {
+            notify(ct.name + ' is too wild to tame! Only babies can be tamed.');
+          }
+        }
+        e.preventDefault();
+        break;
+      }
+    }
+    // F key — lasso nearby creature with rope
+    if (e.code === 'KeyF' && !player.inTree) {
+      const heldId = getHeldItemId();
+      if (heldId === 'rope') {
+        for (const c of creatures) {
+          const dx = c.x - player.x, dy = c.y - player.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist >= 4) continue;
+          if (c.lassoed) {
+            c.lassoed = false;
+            notify('Released ' + CREATURE_TYPES[c.type].name + ' from lasso');
+          } else {
+            c.lassoed = true;
+            notify('Lassoed ' + CREATURE_TYPES[c.type].name + '! It stays close.');
+          }
+          break;
+        }
+      } else {
+        // Check if any creature is lassoed — release nearest
+        for (const c of creatures) {
+          if (!c.lassoed) continue;
+          const dx = c.x - player.x, dy = c.y - player.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 5) {
+            c.lassoed = false;
+            notify('Released ' + CREATURE_TYPES[c.type].name);
+            break;
+          }
+        }
+      }
       e.preventDefault();
     }
   }
@@ -1696,33 +1814,34 @@ function spawnNPCs() {
   npcs = [];
   for (const town of townPositions) {
     if (town.mega) {
-      // Capital: 27+ NPCs spread across districts
+      // Capital: 40+ NPCs — mix of traders and regular townspeople/children
       const capitalNPCs = [];
-      // 4 merchants near central market
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2;
+      // 2 merchants near central market (fewer traders)
+      for (let i = 0; i < 2; i++) {
+        const a = (i / 2) * Math.PI * 2;
         capitalNPCs.push({type:'merchant', ox: Math.round(Math.cos(a) * 6), oy: Math.round(Math.sin(a) * 6)});
       }
-      // 2 blacksmiths near smithy (east)
+      // 1 blacksmith near smithy (east)
       capitalNPCs.push({type:'blacksmith', ox: 17, oy: -1});
-      capitalNPCs.push({type:'blacksmith', ox: 19, oy: 1});
-      // 3 farmers wandering
-      for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 + 0.5;
-        capitalNPCs.push({type:'farmer', ox: Math.round(Math.cos(a) * (10 + i * 3)), oy: Math.round(Math.sin(a) * (10 + i * 3))});
-      }
-      // 2 ranchers near stables (south)
+      // 1 farmer
+      capitalNPCs.push({type:'farmer', ox: 12, oy: 8});
+      // 1 rancher near stables (south)
       capitalNPCs.push({type:'rancher', ox: -3, oy: 20});
-      capitalNPCs.push({type:'rancher', ox: 3, oy: 22});
       // 1 innkeeper at tavern (west)
       capitalNPCs.push({type:'innkeeper', ox: -22, oy: 0});
       // 1 stablemaster at stables (south)
       capitalNPCs.push({type:'stablemaster', ox: 0, oy: 22});
-      // 6 villagers wandering throughout
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2 + 1.0;
-        const r = 8 + i * 4;
-        capitalNPCs.push({type:'villager', ox: Math.round(Math.cos(a) * r), oy: Math.round(Math.sin(a) * r)});
+      // 15 townspeople wandering throughout (non-traders)
+      for (let i = 0; i < 15; i++) {
+        const a = (i / 15) * Math.PI * 2 + 0.3;
+        const r = 6 + (i % 5) * 5;
+        capitalNPCs.push({type:'townsperson', ox: Math.round(Math.cos(a) * r), oy: Math.round(Math.sin(a) * r)});
+      }
+      // 8 children running around
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 1.5;
+        const r = 5 + (i % 4) * 4;
+        capitalNPCs.push({type:'child', ox: Math.round(Math.cos(a) * r), oy: Math.round(Math.sin(a) * r)});
       }
       // Place all named NPCs
       for (const cn of capitalNPCs) {
@@ -1751,15 +1870,17 @@ function spawnNPCs() {
           type: 'horse', x: hx + 0.5, y: hy + 0.5,
           hp: 40, maxHp: 40, state: 'idle', stateTimer: 0,
           angle: Math.PI, attackTimer: 0, tamed: true, attackAnim: 0,
-          produceTimer: 0, penned: true,
+          produceTimer: 0, penned: true, lassoed: false,
         });
       }
     } else {
-      // Normal towns: 8 NPCs (merchant, blacksmith, farmer, rancher, 2 guards, 2 villagers)
-      const townTypes = ['merchant','blacksmith','farmer','rancher','guard','guard','villager','villager'];
+      // Normal towns: 16 NPCs (few traders, mostly townspeople + children)
+      const townTypes = ['merchant','blacksmith','farmer','guard','guard',
+        'townsperson','townsperson','townsperson','townsperson','townsperson',
+        'child','child','child','child','townsperson','townsperson'];
       for (let i = 0; i < townTypes.length; i++) {
         const a = (i / townTypes.length) * Math.PI * 2;
-        const r = 4 + (i % 2) * 3;
+        const r = 3 + (i % 3) * 3;
         npcs.push({
           type: townTypes[i],
           x: town.x + Math.round(Math.cos(a) * r) + 0.5,
@@ -1775,7 +1896,10 @@ function findNearbyNPC() {
   for (const n of npcs) {
     const dx = n.x - player.x, dy = n.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 3) return n;
+    if (dist < 3) {
+      const nt = NPC_TYPES[n.type];
+      if (nt.trades && nt.trades.length > 0) return n;
+    }
   }
   return null;
 }
@@ -1922,6 +2046,7 @@ function spawnCreatures() {
       attackAnim: 0,
       produceTimer: 0,
       penned: false,
+      lassoed: false,
     });
     spawned++;
   }
@@ -1951,6 +2076,17 @@ function updateCreatures(dt) {
     c.attackTimer = Math.max(0, c.attackTimer - dt);
     if (c.attackAnim > 0) c.attackAnim = Math.max(0, c.attackAnim - dt);
     c.stateTimer -= dt;
+
+    // Lassoed creatures stay very close to player (2 units)
+    if (c.lassoed) {
+      if (dist > 2) {
+        c.x += Math.cos(angleToPlayer) * ct.speed * 1.5 * dt;
+        c.y += Math.sin(angleToPlayer) * ct.speed * 1.5 * dt;
+      }
+      c.angle = angleToPlayer;
+      c.state = 'idle';
+      continue;
+    }
 
     if (c.tamed) {
       // Produce timer tick
@@ -2085,7 +2221,7 @@ function updateCreatures(dt) {
         tamed: c.tamed, stateTimer: Math.random() * 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
         age: 0, breedTimer: 120, attackAnim: 0,
-        produceTimer: 0, penned: false,
+        produceTimer: 0, penned: false, lassoed: false,
       });
       c.breedTimer = 120;
       mate.breedTimer = 120;
@@ -2120,7 +2256,7 @@ function updateTreeGrowth() {
             const biome = getBiome(x, y);
             species = BIOME_DEFAULT_TREE[biome] || 'oak';
           }
-          const matureMap = {oak: T.OAK, pine: T.PINE, jungle: T.JUNGLE_TREE, palm: T.PALM};
+          const matureMap = {oak: T.OAK, pine: T.PINE, jungle: T.JUNGLE_TREE, palm: T.PALM, apple_tree: T.APPLE_TREE, banana_tree: T.BANANA_TREE, coconut_tree: T.COCONUT_TREE};
           setBlock(x, y, matureMap[species] || T.OAK);
           delete saplingData[key];
         }
@@ -2130,7 +2266,7 @@ function updateTreeGrowth() {
           setBlock(x, y, T.MATURE_CROP);
           // Keep saplingData — species needed for harvest
         }
-      } else if (tile === T.OAK || tile === T.PINE || tile === T.JUNGLE_TREE || tile === T.PALM) {
+      } else if (tile === T.OAK || tile === T.PINE || tile === T.JUNGLE_TREE || tile === T.PALM || tile === T.APPLE_TREE || tile === T.BANANA_TREE || tile === T.COCONUT_TREE) {
         // Mature trees can spread: 2% chance to spawn sapling nearby
         if (Math.random() < 0.02) {
           const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -2139,7 +2275,7 @@ function updateTreeGrowth() {
           if (nx > 0 && nx < MAP_SIZE - 1 && ny > 0 && ny < MAP_SIZE - 1 && getBlock(nx, ny) === T.AIR) {
             setBlock(nx, ny, T.SAPLING);
             // Record species based on parent tree
-            const speciesMap = {[T.OAK]:'oak', [T.PINE]:'pine', [T.JUNGLE_TREE]:'jungle', [T.PALM]:'palm'};
+            const speciesMap = {[T.OAK]:'oak', [T.PINE]:'pine', [T.JUNGLE_TREE]:'jungle', [T.PALM]:'palm', [T.APPLE_TREE]:'apple_tree', [T.BANANA_TREE]:'banana_tree', [T.COCONUT_TREE]:'coconut_tree'};
             saplingData[nx + ',' + ny] = speciesMap[tile] || 'oak';
           }
         }
@@ -2511,6 +2647,22 @@ function renderCreatures() {
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(ct.name, screenX, drawY - 10);
+    } else if (dist < 3 && ct.tameable) {
+      // Show [T] Tame prompt for untamed tameable creatures
+      const predators = ['wolf','bear','mountain_lion','raptor','fire_drake'];
+      let canTame = true;
+      if (predators.includes(c.type) && (c.age || 120) >= 120) canTame = false;
+      ctx.fillStyle = canTame ? '#44FF44' : '#FF6644';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(canTame ? '[T] Tame' : 'Too Wild', screenX, drawY - 10);
+    }
+    // Lassoed indicator
+    if (c.lassoed) {
+      ctx.fillStyle = '#DDAA44';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('LASSOED', screenX, drawY - (c.tamed ? 22 : 10));
     }
 
     ctx.restore();
@@ -2562,11 +2714,13 @@ function renderNPCs() {
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(nt.name, screenX, drawY - 6);
-    // E prompt if close
+    // E prompt if close — only show trade for NPCs with trades
     if (dist < 3) {
-      ctx.fillStyle = '#44FF44';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('[E] Trade', screenX, drawY - 18);
+      if (nt.trades && nt.trades.length > 0) {
+        ctx.fillStyle = '#44FF44';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('[E] Trade', screenX, drawY - 18);
+      }
     }
   }
 }
@@ -3296,7 +3450,7 @@ function update(dt) {
     if (block === T.AIR || block === T.DOOR) return true;
     if (block === T.WATER) return true;
     if (block === T.HOLE) return true;
-    if (block === T.CROP || block === T.MATURE_CROP) return true;
+    if (block === T.CROP || block === T.MATURE_CROP || block === T.STAIRS) return true;
     return false;
   }
 
@@ -3612,18 +3766,18 @@ function handleMineOrAttack(dt) {
         notify('Tree destroyed — fell down!');
       }
       // Drop seeds from tree tiles (2-3 seeds)
-      const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed'};
+      const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed',[T.APPLE_TREE]:'apple_seed',[T.BANANA_TREE]:'banana_seed',[T.COCONUT_TREE]:'coconut_seed'};
       if (treeSeedMap[mineBlock]) {
         const seedAmt = 2 + Math.floor(Math.random() * 2); // 2 or 3
         const seedAdded = addItem(treeSeedMap[mineBlock], seedAmt);
         if (seedAdded > 0) notify('+' + seedAdded + ' ' + ITEMS[treeSeedMap[mineBlock]].name);
       }
-      // Drop fruit from certain trees
-      const treeFruitMap = {[T.OAK]:'apple',[T.PALM]:'coconut',[T.JUNGLE_TREE]:'banana'};
-      if (treeFruitMap[mineBlock] && Math.random() < 0.5) {
-        const fruit = treeFruitMap[mineBlock];
-        const fa = addItem(fruit, 1);
-        if (fa > 0) notify('+1 ' + ITEMS[fruit].name);
+      // Drop fruit from fruit trees only
+      const treeFruitMap = {[T.APPLE_TREE]:'apple',[T.COCONUT_TREE]:'coconut',[T.BANANA_TREE]:'banana'};
+      if (treeFruitMap[mineBlock]) {
+        const fruitAmt = 2 + Math.floor(Math.random() * 2);
+        const fa = addItem(treeFruitMap[mineBlock], fruitAmt);
+        if (fa > 0) notify('+' + fa + ' ' + ITEMS[treeFruitMap[mineBlock]].name);
       }
       // Leaves sometimes drop vegetable seeds
       if (mineBlock === T.LEAVES && Math.random() < 0.15) {
@@ -3752,7 +3906,7 @@ function handleRightClick() {
         tamed: true, stateTimer: 3,
         knockback: 0, kbAngle: 0, attackTimer: 0,
         age: 120, breedTimer: 0, attackAnim: 0,
-        produceTimer: 0, penned: false,
+        produceTimer: 0, penned: false, lassoed: false,
       });
       removeItem(heldId, 1);
       notify('Summoned tame ' + ct.name + '!'); SFX.tame();
@@ -3854,29 +4008,7 @@ function handleRightClick() {
     return;
   }
 
-  // Try to tame creature with berries
-  if (heldId === 'berries') {
-    for (const c of creatures) {
-      if (c.tamed) continue;
-      const ct = CREATURE_TYPES[c.type];
-      if (!ct.tameable) continue;
-      const dx = c.x - player.x, dy = c.y - player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 3) {
-        const tameChance = 0.3 + (c.hp < c.maxHp ? 0.2 : 0);
-        if (Math.random() < tameChance) {
-          c.tamed = true;
-          c.state = 'follow';
-          c.hp = c.maxHp;
-          notify('Tamed ' + ct.name + '!'); SFX.tame();
-        } else {
-          notify(ct.name + ' sniffed the berries...');
-        }
-        removeItem('berries', 1);
-        return;
-      }
-    }
-  }
+  // (Taming is now done with T key — no berry feeding needed)
 
   // Open furnace if looking at one
   const hitF = castRay(player.x, player.y, player.angle);
@@ -4032,7 +4164,7 @@ function saveGame() {
       type: c.type, x: c.x, y: c.y, hp: c.hp,
       tamed: c.tamed, angle: c.angle,
       age: c.age || 0, breedTimer: c.breedTimer || 0,
-      produceTimer: c.produceTimer || 0, penned: c.penned || false,
+      produceTimer: c.produceTimer || 0, penned: c.penned || false, lassoed: c.lassoed || false,
     })),
     npcs: npcs.map(n => ({ type: n.type, x: n.x, y: n.y, town: n.town })),
     minimapSize,
@@ -4106,7 +4238,7 @@ function loadGame(slot) {
           age: cd.age || 120,
           breedTimer: cd.breedTimer || 0,
           produceTimer: cd.produceTimer || 0,
-          penned: cd.penned || false,
+          penned: cd.penned || false, lassoed: cd.lassoed || false,
         });
       }
     }
