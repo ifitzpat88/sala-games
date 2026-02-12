@@ -51,7 +51,60 @@ body::before{
   z-index:0;pointer-events:none;
 }
 
-/* ========== LAYOUT ========== */
+/* ========== PAGE LAYOUT (sidebar + main) ========== */
+.page-layout{
+  display:flex;gap:0;min-height:100vh;position:relative;z-index:1;
+}
+
+/* ========== SIDEBAR ========== */
+.sidebar{
+  width:72px;min-height:100vh;
+  background:rgba(15,15,26,.95);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:16px 0;gap:6px;
+  position:fixed;left:0;top:0;z-index:10;
+}
+.sidebar-label{
+  font-size:.5rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text-dim);
+  margin-bottom:8px;writing-mode:horizontal-tb;
+}
+.sidebar-divider{
+  width:40px;height:1px;background:var(--border);margin:4px 0;
+}
+.sidebar-player{
+  width:56px;height:64px;
+  background:var(--card);border:2px solid var(--border);
+  border-radius:12px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;transition:all .25s;position:relative;
+}
+.sidebar-player:hover{
+  border-color:var(--accent);
+  transform:scale(1.08);
+  box-shadow:0 0 16px var(--glow-purple);
+}
+.sidebar-player .animal{font-size:1.5rem;line-height:1;}
+.sidebar-player .name{
+  font-size:.55rem;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.sidebar-player:hover .name{color:var(--text);}
+.sidebar-player.has-unread::after{
+  content:'';position:absolute;top:4px;right:4px;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+}
+.sidebar-msg-icon{
+  margin-top:auto;margin-bottom:8px;
+  font-size:1.2rem;opacity:.3;
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content{
+  flex:1;margin-left:72px;
+}
 .container{
   max-width:900px;margin:0 auto;padding:20px 16px 40px;
   position:relative;z-index:1;
@@ -170,41 +223,231 @@ body::before{
 }
 .footer a{color:var(--accent2);text-decoration:none;}
 
+/* ========== MESSAGE MODAL ========== */
+.modal-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:100;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:20px;padding:32px;
+  width:90%;max-width:420px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px var(--glow-purple);
+  animation:modalIn .3s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+.modal-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+}
+.modal-animal{font-size:2.5rem;}
+.modal-title{font-size:1.2rem;font-weight:800;color:var(--text-bright);}
+.modal-subtitle{font-size:.75rem;color:var(--text-dim);}
+
+.modal-close{
+  position:absolute;top:16px;right:20px;
+  background:none;border:none;color:var(--text-dim);
+  font-size:1.5rem;cursor:pointer;transition:color .2s;
+}
+.modal-close:hover{color:var(--text);}
+
+/* Password step */
+.modal-step{display:none;}
+.modal-step.active{display:block;}
+
+.modal-input{
+  width:100%;padding:12px 16px;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:12px;color:var(--text);
+  font-size:.95rem;font-family:inherit;
+  outline:none;transition:border-color .2s;
+}
+.modal-input:focus{border-color:var(--accent);}
+.modal-input::placeholder{color:var(--text-dim);}
+
+textarea.modal-input{
+  min-height:120px;resize:vertical;line-height:1.5;
+}
+
+.modal-btn{
+  width:100%;padding:12px;margin-top:12px;
+  background:var(--accent);border:none;
+  border-radius:12px;color:white;
+  font-size:.9rem;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:all .2s;
+}
+.modal-btn:hover{background:var(--accent2);box-shadow:0 0 20px var(--glow-purple);}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.modal-error{
+  color:var(--red);font-size:.8rem;margin-top:8px;
+  display:none;
+}
+.modal-error.show{display:block;}
+
+.modal-hint{
+  color:var(--text-dim);font-size:.7rem;margin-top:8px;
+  text-align:center;
+}
+
+/* Success state */
+.modal-success{
+  text-align:center;padding:20px 0;
+}
+.modal-success .check{font-size:3rem;margin-bottom:12px;}
+.modal-success h3{color:var(--green);font-size:1.1rem;margin-bottom:8px;}
+.modal-success p{color:var(--text-dim);font-size:.85rem;line-height:1.5;}
+
+/* Message history */
+.msg-history{
+  margin-top:16px;padding-top:16px;border-top:1px solid var(--border);
+}
+.msg-history-title{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text-dim);margin-bottom:8px;
+}
+.msg-history-list{
+  max-height:150px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;
+}
+.msg-history-item{
+  font-size:.75rem;color:var(--text-dim);
+  padding:8px 10px;background:var(--bg);
+  border-radius:8px;line-height:1.4;
+}
+.msg-history-item .msg-date{
+  font-size:.6rem;color:var(--accent2);
+  display:block;margin-bottom:2px;
+}
+
 /* ========== RESPONSIVE ========== */
-@media(max-width:500px){
+@media(max-width:600px){
+  .sidebar{
+    width:100%;min-height:auto;height:auto;
+    flex-direction:row;position:fixed;bottom:0;top:auto;
+    border-right:none;border-top:1px solid var(--border);
+    padding:8px 16px;justify-content:center;gap:16px;
+  }
+  .sidebar-label,.sidebar-divider,.sidebar-msg-icon{display:none;}
+  .sidebar-player{width:60px;height:52px;flex-direction:row;gap:6px;}
+  .sidebar-player .animal{font-size:1.2rem;}
+  .sidebar-player .name{font-size:.6rem;}
+  .main-content{margin-left:0;margin-bottom:68px;}
   .game-grid{grid-template-columns:1fr;}
   .card-banner{height:80px;font-size:2.5rem;}
 }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <div class="header">
-    <div class="header-icon">🎮</div>
-    <h1>SALA ARCADE</h1>
-    <div class="tagline">Family Game Portal</div>
+<div class="page-layout">
+
+  <!-- ===== SIDEBAR: Message Ian ===== -->
+  <div class="sidebar">
+    <div class="sidebar-label">MSG</div>
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-player" onclick="openModal('cash')" title="Message Ian as Cash">
+      <div class="animal">🐕</div>
+      <div class="name">Cash</div>
+    </div>
+
+    <div class="sidebar-player" onclick="openModal('austyn')" title="Message Ian as Austyn">
+      <div class="animal">🐱</div>
+      <div class="name">Austyn</div>
+    </div>
+
+    <div class="sidebar-player" onclick="openModal('arliss')" title="Message Ian as Arliss">
+      <div class="animal">🦁</div>
+      <div class="name">Arliss</div>
+    </div>
+
+    <div class="sidebar-msg-icon">✉️</div>
   </div>
 
-  <div class="filter-bar" id="filter-bar">
-    <button class="filter-btn active" data-filter="all" onclick="filterGames('all',this)">All Games</button>
-    <button class="filter-btn" data-filter="arliss" onclick="filterGames('arliss',this)">🟢 Arliss</button>
-    <button class="filter-btn" data-filter="austyn" onclick="filterGames('austyn',this)">🔵 Austyn</button>
-    <button class="filter-btn" data-filter="cash" onclick="filterGames('cash',this)">🟠 Cash</button>
-    <button class="filter-btn" data-filter="heather" onclick="filterGames('heather',this)">🩷 Heather</button>
-    <button class="filter-btn" data-filter="el-padre" onclick="filterGames('el-padre',this)">🟣 El Padre</button>
-    <button class="filter-btn" data-filter="claude" onclick="filterGames('claude',this)">🔷 Claude</button>
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="main-content">
+    <div class="container">
+
+      <div class="header">
+        <div class="header-icon">🎮</div>
+        <h1>SALA ARCADE</h1>
+        <div class="tagline">Family Game Portal</div>
+      </div>
+
+      <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" data-filter="all" onclick="filterGames('all',this)">All Games</button>
+        <button class="filter-btn" data-filter="arliss" onclick="filterGames('arliss',this)">🟢 Arliss</button>
+        <button class="filter-btn" data-filter="austyn" onclick="filterGames('austyn',this)">🔵 Austyn</button>
+        <button class="filter-btn" data-filter="cash" onclick="filterGames('cash',this)">🟠 Cash</button>
+        <button class="filter-btn" data-filter="heather" onclick="filterGames('heather',this)">🩷 Heather</button>
+        <button class="filter-btn" data-filter="el-padre" onclick="filterGames('el-padre',this)">🟣 El Padre</button>
+        <button class="filter-btn" data-filter="claude" onclick="filterGames('claude',this)">🔷 Claude</button>
+      </div>
+
+      <div class="game-grid" id="game-grid"></div>
+
+      <div class="footer">
+        Sala Arcade &mdash; Built with love by the family<br>
+        Powered by HTML5, CSS, JavaScript &amp; imagination
+      </div>
+    </div>
   </div>
+</div>
 
-  <div class="game-grid" id="game-grid"></div>
+<!-- ===== MESSAGE MODAL ===== -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
 
-  <div class="footer">
-    Sala Arcade &mdash; Built with love by the family<br>
-    Powered by HTML5, CSS, JavaScript &amp; imagination
+    <div class="modal-header">
+      <div class="modal-animal" id="modal-animal"></div>
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-subtitle">Send a message to Ian</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Password -->
+    <div class="modal-step active" id="step-password">
+      <input type="password" class="modal-input" id="password-input"
+        placeholder="Enter your secret password..."
+        onkeydown="if(event.key==='Enter')checkPassword()">
+      <button class="modal-btn" onclick="checkPassword()">Unlock</button>
+      <div class="modal-error" id="password-error">Wrong password! Try again.</div>
+      <div class="modal-hint">Hint: your animal + your name (lowercase)</div>
+    </div>
+
+    <!-- Step 2: Message -->
+    <div class="modal-step" id="step-message">
+      <textarea class="modal-input" id="message-input"
+        placeholder="What game updates or ideas do you want to tell Ian about?"></textarea>
+      <button class="modal-btn" id="send-btn" onclick="sendMessage()">Send to Ian</button>
+
+      <!-- Past messages -->
+      <div class="msg-history" id="msg-history" style="display:none;">
+        <div class="msg-history-title">Your sent messages</div>
+        <div class="msg-history-list" id="msg-history-list"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="modal-step" id="step-success">
+      <div class="modal-success">
+        <div class="check">✅</div>
+        <h3>Message sent!</h3>
+        <p>Ian will see your message soon.<br>Keep playing and have fun!</p>
+      </div>
+      <button class="modal-btn" onclick="closeModal()" style="background:var(--green);">Back to Games</button>
+    </div>
+
   </div>
 </div>
 
 <script>
+/* ========== GAMES DATA ========== */
 const GAMES = [
   {
     title: 'Camp Cretaceous: Protocol Survival',
@@ -384,6 +627,7 @@ const GAMES = [
   },
 ];
 
+/* ========== GAME RENDERING ========== */
 function renderGames(filter){
   const grid = document.getElementById('game-grid');
   const filtered = filter==='all' ? GAMES : GAMES.filter(g=>g.player.toLowerCase().replace(' ','-')===filter || g.playerColor.replace('color-','')===filter);
@@ -417,6 +661,131 @@ function filterGames(filter, btn){
   btn.classList.add('active');
   renderGames(filter);
 }
+
+/* ========== MESSAGE SYSTEM ========== */
+const PLAYERS = {
+  cash:   { name: 'Cash',   animal: '🐕', password: 'dogcash',     color: 'var(--orange)' },
+  austyn: { name: 'Austyn', animal: '🐱', password: 'cataustyn',   color: 'var(--cyan)' },
+  arliss: { name: 'Arliss', animal: '🦁', password: 'lionarliss',  color: 'var(--green)' },
+};
+
+const NTFY_TOPIC = 'sala-arcade-fitz-oklahoma';
+let currentPlayer = null;
+
+function openModal(playerId) {
+  currentPlayer = PLAYERS[playerId];
+  currentPlayer.id = playerId;
+
+  document.getElementById('modal-animal').textContent = currentPlayer.animal;
+  document.getElementById('modal-title').textContent = currentPlayer.name + "'s Message Box";
+
+  // Reset to password step
+  document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-password').classList.add('active');
+  document.getElementById('password-input').value = '';
+  document.getElementById('message-input').value = '';
+  document.getElementById('password-error').classList.remove('show');
+
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('password-input').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentPlayer = null;
+}
+
+function checkPassword() {
+  const input = document.getElementById('password-input').value.trim().toLowerCase();
+  if (input === currentPlayer.password) {
+    // Go to message step
+    document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-message').classList.add('active');
+    setTimeout(() => document.getElementById('message-input').focus(), 100);
+    renderHistory();
+  } else {
+    document.getElementById('password-error').classList.add('show');
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-input').focus();
+    // Shake animation
+    const modal = document.querySelector('.modal');
+    modal.style.animation = 'none';
+    modal.offsetHeight; // trigger reflow
+    modal.style.animation = 'shake .4s ease';
+  }
+}
+
+async function sendMessage() {
+  const msg = document.getElementById('message-input').value.trim();
+  if (!msg) return;
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  // Save to localStorage
+  const key = 'sala_messages_' + currentPlayer.id;
+  const messages = JSON.parse(localStorage.getItem(key) || '[]');
+  const entry = {
+    text: msg,
+    date: new Date().toISOString(),
+    player: currentPlayer.name,
+  };
+  messages.unshift(entry);
+  localStorage.setItem(key, JSON.stringify(messages));
+
+  // Send to ntfy.sh
+  try {
+    await fetch('https://ntfy.sh/' + NTFY_TOPIC, {
+      method: 'POST',
+      headers: { 'Title': currentPlayer.animal + ' ' + currentPlayer.name + ' - Sala Arcade' },
+      body: currentPlayer.animal + ' ' + currentPlayer.name + ' says:\n\n' + msg,
+    });
+  } catch (e) {
+    // Offline? Message is still saved locally
+    console.log('ntfy send failed (offline?), message saved locally');
+  }
+
+  // Show success
+  btn.disabled = false;
+  btn.textContent = 'Send to Ian';
+  document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-success').classList.add('active');
+}
+
+function renderHistory() {
+  if (!currentPlayer) return;
+  const key = 'sala_messages_' + currentPlayer.id;
+  const messages = JSON.parse(localStorage.getItem(key) || '[]');
+
+  const container = document.getElementById('msg-history');
+  const list = document.getElementById('msg-history-list');
+
+  if (messages.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = '';
+  messages.slice(0, 10).forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'msg-history-item';
+    const d = new Date(m.date);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    item.innerHTML = '<span class="msg-date">' + dateStr + '</span>' + m.text;
+    list.appendChild(item);
+  });
+}
+
+/* Shake keyframe for wrong password */
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}';
+document.head.appendChild(shakeStyle);
+
+// Escape key closes modal
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // Init
 renderGames('all');
