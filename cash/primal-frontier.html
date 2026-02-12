@@ -44,7 +44,7 @@ canvas{display:block;image-rendering:pixelated;cursor:none;}
 <div id="ui"></div>
 <div id="title-screen">
   <h1>ALONE</h1>
-  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.4</div>
+  <div class="subtitle">FIRST-PERSON SURVIVAL — v1.0.5</div>
   <div id="save-slots" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;max-width:800px;"></div>
   <div class="hint">WASD move &bull; Shift sprint &bull; Mouse look &bull; Left-click mine/attack &bull; Right-click place/eat/use<br>E open crafting &bull; B build menu (craft &amp; place structures) &bull; Tab backpack &bull; M map &bull; 1-8 hotbar</div>
 </div>
@@ -3611,11 +3611,12 @@ function handleMineOrAttack(dt) {
         player.inTree = false; player.treePos = null; player.treeStealth = false;
         notify('Tree destroyed — fell down!');
       }
-      // Drop seeds from tree tiles
+      // Drop seeds from tree tiles (2-3 seeds)
       const treeSeedMap = {[T.OAK]:'oak_seed',[T.PINE]:'pine_seed',[T.JUNGLE_TREE]:'jungle_seed',[T.PALM]:'palm_seed'};
       if (treeSeedMap[mineBlock]) {
-        const seedAdded = addItem(treeSeedMap[mineBlock], 1);
-        if (seedAdded > 0) notify('+1 ' + ITEMS[treeSeedMap[mineBlock]].name);
+        const seedAmt = 2 + Math.floor(Math.random() * 2); // 2 or 3
+        const seedAdded = addItem(treeSeedMap[mineBlock], seedAmt);
+        if (seedAdded > 0) notify('+' + seedAdded + ' ' + ITEMS[treeSeedMap[mineBlock]].name);
       }
       // Drop fruit from certain trees
       const treeFruitMap = {[T.OAK]:'apple',[T.PALM]:'coconut',[T.JUNGLE_TREE]:'banana'};
