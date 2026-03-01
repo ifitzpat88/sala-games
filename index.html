@@ -742,7 +742,7 @@ async function sendMessage() {
   try {
     const res = await fetch(`${NTFY_URL}${encodeURIComponent(NTFY_TOPIC)}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Email': 'effectech@gmail.com' },
       body: `${currentPlayer.animal} ${currentPlayer.name} says:\n\n${msg}`,
     });
     if (!res.ok) {
