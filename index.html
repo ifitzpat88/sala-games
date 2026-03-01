@@ -425,6 +425,7 @@ textarea.modal-input{
       <textarea class="modal-input" id="message-input"
         placeholder="What game updates or ideas do you want to tell Ian about?"></textarea>
       <button class="modal-btn" id="send-btn" onclick="sendMessage()">Send to Ian</button>
+      <div class="modal-error" id="send-error">Unable to send right now.</div>
 
       <!-- Past messages -->
       <div class="msg-history" id="msg-history" style="display:none;">
@@ -670,6 +671,7 @@ const PLAYERS = {
 };
 
 const NTFY_TOPIC = 'sala-arcade-fitz-oklahoma';
+const NTFY_URL = 'https://ntfy.sh/';
 let currentPlayer = null;
 
 function openModal(playerId) {
@@ -685,6 +687,7 @@ function openModal(playerId) {
   document.getElementById('password-input').value = '';
   document.getElementById('message-input').value = '';
   document.getElementById('password-error').classList.remove('show');
+  document.getElementById('send-error').classList.remove('show');
 
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('password-input').focus(), 100);
@@ -730,20 +733,35 @@ async function sendMessage() {
     text: msg,
     date: new Date().toISOString(),
     player: currentPlayer.name,
+    delivered: false,
   };
   messages.unshift(entry);
   localStorage.setItem(key, JSON.stringify(messages));
 
   // Send to ntfy.sh
   try {
-    await fetch('https://ntfy.sh/' + NTFY_TOPIC, {
+    const res = await fetch(`${NTFY_URL}${encodeURIComponent(NTFY_TOPIC)}`, {
       method: 'POST',
-      headers: { 'Title': currentPlayer.animal + ' ' + currentPlayer.name + ' - Sala Arcade' },
-      body: currentPlayer.animal + ' ' + currentPlayer.name + ' says:\n\n' + msg,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: `${currentPlayer.animal} ${currentPlayer.name} says:\n\n${msg}`,
     });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`${res.status} ${res.statusText}${body ? ` - ${body}` : ''}`);
+    }
+
+    entry.delivered = true;
+    messages[0] = entry;
+    localStorage.setItem(key, JSON.stringify(messages));
   } catch (e) {
-    // Offline? Message is still saved locally
-    console.log('ntfy send failed (offline?), message saved locally');
+    document.getElementById('send-error').textContent =
+      'Saved locally, but I can not reach ntfy right now. Your message is queued in the browser.';
+    document.getElementById('send-error').classList.add('show');
+    console.log('ntfy send failed, message saved locally', e);
+    renderHistory();
+    btn.disabled = false;
+    btn.textContent = 'Send to Ian';
+    return;
   }
 
   // Show success
