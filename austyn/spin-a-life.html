@@ -65,6 +65,19 @@ body::after{width:150px;height:50px;top:80px;right:15%;box-shadow:30px -10px 0 8
 .friend-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;border:2px solid #eee;transition:all .2s;}.friend-card.met{border-color:#e1bee7;background:#faf5ff;}.friend-avatar{font-size:2rem;}.friend-info{flex:1;}.friend-name{font-weight:700;font-size:.9rem;}.friend-personality{font-size:.72rem;color:var(--text-light);}.friend-level{font-size:.72rem;font-weight:600;color:#9c27b0;}
 .friend-hearts{display:flex;gap:2px;margin-top:3px;}.friend-hearts span{font-size:.7rem;opacity:.25;}.friend-hearts span.filled{opacity:1;}
 .friend-perk{font-size:.68rem;color:var(--green-dark);font-weight:600;margin-top:2px;}
+.need-bar{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:10px;margin-bottom:6px;}
+.need-hunger{background:#fff8f0;}.need-hygiene{background:#f0f8ff;}
+.need-label{font-size:.72rem;font-weight:600;white-space:nowrap;min-width:72px;}
+.need-track{flex:1;height:9px;background:rgba(0,0,0,.07);border-radius:5px;overflow:hidden;}
+.need-fill-h{height:100%;border-radius:5px;transition:width .4s;background:linear-gradient(90deg,#ff9800,#ffd54f);}
+.need-fill-hy{height:100%;border-radius:5px;transition:width .4s;background:linear-gradient(90deg,#29b6f6,#4dd0e1);}
+.need-val{font-size:.73rem;font-weight:700;color:var(--text-light);width:28px;text-align:right;}
+.daily-item{display:flex;align-items:center;gap:12px;padding:12px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
+.daily-icon{font-size:1.8rem;width:36px;text-align:center;}
+.daily-info{flex:1;}.daily-name{font-weight:700;font-size:.9rem;}.daily-desc{font-size:.72rem;color:var(--text-light);}
+.school-grade-box{text-align:center;padding:16px;background:linear-gradient(135deg,#e3f2fd,#f3e5f5);border-radius:14px;margin-bottom:12px;}
+.grade-big{font-size:4rem;font-weight:900;line-height:1.1;}.grade-sub{font-size:.8rem;color:var(--text-light);margin-top:4px;}
+.school-item{display:flex;align-items:center;gap:12px;padding:12px;background:#f8f8f8;border-radius:12px;margin-bottom:8px;}
 @media(max-width:420px){.country-grid{grid-template-columns:repeat(2,1fr);}.map-grid{grid-template-columns:repeat(5,1fr);}.wheel-outer{width:240px;height:240px;}.wheel-canvas{width:240px;height:240px;}.ach-grid{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
@@ -75,7 +88,7 @@ body::after{width:150px;height:50px;top:80px;right:15%;box-shadow:30px -10px 0 8
 <div id="country-screen" class="screen"><div class="card"><div class="card-title">🗺️ Choose Your Country</div><div class="country-grid" id="country-grid"></div></div><button class="btn btn-red btn-sm" onclick="showScreen('title-screen');renderPassports();">Back</button></div>
 <div id="wheel-screen" class="screen"><div class="card"><div class="wheel-container"><div style="font-size:.9rem;font-weight:600;margin-bottom:10px;" id="wheel-country-label">🎯 Spinning for your town...</div><div class="wheel-outer"><div class="wheel-pointer">📍</div><canvas class="wheel-canvas" id="wheel-canvas" width="280" height="280"></canvas></div><div class="wheel-result" id="wheel-result"></div><button class="btn btn-orange btn-lg" id="spin-btn" onclick="spinWheel()">🎰 SPIN THE WHEEL!</button></div></div></div>
 <div id="town-screen" class="screen"><div class="card"><div class="town-header"><div class="town-name" id="town-name-display"></div><div class="town-country" id="town-country-display"></div><div style="font-size:.8rem;color:var(--green-dark);font-weight:600;margin-top:4px;">Click a green square to build your house! 🏠</div></div><div class="map-grid" id="town-map"></div><div style="margin-top:12px;text-align:center;"><button class="btn btn-blue" id="confirm-house-btn" style="display:none;" onclick="confirmHouse()">Confirm House Spot ✅</button></div></div></div>
-<div id="hub-screen" class="screen"><div class="hub-header"><div class="hub-avatar">🧑</div><div class="hub-info"><div class="hub-name" id="hub-name"></div><div class="hub-location" id="hub-location"></div></div><div class="hub-money" id="hub-money">$100</div><div class="hub-stage" id="hub-stage"></div></div><div class="energy-bar"><div class="energy-label">⚡ Energy</div><div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div><div class="energy-val" id="energy-val">100</div></div><div class="mood-bar"><div class="mood-label"><span class="mood-emoji" id="mood-emoji">😊</span> Mood</div><div class="mood-track"><div class="mood-fill" id="mood-fill"></div></div><div class="mood-val" id="mood-val">70</div></div><div id="mood-status-bar"></div><div class="hub-nav" id="hub-nav"></div><div id="hub-panel"></div></div>
+<div id="hub-screen" class="screen"><div class="hub-header"><div class="hub-avatar">🧑</div><div class="hub-info"><div class="hub-name" id="hub-name"></div><div class="hub-location" id="hub-location"></div></div><div class="hub-money" id="hub-money">$100</div><div class="hub-stage" id="hub-stage"></div></div><div class="energy-bar"><div class="energy-label">⚡ Energy</div><div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div><div class="energy-val" id="energy-val">100</div></div><div class="mood-bar"><div class="mood-label"><span class="mood-emoji" id="mood-emoji">😊</span> Mood</div><div class="mood-track"><div class="mood-fill" id="mood-fill"></div></div><div class="mood-val" id="mood-val">70</div></div><div id="mood-status-bar"></div><div id="needs-bars"></div><div class="hub-nav" id="hub-nav"></div><div id="hub-panel"></div></div>
 </div>
 <div id="minigame-overlay"><div class="minigame-box" id="minigame-box"></div></div>
 <script>
@@ -256,7 +269,12 @@ var ACHIEVEMENTS=[
 {id:'life_of_party',emoji:'\U0001F389',name:'Life of the Party',check:function(){return(G.mood||0)>=100;}},
 {id:'social_butterfly',emoji:'\U0001F98B',name:'Social Butterfly',check:function(){return G.friends&&G.friends.length>=3;}},
 {id:'bff_ach',emoji:'\U0001F49C',name:'BFF!',check:function(){if(!G.friendLevels)return false;return Object.values(G.friendLevels).some(function(v){return v>=5;});}},
-{id:'chill_master',emoji:'\U0001F9D8',name:'Chill Master',check:function(){return G.hangoutsTotal&&G.hangoutsTotal>=20;}}
+{id:'chill_master',emoji:'\U0001F9D8',name:'Chill Master',check:function(){return G.hangoutsTotal&&G.hangoutsTotal>=20;}},
+{id:'squeaky_clean',emoji:'\U0001F6BF',name:'Squeaky Clean',check:function(){return(G.showerStreak||0)>=5;}},
+{id:'honor_roll',emoji:'\U0001F4D6',name:'Honor Roll',check:function(){return G.school&&G.school.grade>=90;}},
+{id:'master_chef',emoji:'\U0001F373',name:'Master Chef',check:function(){return(G.mealsCooked||0)>=10;}},
+{id:'phone_friend',emoji:'\U0001F4DE',name:'Phone Friend',check:function(){return(G.callsMade||0)>=5;}},
+{id:'honor_student',emoji:'\U0001F393',name:'Honor Student',check:function(){return G.school&&G.school.credits>=20;}}
 ];
 var MOOD_LEVELS=[
 {id:'joyful',emoji:'\U0001F604',name:'Joyful',min:80,color:'#4caf50',payMult:1.25,trainBonus:1,energyRestore:100},
@@ -287,6 +305,26 @@ var FRIENDS_DATA=[
 {id:'rex',name:'Rex',emoji:'\U0001F9D1\u200D\U0001F33E',personality:'Nature explorer and animal lover',hangout:'spa',gift:{health:3},giftDesc:'+3 Health'}
 ];
 var FRIEND_LEVEL_NAMES=['Stranger','Acquaintance','Buddy','Good Friend','Best Friend','BFF \U0001F49C'];
+var DAILY_ACTIVITIES=[
+{id:'shower',name:'Take a Shower',emoji:'\U0001F6BF',energyCost:5,desc:'Clean up! +40 hygiene',effect:{hygiene:40}},
+{id:'cook',name:'Cook a Meal',emoji:'\U0001F373',energyCost:10,desc:'Make something yummy! +50 hunger, +1 creativity',effect:{hunger:50,stat:'creativity',val:1}},
+{id:'eat_out',name:'Grab Takeout',emoji:'\U0001F354',energyCost:0,moneyCost:10,desc:'Quick and easy. +35 hunger',effect:{hunger:35}},
+{id:'walk',name:'Go for a Walk',emoji:'\U0001F6B6',energyCost:8,desc:'+1 running, small mood boost',effect:{stat:'running',val:1,mood:5}},
+{id:'nap',name:'Take a Nap',emoji:'\U0001F4A4',energyCost:0,desc:'+20 energy, small hygiene drop',effect:{energy:20,hygiene:-5}},
+{id:'tv',name:'Watch TV',emoji:'\U0001F4FA',energyCost:0,moneyCost:0,desc:'Relax! +8 mood',effect:{mood:8}},
+{id:'games',name:'Play Video Games',emoji:'\U0001F3AE',energyCost:0,desc:'Fun time! +10 mood, need console',effect:{mood:10},item:'console'},
+{id:'swim',name:'Swim in Pool',emoji:'\U0001F3CA',energyCost:12,desc:'+2 running, +2 jumping, need pool',effect:{stat2:['running','jumping'],val:2},item:'pool'},
+{id:'read',name:'Read a Book',emoji:'\U0001F4DA',energyCost:5,desc:'+2 intelligence, small mood boost',effect:{stat:'intelligence',val:2,mood:3}},
+{id:'journal',name:'Write in Journal',emoji:'\U0001F4D3',energyCost:3,desc:'+3 mood, +1 creativity',effect:{mood:3,stat:'creativity',val:1}},
+{id:'clean',name:'Clean the House',emoji:'\U0001F9F9',energyCost:10,desc:'+10 mood, +5 hygiene',effect:{mood:10,hygiene:5}}
+];
+var SCHOOL_SUBJECTS=[
+{id:'math',name:'Math',emoji:'\u2795',desc:'Numbers and logic',minigame:'memory',statBonus:{intelligence:2}},
+{id:'science',name:'Science',emoji:'\U0001F52C',desc:'Explore the world',minigame:'pattern',statBonus:{intelligence:1,creativity:1}},
+{id:'pe',name:'Gym Class',emoji:'\U0001F3C3',desc:'Stay active!',minigame:'clicking',statBonus:{running:2}},
+{id:'art',name:'Art Class',emoji:'\U0001F3A8',desc:'Express yourself',minigame:'pattern',statBonus:{creativity:2}},
+{id:'english',name:'English',emoji:'\U0001F4DD',desc:'Reading and writing',minigame:'reaction',statBonus:{intelligence:1,charisma:1}}
+];
 var SLEEP_POS=[
 function(){var x=rng(15,50);G.money+=x;G.totalEarned+=x;return'Found $'+x+' on the ground! \U0001F4B5';},
 function(){var x=rng(50,100);G.money+=x;G.totalEarned+=x;return'Won a local contest! +$'+x+' \U0001F389';},
@@ -310,8 +348,8 @@ function(){G.stats.creativity=(G.stats.creativity||5)+2;return'Meteor shower! Cr
 var SAVE_KEY='spinalife_saves';
 function loadAllSaves(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||[null,null,null];}catch(e){return[null,null,null];}}
 function saveAllSaves(sv){localStorage.setItem(SAVE_KEY,JSON.stringify(sv));}
-function newGameState(name){return{name:name,money:100,energy:100,maxEnergy:100,country:null,town:null,housePos:null,day:1,stats:{health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5},pets:[],furniture:[],clothing:[],tech:[],vehicles:[],luxury:[],businesses:[],achievements:[],totalEarned:0,totalTrained:0,buffDoubleTrain:false,jobsWorked:{},mood:70,friends:[],friendLevels:{},hangoutsTotal:0};}
-function migrateSave(g){if(!g)return g;['pets','furniture','clothing','tech','vehicles','luxury','businesses','achievements'].forEach(function(k){if(!Array.isArray(g[k]))g[k]=[];});if(!g.jobsWorked||typeof g.jobsWorked!=='object')g.jobsWorked={};if(!g.stats||typeof g.stats!=='object')g.stats={};var ds={health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5};Object.keys(ds).forEach(function(k){if(g.stats[k]===undefined)g.stats[k]=ds[k];});if(g.totalEarned===undefined)g.totalEarned=0;if(g.totalTrained===undefined)g.totalTrained=0;if(g.buffDoubleTrain===undefined)g.buffDoubleTrain=false;if(g.maxEnergy===undefined)g.maxEnergy=100;if(g.day===undefined)g.day=1;if(g.money===undefined)g.money=100;if(g.energy===undefined)g.energy=100;if(g.mood===undefined)g.mood=70;if(!Array.isArray(g.friends))g.friends=[];if(!g.friendLevels||typeof g.friendLevels!=='object')g.friendLevels={};if(g.hangoutsTotal===undefined)g.hangoutsTotal=0;return g;}
+function newGameState(name){return{name:name,money:100,energy:100,maxEnergy:100,country:null,town:null,housePos:null,day:1,stats:{health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5},pets:[],furniture:[],clothing:[],tech:[],vehicles:[],luxury:[],businesses:[],achievements:[],totalEarned:0,totalTrained:0,buffDoubleTrain:false,jobsWorked:{},mood:70,friends:[],friendLevels:{},hangoutsTotal:0,hunger:100,hygiene:100,school:{grade:70,credits:0,streak:0},showerStreak:0,mealsCooked:0,callsMade:0};}
+function migrateSave(g){if(!g)return g;['pets','furniture','clothing','tech','vehicles','luxury','businesses','achievements'].forEach(function(k){if(!Array.isArray(g[k]))g[k]=[];});if(!g.jobsWorked||typeof g.jobsWorked!=='object')g.jobsWorked={};if(!g.stats||typeof g.stats!=='object')g.stats={};var ds={health:50,jumping:5,running:5,climbing:5,sneakiness:5,strength:5,intelligence:5,creativity:5,charisma:5};Object.keys(ds).forEach(function(k){if(g.stats[k]===undefined)g.stats[k]=ds[k];});if(g.totalEarned===undefined)g.totalEarned=0;if(g.totalTrained===undefined)g.totalTrained=0;if(g.buffDoubleTrain===undefined)g.buffDoubleTrain=false;if(g.maxEnergy===undefined)g.maxEnergy=100;if(g.day===undefined)g.day=1;if(g.money===undefined)g.money=100;if(g.energy===undefined)g.energy=100;if(g.mood===undefined)g.mood=70;if(!Array.isArray(g.friends))g.friends=[];if(!g.friendLevels||typeof g.friendLevels!=='object')g.friendLevels={};if(g.hangoutsTotal===undefined)g.hangoutsTotal=0;if(g.hunger===undefined)g.hunger=100;if(g.hygiene===undefined)g.hygiene=100;if(!g.school||typeof g.school!=='object')g.school={grade:70,credits:0,streak:0};if(g.school.grade===undefined)g.school.grade=70;if(g.school.credits===undefined)g.school.credits=0;if(g.school.streak===undefined)g.school.streak=0;if(g.showerStreak===undefined)g.showerStreak=0;if(g.mealsCooked===undefined)g.mealsCooked=0;if(g.callsMade===undefined)g.callsMade=0;return g;}
 var saves=loadAllSaves(),currentSlot=-1,G=null,selectedHouseCell=-1,currentShopTab='pet',minigameData={};
 function showScreen(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
 function rng(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
@@ -332,8 +370,9 @@ function renderTownMap(){var country=COUNTRIES.find(function(c){return c.id===G.
 function selectHouseSpot(index,cell){document.querySelectorAll('.map-cell.house').forEach(function(c){c.classList.remove('house');c.classList.add('available');c.textContent='';});cell.classList.remove('available');cell.classList.add('house');cell.textContent='\U0001F3E0';selectedHouseCell=index;document.getElementById('confirm-house-btn').style.display='inline-flex';}
 function confirmHouse(){G.housePos=selectedHouseCell;saveGame();enterHub();}
 function enterHub(){showScreen('hub-screen');renderHub();showPanel('stats');}
-function renderHub(){var country=COUNTRIES.find(function(c){return c.id===G.country;}),stage=getStage(G.totalEarned),progress=getStageProgress(G.totalEarned),si=getStageIndex(G.totalEarned),ns=si<LIFE_STAGES.length-1?LIFE_STAGES[si+1]:null;document.getElementById('hub-name').textContent=G.name;document.getElementById('hub-location').textContent=country.flag+' '+G.town+' | Day '+G.day;document.getElementById('hub-money').textContent='$'+G.money;document.getElementById('energy-fill').style.width=(G.energy/G.maxEnergy*100)+'%';document.getElementById('energy-val').textContent=G.energy;var ml=getMoodLevel(G.mood);document.getElementById('mood-fill').style.width=Math.min(100,G.mood)+'%';document.getElementById('mood-fill').style.background=ml.color;document.getElementById('mood-val').textContent=Math.round(G.mood);document.getElementById('mood-emoji').textContent=ml.emoji;var msb=document.getElementById('mood-status-bar');msb.innerHTML='<div class="mood-status '+ml.id+'">'+ml.emoji+' '+ml.name+(ml.payMult!==1?' | Job pay '+(ml.payMult>1?'+':'')+Math.round((ml.payMult-1)*100)+'%':'')+(ml.energyRestore<100?' | Sleep energy: '+ml.energyRestore:'')+(ml.trainBonus>0?' | Training +'+ml.trainBonus:'')+'</div>';var se=document.getElementById('hub-stage');se.innerHTML='<div class="stage-label"><span>'+stage.emoji+' '+stage.name+'</span>'+(ns?'<span style="font-size:.65rem;color:var(--text-light);">Next: '+ns.emoji+' '+ns.name+'</span>':'<span style="font-size:.65rem;color:var(--text-light);">MAX!</span>')+'</div><div class="stage-bar"><div class="stage-fill" style="width:'+progress+'%;background:'+stage.color+'"></div></div>';var ne=document.getElementById('hub-nav'),w=hasStage('wealthy'),h='';h+='<button class="nav-btn" onclick="showPanel(\'stats\')"><div class="nav-icon">\U0001F4CA</div><div class="nav-label">Stats</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'gym\')"><div class="nav-icon">\U0001F3CB\uFE0F</div><div class="nav-label">Gym</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'jobs\')"><div class="nav-icon">\U0001F4BC</div><div class="nav-label">Jobs</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'shop\')"><div class="nav-icon">\U0001F6D2</div><div class="nav-label">Shop</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'home\')"><div class="nav-icon">\U0001F3E0</div><div class="nav-label">Home</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'fun\')"><div class="nav-icon">\U0001F389</div><div class="nav-label">Fun</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'friends\')"><div class="nav-icon">\U0001F46B</div><div class="nav-label">Friends</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'achievements\')"><div class="nav-icon">\U0001F3C6</div><div class="nav-label">Awards</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'adventures\')"><div class="nav-icon">\U0001F5FA\uFE0F</div><div class="nav-label">Adventures</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'business\')"><div class="nav-icon">\U0001F4B0</div><div class="nav-label">Business</div></button>';h+='<button class="nav-btn" onclick="doSleep()"><div class="nav-icon">\U0001F634</div><div class="nav-label">Sleep</div></button>';ne.innerHTML=h;}
-function showPanel(panel){var el=document.getElementById('hub-panel');switch(panel){case'stats':renderStatsPanel(el);break;case'gym':renderGymPanel(el);break;case'jobs':renderJobsPanel(el);break;case'shop':renderShopPanel(el);break;case'home':renderHomePanel(el);break;case'achievements':renderAchievementsPanel(el);break;case'adventures':renderAdventuresPanel(el);break;case'business':renderBusinessPanel(el);break;case'fun':renderFunPanel(el);break;case'friends':renderFriendsPanel(el);break;}}
+function renderHub(){var country=COUNTRIES.find(function(c){return c.id===G.country;}),stage=getStage(G.totalEarned),progress=getStageProgress(G.totalEarned),si=getStageIndex(G.totalEarned),ns=si<LIFE_STAGES.length-1?LIFE_STAGES[si+1]:null;document.getElementById('hub-name').textContent=G.name;document.getElementById('hub-location').textContent=country.flag+' '+G.town+' | Day '+G.day;document.getElementById('hub-money').textContent='$'+G.money;document.getElementById('energy-fill').style.width=(G.energy/G.maxEnergy*100)+'%';document.getElementById('energy-val').textContent=G.energy;var ml=getMoodLevel(G.mood);document.getElementById('mood-fill').style.width=Math.min(100,G.mood)+'%';document.getElementById('mood-fill').style.background=ml.color;document.getElementById('mood-val').textContent=Math.round(G.mood);document.getElementById('mood-emoji').textContent=ml.emoji;var msb=document.getElementById('mood-status-bar');msb.innerHTML='<div class="mood-status '+ml.id+'">'+ml.emoji+' '+ml.name+(ml.payMult!==1?' | Job pay '+(ml.payMult>1?'+':'')+Math.round((ml.payMult-1)*100)+'%':'')+(ml.energyRestore<100?' | Sleep energy: '+ml.energyRestore:'')+(ml.trainBonus>0?' | Training +'+ml.trainBonus:'')+'</div>';var se=document.getElementById('hub-stage');se.innerHTML='<div class="stage-label"><span>'+stage.emoji+' '+stage.name+'</span>'+(ns?'<span style="font-size:.65rem;color:var(--text-light);">Next: '+ns.emoji+' '+ns.name+'</span>':'<span style="font-size:.65rem;color:var(--text-light);">MAX!</span>')+'</div><div class="stage-bar"><div class="stage-fill" style="width:'+progress+'%;background:'+stage.color+'"></div></div>';var nb=document.getElementById('needs-bars'),hun=G.hunger||0,hyg=G.hygiene||0;nb.innerHTML='<div class="need-bar need-hunger"><div class="need-label">\U0001F354 Hunger</div><div class="need-track"><div class="need-fill-h" style="width:'+hun+'%"></div></div><div class="need-val">'+Math.round(hun)+'</div></div><div class="need-bar need-hygiene"><div class="need-label">\U0001F6BF Hygiene</div><div class="need-track"><div class="need-fill-hy" style="width:'+hyg+'%"></div></div><div class="need-val">'+Math.round(hyg)+'</div></div>';
+var ne=document.getElementById('hub-nav'),w=hasStage('wealthy'),h='';h+='<button class="nav-btn" onclick="showPanel(\'stats\')"><div class="nav-icon">\U0001F4CA</div><div class="nav-label">Stats</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'daily\')"><div class="nav-icon">\U0001F3E0</div><div class="nav-label">Daily</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'school\')"><div class="nav-icon">\U0001F393</div><div class="nav-label">School</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'gym\')"><div class="nav-icon">\U0001F3CB\uFE0F</div><div class="nav-label">Gym</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'jobs\')"><div class="nav-icon">\U0001F4BC</div><div class="nav-label">Jobs</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'shop\')"><div class="nav-icon">\U0001F6D2</div><div class="nav-label">Shop</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'fun\')"><div class="nav-icon">\U0001F389</div><div class="nav-label">Fun</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'friends\')"><div class="nav-icon">\U0001F46B</div><div class="nav-label">Friends</div></button>';h+='<button class="nav-btn" onclick="showPanel(\'achievements\')"><div class="nav-icon">\U0001F3C6</div><div class="nav-label">Awards</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'adventures\')"><div class="nav-icon">\U0001F5FA\uFE0F</div><div class="nav-label">Adventures</div></button>';if(w)h+='<button class="nav-btn" onclick="showPanel(\'business\')"><div class="nav-icon">\U0001F4B0</div><div class="nav-label">Business</div></button>';h+='<button class="nav-btn" onclick="doSleep()"><div class="nav-icon">\U0001F634</div><div class="nav-label">Sleep</div></button>';ne.innerHTML=h;}
+function showPanel(panel){var el=document.getElementById('hub-panel');switch(panel){case'stats':renderStatsPanel(el);break;case'daily':renderDailyPanel(el);break;case'school':renderSchoolPanel(el);break;case'gym':renderGymPanel(el);break;case'jobs':renderJobsPanel(el);break;case'shop':renderShopPanel(el);break;case'home':renderHomePanel(el);break;case'achievements':renderAchievementsPanel(el);break;case'adventures':renderAdventuresPanel(el);break;case'business':renderBusinessPanel(el);break;case'fun':renderFunPanel(el);break;case'friends':renderFriendsPanel(el);break;}}
 
 // ============================================================
 //  PANEL RENDERERS
@@ -352,6 +391,74 @@ G.pets.forEach(function(pid){var item=SHOP_ITEMS.find(function(i){return i.id===
 h+='</div></div>';
 }
 el.innerHTML=h;
+}
+
+function renderDailyPanel(el){
+var h='<div class="card"><div class="card-title">\uD83C\uDFE0 Daily Life</div>';
+DAILY_ACTIVITIES.forEach(function(act){
+var locked=act.item&&G.furniture.indexOf(act.item)===-1&&G.tech.indexOf(act.item)===-1&&G.vehicles.indexOf(act.item)===-1;
+var noEnergy=G.energy<(act.energyCost||0);
+var noMoney=act.moneyCost&&G.money<act.moneyCost;
+var disabled=locked||noEnergy||noMoney;
+var note='';
+if(locked){var si=SHOP_ITEMS.find(function(i){return i.id===act.item;});note=' (need '+si.name+')';}
+else if(noEnergy)note=' (need \u26A1'+(act.energyCost||0)+')';
+else if(noMoney)note=' (need $'+act.moneyCost+')';
+h+='<div class="daily-item"><div class="daily-icon">'+act.emoji+'</div><div class="daily-info"><div class="daily-name">'+act.name+'</div><div class="daily-desc">'+act.desc+note+'</div></div><button class="btn btn-blue btn-sm" onclick="doDailyActivity(\''+act.id+'\')"'+(disabled?' disabled':'')+'>Do It!</button></div>';
+});
+h+='</div>';
+el.innerHTML=h;
+}
+function doDailyActivity(actId){
+var act=DAILY_ACTIVITIES.find(function(a){return a.id===actId;});
+if(!act)return;
+if(act.item&&G.furniture.indexOf(act.item)===-1&&G.tech.indexOf(act.item)===-1&&G.vehicles.indexOf(act.item)===-1)return;
+if(G.energy<(act.energyCost||0)){showToast('Not enough energy!');return;}
+if(act.moneyCost&&G.money<act.moneyCost){showToast('Not enough money!');return;}
+G.energy=Math.max(0,G.energy-(act.energyCost||0));
+if(act.moneyCost)G.money-=act.moneyCost;
+var msgs=[act.emoji+' '+act.name];
+var e=act.effect;
+if(e.hygiene){G.hygiene=Math.min(100,(G.hygiene||0)+e.hygiene);if(e.hygiene>0){G.showerStreak=(G.showerStreak||0)+1;msgs.push('\uD83D\uDEBF Hygiene +'+e.hygiene);}}
+if(e.hunger){G.hunger=Math.min(100,(G.hunger||0)+e.hunger);if(e.hunger>0){G.mealsCooked=(G.mealsCooked||0)+1;msgs.push('\uD83C\uDF54 Hunger +'+e.hunger);}}
+if(e.energy){G.energy=Math.min(G.maxEnergy,G.energy+e.energy);msgs.push('\u26A1 Energy +'+e.energy);}
+if(e.mood){G.mood=Math.min(100,(G.mood||70)+e.mood);msgs.push('\uD83D\uDE0A Mood +'+e.mood);}
+if(e.stat){G.stats[e.stat]=Math.min(100,(G.stats[e.stat]||5)+e.val);var sd=STAT_DEFS.find(function(s){return s.id===e.stat;});if(sd)msgs.push(sd.emoji+' '+sd.name+' +'+e.val);}
+if(e.stat2){e.stat2.forEach(function(sn){G.stats[sn]=Math.min(100,(G.stats[sn]||5)+e.val);var sd=STAT_DEFS.find(function(s){return s.id===sn;});if(sd)msgs.push(sd.emoji+' +'+e.val);});}
+showToast(msgs.join(' | '));
+checkAchievements();saveGame();renderHub();showPanel('daily');
+}
+
+function renderSchoolPanel(el){
+var sc=G.school||{grade:70,credits:0,streak:0};
+var letter=sc.grade>=90?'A+':sc.grade>=80?'A':sc.grade>=70?'B':sc.grade>=60?'C':sc.grade>=50?'D':'F';
+var h='<div class="card"><div class="school-grade-box"><div class="grade-big">'+letter+'</div><div class="grade-sub">Grade: '+sc.grade+'% | Credits: '+sc.credits+' | Streak: '+sc.streak+' days</div></div><div class="card-title">\uD83D\uDCDA Study Subjects</div>';
+SCHOOL_SUBJECTS.forEach(function(subj){
+var noEnergy=G.energy<15;
+h+='<div class="school-item"><div class="daily-icon">'+subj.emoji+'</div><div class="daily-info"><div class="daily-name">'+subj.name+'</div><div class="daily-desc">'+subj.desc+'</div></div><button class="btn btn-purple btn-sm" onclick="doSchoolSubject(\''+subj.id+'\')"'+(noEnergy?' disabled':'')+'>Study (\u26A115)</button></div>';
+});
+h+='</div>';
+el.innerHTML=h;
+}
+function doSchoolSubject(subjId){
+var subj=SCHOOL_SUBJECTS.find(function(s){return s.id===subjId;});
+if(!subj||G.energy<15){showToast('Not enough energy!');return;}
+G.energy-=15;renderHub();
+startMinigame(subj.minigame,'intelligence',function(score){
+var gradeGain=score*4;
+var sc=G.school;
+sc.grade=Math.min(100,sc.grade+gradeGain);
+sc.credits=(sc.credits||0)+score;
+sc.streak=(sc.streak||0)+1;
+var msgs=[subj.emoji+' '+subj.name+' +'+gradeGain+'% grade'];
+Object.keys(subj.statBonus).forEach(function(k){
+G.stats[k]=Math.min(100,(G.stats[k]||5)+subj.statBonus[k]);
+var sd=STAT_DEFS.find(function(s){return s.id===k;});
+if(sd)msgs.push(sd.emoji+' +'+subj.statBonus[k]);
+});
+showToast(msgs.join(' | '));
+checkAchievements();saveGame();renderHub();showPanel('school');
+});
 }
 
 function renderGymPanel(el){
@@ -549,6 +656,33 @@ el.innerHTML=h;
 }
 
 // ============================================================
+//  FRIEND INTERACTIONS
+// ============================================================
+
+function doCallFriend(fid){
+var fd=FRIENDS_DATA.find(function(f){return f.id===fid;});
+if(!fd)return;
+G.callsMade=(G.callsMade||0)+1;
+G.mood=Math.min(100,(G.mood||70)+8);
+var lvl=G.friendLevels[fid]||0;
+if(lvl<5&&Math.random()<0.4){G.friendLevels[fid]=lvl+1;}
+showToast(fd.emoji+' Called '+fd.name+'! \uD83D\uDE0A Mood +8');
+checkAchievements();saveGame();renderHub();showPanel('friends');
+}
+
+function doInviteOver(fid){
+var fd=FRIENDS_DATA.find(function(f){return f.id===fid;});
+if(!fd)return;
+if(G.money<5){showToast('Need $5 for snacks!');return;}
+G.money-=5;
+G.mood=Math.min(100,(G.mood||70)+15);
+var lvl=G.friendLevels[fid]||0;
+if(lvl<5){G.friendLevels[fid]=Math.min(5,lvl+1);}
+showToast(fd.emoji+' '+fd.name+' came over! \uD83C\uDFE0 Mood +15, friendship grew!');
+checkAchievements();saveGame();renderHub();showPanel('friends');
+}
+
+// ============================================================
 //  HANGOUT SPOTS (FUN PANEL)
 // ============================================================
 
@@ -633,9 +767,10 @@ h+='<div class="friend-card met"><div class="friend-avatar">'+fd.emoji+'</div><d
 for(var i=0;i<5;i++)h+='<span'+(i<lvl?' class="filled"':'')+'>'+'\u2764\uFE0F'+'</span>';
 h+='</div>';
 if(lvl>=4)h+='<div class="friend-perk">\uD83C\uDF81 Daily gift: '+fd.giftDesc+'</div>';
+h+='<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-blue btn-sm" onclick="doCallFriend(\''+fid+'\')">\uD83D\uDCDE Call</button><button class="btn btn-green btn-sm" onclick="doInviteOver(\''+fid+'\')">\uD83C\uDFE0 Invite ($5)</button></div>';
 h+='</div>';
 var hangoutSpot=HANGOUT_SPOTS.find(function(s){return s.id===fd.hangout;});
-if(hangoutSpot)h+='<div style="text-align:center;font-size:.7rem;color:var(--text-light);">Hangs out at<br>'+hangoutSpot.emoji+' '+hangoutSpot.name+'</div>';
+if(hangoutSpot)h+='<div style="text-align:center;font-size:.7rem;color:var(--text-light);">Hangs out at '+hangoutSpot.emoji+' '+hangoutSpot.name+'</div>';
 h+='</div>';
 });
 }
@@ -658,6 +793,10 @@ el.innerHTML=h;
 
 function doSleep(){
 G.day++;
+G.hunger=Math.max(0,(G.hunger||100)-25);
+G.hygiene=Math.max(0,(G.hygiene||100)-15);
+if(G.hunger<20)G.mood=Math.max(0,(G.mood||70)-10);
+if(G.hygiene<20)G.mood=Math.max(0,(G.mood||70)-8);
 var bizIncome=0;
 G.businesses.forEach(function(bid){var item=SHOP_ITEMS.find(function(i){return i.id===bid;});if(item&&item.income)bizIncome+=item.income;});
 if(bizIncome>0){G.money+=bizIncome;G.totalEarned+=bizIncome;}
