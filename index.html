@@ -215,6 +215,43 @@ body::before{
 .tag-adventure{background:rgba(236,72,153,.15);color:#f472b6;}
 .tag-flight{background:rgba(59,130,246,.15);color:#60a5fa;}
 
+/* ========== UPDATES BANNER ========== */
+.updates-banner{
+  background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(6,182,212,.08));
+  border:1px solid rgba(124,58,237,.35);
+  border-radius:12px;padding:14px 18px;margin-bottom:20px;
+  font-size:.82rem;color:var(--text);
+}
+.updates-banner .ub-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.updates-banner .ub-date{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--accent2);background:rgba(124,58,237,.15);
+  border-radius:6px;padding:3px 8px;white-space:nowrap;
+}
+.updates-banner .ub-summary{color:var(--text-dim);flex:1;min-width:200px;}
+.updates-banner .ub-summary strong{color:var(--text-bright);}
+.ub-toggle{
+  background:none;border:1px solid rgba(124,58,237,.4);color:var(--accent2);
+  font-size:.72rem;border-radius:6px;padding:3px 10px;cursor:pointer;
+  white-space:nowrap;transition:background .2s;
+}
+.ub-toggle:hover{background:rgba(124,58,237,.15);}
+.updates-changelog{
+  display:none;margin-top:12px;padding-top:12px;
+  border-top:1px solid rgba(124,58,237,.2);
+}
+.updates-changelog.open{display:block;}
+.updates-changelog ul{
+  list-style:none;padding:0;margin:0;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 20px;
+}
+.updates-changelog li{
+  color:var(--text-dim);font-size:.78rem;padding:3px 0;
+  display:flex;align-items:flex-start;gap:6px;
+}
+.updates-changelog li::before{content:'→';color:var(--cyan);flex-shrink:0;}
+.updates-changelog li strong{color:var(--text-bright);}
+
 /* ========== FOOTER ========== */
 .footer{
   text-align:center;margin-top:40px;padding:20px;
@@ -377,6 +414,29 @@ textarea.modal-input{
         <div class="tagline">Family Game Portal</div>
       </div>
 
+      <!-- ===== UPDATES BANNER ===== -->
+      <div class="updates-banner">
+        <div class="ub-top">
+          <span class="ub-date">Mar 2, 2026</span>
+          <span class="ub-summary">
+            <strong>New: Demolition Derby!</strong> + Energy Siege v1.5 — star-tier weapons, leaderboards, auto-collector, lag fixes.
+          </span>
+          <button class="ub-toggle" onclick="this.textContent=this.textContent.includes('more')?'Show less':'Read more';document.getElementById('ub-changelog').classList.toggle('open')">Read more</button>
+        </div>
+        <div class="updates-changelog" id="ub-changelog">
+          <ul>
+            <li><strong>NEW GAME:</strong> Demolition Derby — 4 cars, 3 CPU rivals, bumper shop, damage hotspots</li>
+            <li><strong>Energy Siege:</strong> Leaderboard per biome for endless mode (stored in localStorage)</li>
+            <li><strong>Energy Siege:</strong> Star Tier panel (Tab key) — Mega Barracks, Hyper Laser, Fortress Wall</li>
+            <li><strong>Energy Siege:</strong> Attractor building [7] — auto-collects nearby energy orbs</li>
+            <li><strong>Energy Siege:</strong> Mega Men spawn from Mega Barracks — gold units with 3× stats</li>
+            <li><strong>Energy Siege:</strong> Hyper Laser — 2× range, 3× DPS, gold beam effects</li>
+            <li><strong>Energy Siege:</strong> Endless lag fix — capped particles (600), orbs (200), enemies (80)</li>
+            <li><strong>Portal Knights:</strong> One-click build mode + Merchant NPC shop in World 0</li>
+          </ul>
+        </div>
+      </div>
+
       <div class="filter-bar" id="filter-bar">
         <button class="filter-btn active" data-filter="all" onclick="filterGames('all',this)">All Games</button>
         <button class="filter-btn" data-filter="arliss" onclick="filterGames('arliss',this)">🟢 Arliss</button>
@@ -529,10 +589,21 @@ const GAMES = [
   },
   {
     title: 'Energy Siege: Overload',
-    desc: 'A strategic energy management game. Build defenses, manage power, and survive the siege!',
+    desc: 'Defend the core across alien biomes! Place turrets, lasers, barracks & star-tier mega-weapons. Auto-collector, endless mode leaderboards, and co-op PeerJS multiplayer.',
     emoji: '⚡',
     banner: 'linear-gradient(135deg, #2a2a0a, #4a4a1a)',
     url: 'cash/energy-siege.html',
+    player: 'Cash',
+    playerColor: 'color-cash',
+    tag: 'Action',
+    tagClass: 'tag-action',
+  },
+  {
+    title: 'Demolition Derby',
+    desc: 'Pick your car, smash your opponents, and be the last one running! Buy bumpers between rounds, earn coins from damage, and battle 3 CPU rivals with different AI styles.',
+    emoji: '🚗',
+    banner: 'linear-gradient(135deg, #3a1500, #6a2a00)',
+    url: 'cash/demolition-derby.html',
     player: 'Cash',
     playerColor: 'color-cash',
     tag: 'Action',

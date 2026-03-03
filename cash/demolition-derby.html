@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demolition Derby - Sala Arcade</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#111; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; font-family:'Segoe UI',sans-serif; }
+canvas { display:block; image-rendering:pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ════════════════════════════════════════
+//  DEMOLITION DERBY  — Designed by Cash & Claude
+//  v1.0.0
+// ════════════════════════════════════════
+
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const W = 900, H = 600;
+C.width = W; C.height = H;
+
+// ─── AUDIO ───────────────────────────────────────
+let ac = null;
+function ea() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); }
+function snd(f, d, t = 'sawtooth', v = 0.05) {
+  if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = t; o.frequency.value = f;
+  g.gain.setValueAtTime(v, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d);
+  o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
+}
+function sndCrash(power) {
+  if (!ac) return;
+  const v = Math.min(0.3, power * 0.01);
+  snd(60, 0.18, 'sawtooth', v); snd(80, 0.12, 'square', v * 0.7);
+  snd(40 + Math.random() * 20, 0.25, 'sawtooth', v * 0.5);
+}
+function sndEngine(rpm) { snd(80 + rpm * 60, 0.08, 'sawtooth', 0.02); }
+function sndBuy() { snd(500, 0.1); snd(700, 0.15, 'sine', 0.04); }
+function sndExplode() {
+  if (!ac) return;
+  for (let i = 0; i < 5; i++) setTimeout(() => {
+    snd(40 + Math.random() * 80, 0.4, 'sawtooth', 0.2);
+  }, i * 60);
+}
+
+// ─── CONSTANTS ──────────────────────────────────
+const ARENA_X = 80, ARENA_Y = 80, ARENA_W = W - 160, ARENA_H = H - 160;
+const CAR_W = 36, CAR_H = 22;
+const FRICTION = 0.92, TURN_FRICTION = 0.88;
+
+// ─── CAR TYPES ──────────────────────────────────
+const CAR_TYPES = [
+  {
+    id: 'speed',
+    name: 'Speed Racer',
+    desc: 'Lightning fast, paper thin',
+    color: '#ff4444', shadow: '#aa0000',
+    topSpeed: 5.5, turnRate: 0.06, accel: 0.28, armor: 0.6, ramPower: 0.8,
+    hp: 70, maxHp: 70,
+    stats: { Speed: 5, Armor: 2, Ramming: 3, Handling: 4 }
+  },
+  {
+    id: 'tank',
+    name: 'The Tank',
+    desc: 'Slow but unstoppable',
+    color: '#44aa44', shadow: '#226622',
+    topSpeed: 2.8, turnRate: 0.03, accel: 0.15, armor: 2.2, ramPower: 2.0,
+    hp: 180, maxHp: 180,
+    stats: { Speed: 1, Armor: 5, Ramming: 5, Handling: 1 }
+  },
+  {
+    id: 'muscle',
+    name: 'Muscle Car',
+    desc: 'All-around bruiser',
+    color: '#4488ff', shadow: '#2244aa',
+    topSpeed: 4.0, turnRate: 0.045, accel: 0.22, armor: 1.0, ramPower: 1.2,
+    hp: 110, maxHp: 110,
+    stats: { Speed: 3, Armor: 3, Ramming: 3, Handling: 3 }
+  },
+  {
+    id: 'ram',
+    name: 'Ram Truck',
+    desc: 'Devastating front hits',
+    color: '#ffaa00', shadow: '#aa6600',
+    topSpeed: 3.5, turnRate: 0.04, accel: 0.20, armor: 1.1, ramPower: 1.8,
+    hp: 130, maxHp: 130,
+    stats: { Speed: 2, Armor: 3, Ramming: 5, Handling: 2 }
+  },
+];
+
+// ─── BUMPERS ────────────────────────────────────
+const BUMPER_DEFS = [
+  { id: 'std_bumper',   name: 'Steel Bumper',   desc: '+20% front damage',   cost: 30,  frontMult: 0.2, sideMult: 0.0, speedBonus: 0.0, color: '#aabbcc' },
+  { id: 'spike_bumper', name: 'Spike Bumper',   desc: '+35% front, +15% side', cost: 50, frontMult: 0.35, sideMult: 0.15, speedBonus: 0.0, color: '#cc4444' },
+  { id: 'ram_bar',      name: 'Ram Bar',        desc: '+40% front at speed',  cost: 70,  frontMult: 0.4, sideMult: 0.0, speedBonus: 0.15, color: '#ffcc00' },
+  { id: 'armor_plate',  name: 'Armor Plating',  desc: '+50 HP shield',        cost: 40,  frontMult: 0.0, sideMult: 0.0, speedBonus: 0.0, armorBonus: 50, color: '#88aacc' },
+];
+
+// ─── AI NAMES ───────────────────────────────────
+const AI_NAMES = ['Crusher', 'Wrecker', 'Smashley', 'Denty', 'Rambo', 'Ironside', 'Bonecrusher'];
+
+// ─── STATE ──────────────────────────────────────
+let state = 'title'; // 'title'|'name'|'car-select'|'bumper-shop'|'game'|'round-over'|'game-over'
+let playerName = '';
+let playerCar = null;   // index into CAR_TYPES
+let playerCoins = 0;
+let playerBumpers = []; // purchased bumper ids
+let round = 1;
+let totalRounds = 3;
+let roundWins = 0;
+let roundCoins = 0;    // coins earned this round
+
+let cars = [];          // all cars this round (cars[0] = player)
+let particles = [];
+let debris = [];        // arena debris/obstacles
+let roundTimer = 0;
+let roundDuration = 90; // seconds
+let roundActive = false;
+let roundResult = null; // 'win' | 'lose' | 'draw'
+let playerDamageDealt = 0;
+let playerKills = 0;
+let frameCount = 0;
+
+// ─── INPUT ──────────────────────────────────────
+const keys = {};
+let nameInput = '';
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (state === 'name') {
+    if (e.key.length === 1 && nameInput.length < 14) nameInput += e.key.toUpperCase();
+    else if (e.code === 'Backspace') nameInput = nameInput.slice(0, -1);
+    else if (e.code === 'Enter' && nameInput.trim().length > 0) {
+      playerName = nameInput.trim(); state = 'car-select'; ea();
+    }
+  }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ─── MOUSE ──────────────────────────────────────
+let mouse = { x: 0, y: 0, clicked: false };
+C.addEventListener('mousemove', e => {
+  const r = C.getBoundingClientRect();
+  mouse.x = (e.clientX - r.left) * (W / r.width);
+  mouse.y = (e.clientY - r.top) * (H / r.height);
+});
+C.addEventListener('mousedown', () => { mouse.clicked = true; ea(); });
+C.addEventListener('mouseup', () => { mouse.clicked = false; });
+let clickConsumed = false;
+function consumeClick() { if (mouse.clicked) { clickConsumed = true; return true; } return false; }
+
+// ─── HELPERS ────────────────────────────────────
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function lerpColor(a, b, t) {
+  const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+  const ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+  const br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bv = Math.round(ab + (bb - ab) * t);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${bv.toString(16).padStart(2,'0')}`;
+}
+function btnHit(bx, by, bw, bh) {
+  return mouse.x > bx && mouse.x < bx + bw && mouse.y > by && mouse.y < by + bh;
+}
+
+// ─── PARTICLE SYSTEM ────────────────────────────
+function spawnParticles(x, y, color, count, speed, life = 30) {
+  if (particles.length > 300) return;
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = Math.random() * speed + 1;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life, maxLife: life, color, size: 2 + Math.random()*3 });
+  }
+}
+function spawnDebrisChunk(x, y, color) {
+  const a = Math.random() * Math.PI * 2;
+  const s = rnd(1.5, 4);
+  particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 60, maxLife: 60, color, size: 4 + Math.random()*6, isChunk: true });
+}
+function spawnSmoke(x, y) {
+  particles.push({ x, y, vx: rnd(-0.3,0.3), vy: rnd(-0.8,-0.2), life: 50, maxLife: 50, color: '#888', size: 8 + Math.random()*8, isSmoke: true });
+}
+
+// ─── CAR CREATION ───────────────────────────────
+function makeCar(typeIdx, x, y, angle, isPlayer, name, aiStyle) {
+  const t = CAR_TYPES[typeIdx];
+  const extraHp = playerBumpers.includes('armor_plate') && isPlayer ? 50 : 0;
+  return {
+    x, y, angle, vx: 0, vy: 0, angularV: 0,
+    typeIdx, isPlayer,
+    name: name || t.name,
+    color: t.color, shadow: t.shadow,
+    topSpeed: t.topSpeed, turnRate: t.turnRate, accel: t.accel,
+    armor: t.armor, ramPower: t.ramPower,
+    hp: t.hp + extraHp, maxHp: t.hp + extraHp,
+    alive: true, exploding: false, explodeTimer: 0,
+    smokeTimer: 0,
+    collisionCD: 0,
+    // Bumper bonuses (player only)
+    bumpFrontMult: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.frontMult : 0); }, 0) : 0,
+    bumpSideMult: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.sideMult : 0); }, 0) : 0,
+    bumpSpeedBonus: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.speedBonus || 0 : 0); }, 0) : 0,
+    // AI
+    aiStyle: aiStyle || 'aggressive', // 'aggressive'|'circler'|'coward'
+    aiTarget: null, aiTimer: 0, aiStuck: 0, aiLastX: 0, aiLastY: 0,
+    // Stats
+    damageDealt: 0, kills: 0,
+  };
+}
+
+// ─── ARENA DEBRIS / OBSTACLES ───────────────────
+function generateDebris() {
+  debris = [];
+  // Center pillars
+  const positions = [
+    { x: W/2 - 80, y: H/2 },
+    { x: W/2 + 80, y: H/2 },
+    { x: W/2, y: H/2 - 70 },
+    { x: W/2, y: H/2 + 70 },
+    { x: W/2 - 160, y: H/2 - 80 },
+    { x: W/2 + 160, y: H/2 + 80 },
+  ];
+  positions.forEach(p => {
+    if (Math.random() < 0.7) debris.push({ x: p.x, y: p.y, r: 18 + Math.random() * 12, type: 'pillar' });
+  });
+  // Scattered junk
+  for (let i = 0; i < 6; i++) {
+    let x, y, tries = 0;
+    do { x = rnd(ARENA_X + 50, ARENA_X + ARENA_W - 50); y = rnd(ARENA_Y + 50, ARENA_Y + ARENA_H - 50); tries++; }
+    while (tries < 30 && debris.some(d => Math.hypot(x - d.x, y - d.y) < 60));
+    debris.push({ x, y, r: 12, type: 'junk', color: ['#888', '#664', '#466'][Math.floor(Math.random()*3)] });
+  }
+}
+
+// ─── INIT ROUND ─────────────────────────────────
+function initRound() {
+  ea();
+  cars = [];
+  particles = [];
+  roundTimer = roundDuration;
+  roundActive = true;
+  roundResult = null;
+  playerDamageDealt = 0;
+  playerKills = 0;
+  roundCoins = 0;
+  generateDebris();
+
+  // Spawn positions
+  const spawnPts = [
+    { x: ARENA_X + 80, y: ARENA_Y + 80 },
+    { x: ARENA_X + ARENA_W - 80, y: ARENA_Y + 80 },
+    { x: ARENA_X + 80, y: ARENA_Y + ARENA_H - 80 },
+    { x: ARENA_X + ARENA_W - 80, y: ARENA_Y + ARENA_H - 80 },
+  ];
+  const angles = [Math.PI * 0.25, Math.PI * 0.75, -Math.PI * 0.25, -Math.PI * 0.75];
+
+  // Player
+  cars.push(makeCar(playerCar, spawnPts[0].x, spawnPts[0].y, angles[0], true, playerName || 'YOU'));
+
+  // CPU opponents (3)
+  const numCPU = Math.min(3, CAR_TYPES.length - 1);
+  const aiStyles = ['aggressive', 'circler', 'coward'];
+  const usedTypes = new Set([playerCar]);
+  for (let i = 0; i < numCPU; i++) {
+    let typeIdx;
+    do { typeIdx = Math.floor(Math.random() * CAR_TYPES.length); } while (usedTypes.has(typeIdx) && usedTypes.size < CAR_TYPES.length);
+    usedTypes.add(typeIdx);
+    const nm = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)] + (round > 1 ? ' II'.slice(0, round * 3 - 3) : '');
+    cars.push(makeCar(typeIdx, spawnPts[i+1].x, spawnPts[i+1].y, angles[i+1], false, nm, aiStyles[i]));
+  }
+
+  state = 'game';
+}
+
+// ─── COLLISION: car rect corners ────────────────
+function carCorners(car) {
+  const hw = CAR_W / 2, hh = CAR_H / 2;
+  const cos = Math.cos(car.angle), sin = Math.sin(car.angle);
+  return [
+    { x: car.x + cos*hw - sin*hh, y: car.y + sin*hw + cos*hh },
+    { x: car.x - cos*hw - sin*hh, y: car.y - sin*hw + cos*hh },
+    { x: car.x - cos*hw + sin*hh, y: car.y - sin*hw - cos*hh },
+    { x: car.x + cos*hw + sin*hh, y: car.y + sin*hw - cos*hh },
+  ];
+}
+
+// Circle vs rotated rect collision (approximate)
+function carDebrisCollide(car, d) {
+  const cos = Math.cos(-car.angle), sin = Math.sin(-car.angle);
+  const lx = (d.x - car.x) * cos - (d.y - car.y) * sin;
+  const ly = (d.x - car.x) * sin + (d.y - car.y) * cos;
+  const nx = clamp(lx, -CAR_W/2, CAR_W/2);
+  const ny = clamp(ly, -CAR_H/2, CAR_H/2);
+  const dist = Math.hypot(lx - nx, ly - ny);
+  return dist < d.r;
+}
+
+// Car-to-car AABB approximation (use bounding circle)
+function carsOverlap(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y) < CAR_W * 0.9;
+}
+
+// ─── DAMAGE HOTSPOT ─────────────────────────────
+// Returns multiplier based on hit angle relative to car B's front
+function hitMultiplier(attacker, defender) {
+  const impactAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
+  let rel = impactAngle - defender.angle;
+  while (rel > Math.PI) rel -= Math.PI * 2;
+  while (rel < -Math.PI) rel += Math.PI * 2;
+  // rel ≈ 0 means hit from front, ±PI means rear, ±PI/2 means sides
+  if (Math.abs(rel) < Math.PI * 0.35) return { mult: 1.5, zone: 'SIDE' }; // rear perspective = attacker came from front
+  if (Math.abs(rel) > Math.PI * 0.65) return { mult: 2.5, zone: 'REAR' }; // attacker hit rear = high damage
+  return { mult: 1.0, zone: 'SIDE' };
+  // Note: we compute from attacker's perspective hitting defender
+  // attacker.angle relative to vector from defender
+}
+
+function attackDamage(attacker, defender) {
+  const speed = Math.hypot(attacker.vx, attacker.vy);
+  if (speed < 0.8) return 0;
+  const { mult, zone } = hitMultiplier(attacker, defender);
+  // Check if attacker is hitting with front (own front angle matches movement direction)
+  const moveAngle = Math.atan2(attacker.vy, attacker.vx);
+  let frontRel = moveAngle - attacker.angle;
+  while (frontRel > Math.PI) frontRel -= Math.PI * 2;
+  while (frontRel < -Math.PI) frontRel += Math.PI * 2;
+  const isFrontHit = Math.abs(frontRel) < Math.PI * 0.4;
+  let baseDmg = speed * attacker.ramPower * 3.5;
+  if (isFrontHit) {
+    baseDmg *= (1.8 + attacker.bumpFrontMult);
+    // Speed bonus bumper
+    if (attacker.bumpSpeedBonus > 0 && speed > 2.5) baseDmg *= 1 + attacker.bumpSpeedBonus;
+  } else {
+    baseDmg *= (1.0 + attacker.bumpSideMult);
+  }
+  const finalDmg = baseDmg * mult / defender.armor;
+  return { dmg: finalDmg, zone, isFrontHit };
+}
+
+// ─── AI UPDATE ──────────────────────────────────
+function updateAI(car) {
+  if (!car.alive) return;
+  car.aiTimer--;
+  // Stuck detection
+  if (frameCount % 60 === 0) {
+    const moved = Math.hypot(car.x - car.aiLastX, car.y - car.aiLastY);
+    if (moved < 5) car.aiStuck += 2; else car.aiStuck = 0;
+    car.aiLastX = car.x; car.aiLastY = car.y;
+  }
+
+  // Pick target: nearest alive car
+  if (car.aiTimer <= 0 || !car.aiTarget || !car.aiTarget.alive) {
+    const aliveCars = cars.filter(c => c !== car && c.alive);
+    if (car.aiStyle === 'coward' && car.hp < car.maxHp * 0.4) {
+      // When low HP, run from nearest threat
+      car.aiTarget = aliveCars.sort((a, b) => Math.hypot(car.x - a.x, car.y - a.y) - Math.hypot(car.x - b.x, car.y - b.y))[0];
+    } else if (car.aiStyle === 'circler') {
+      // Target lowest HP
+      car.aiTarget = aliveCars.sort((a, b) => a.hp - b.hp)[0];
+    } else {
+      // Aggressive: target nearest
+      car.aiTarget = aliveCars.sort((a, b) => Math.hypot(car.x - a.x, car.y - a.y) - Math.hypot(car.x - b.x, car.y - b.y))[0];
+    }
+    car.aiTimer = 30 + Math.random() * 45;
+  }
+
+  if (!car.aiTarget) return;
+  const target = car.aiTarget;
+  let targetX = target.x, targetY = target.y;
+
+  // Coward: flee when low HP
+  if (car.aiStyle === 'coward' && car.hp < car.maxHp * 0.4) {
+    targetX = car.x * 2 - target.x;
+    targetY = car.y * 2 - target.y;
+  }
+
+  // Circler: orbit target
+  if (car.aiStyle === 'circler') {
+    const orbitAngle = Math.atan2(car.y - target.y, car.x - target.x) + 0.6;
+    const orbitDist = 120;
+    targetX = target.x + Math.cos(orbitAngle) * orbitDist;
+    targetY = target.y + Math.sin(orbitAngle) * orbitDist;
+  }
+
+  // Stuck escape
+  if (car.aiStuck > 4) {
+    targetX = rnd(ARENA_X + 80, ARENA_X + ARENA_W - 80);
+    targetY = rnd(ARENA_Y + 80, ARENA_Y + ARENA_H - 80);
+    car.aiStuck = 0;
+  }
+
+  // Steer toward target
+  const angleToTarget = Math.atan2(targetY - car.y, targetX - car.x);
+  let angleDiff = angleToTarget - car.angle;
+  while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+  while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+  const dist = Math.hypot(targetX - car.x, targetY - car.y);
+  const speed = Math.hypot(car.vx, car.vy);
+
+  // Turn
+  car.angularV += Math.sign(angleDiff) * car.turnRate * (Math.min(Math.abs(angleDiff), 1));
+  car.angularV *= TURN_FRICTION;
+  car.angle += car.angularV;
+
+  // Accelerate / brake
+  if (Math.abs(angleDiff) < 1.2 && dist > 40) {
+    // Accelerate forward
+    car.vx += Math.cos(car.angle) * car.accel;
+    car.vy += Math.sin(car.angle) * car.accel;
+  } else if (dist > 60) {
+    // Brake if misaligned or brake to steer
+    car.vx *= 0.97;
+    car.vy *= 0.97;
+  }
+}
+
+// ─── CAR UPDATE ─────────────────────────────────
+function updateCar(car, dt) {
+  if (!car.alive) {
+    car.explodeTimer--;
+    if (car.explodeTimer % 8 === 0) spawnParticles(car.x + rnd(-15,15), car.y + rnd(-15,15), '#ff6600', 6, 3, 25);
+    if (car.explodeTimer % 5 === 0) spawnSmoke(car.x + rnd(-10,10), car.y + rnd(-10,10));
+    return;
+  }
+
+  // Player input
+  if (car.isPlayer) {
+    const left  = keys['KeyA'] || keys['ArrowLeft'];
+    const right = keys['KeyD'] || keys['ArrowRight'];
+    const up    = keys['KeyW'] || keys['ArrowUp'];
+    const down  = keys['KeyS'] || keys['ArrowDown'];
+
+    const speed = Math.hypot(car.vx, car.vy);
+    if (left)  { car.angularV -= car.turnRate; }
+    if (right) { car.angularV += car.turnRate; }
+    if (up)    { car.vx += Math.cos(car.angle) * car.accel; car.vy += Math.sin(car.angle) * car.accel; }
+    if (down)  { car.vx -= Math.cos(car.angle) * car.accel * 0.6; car.vy -= Math.sin(car.angle) * car.accel * 0.6; }
+    if (!left && !right) car.angularV *= TURN_FRICTION;
+
+    // Engine sound (occasional)
+    if (frameCount % 20 === 0 && (up || down)) sndEngine(speed / car.topSpeed);
+  } else {
+    updateAI(car);
+  }
+
+  // Speed cap
+  const topSpd = car.topSpeed * (1 + car.bumpSpeedBonus);
+  const spd = Math.hypot(car.vx, car.vy);
+  if (spd > topSpd) { const f = topSpd / spd; car.vx *= f; car.vy *= f; }
+
+  // Angular velocity cap and damping
+  car.angularV = clamp(car.angularV, -0.12, 0.12);
+  car.angle += car.angularV;
+  car.angularV *= TURN_FRICTION;
+
+  // Friction
+  car.vx *= FRICTION; car.vy *= FRICTION;
+
+  // Move
+  car.x += car.vx; car.y += car.vy;
+
+  // Wall bouncing
+  const margin = 20;
+  if (car.x < ARENA_X + margin) { car.x = ARENA_X + margin; car.vx = Math.abs(car.vx) * 0.5; }
+  if (car.x > ARENA_X + ARENA_W - margin) { car.x = ARENA_X + ARENA_W - margin; car.vx = -Math.abs(car.vx) * 0.5; }
+  if (car.y < ARENA_Y + margin) { car.y = ARENA_Y + margin; car.vy = Math.abs(car.vy) * 0.5; }
+  if (car.y > ARENA_Y + ARENA_H - margin) { car.y = ARENA_Y + ARENA_H - margin; car.vy = -Math.abs(car.vy) * 0.5; }
+
+  // Debris collision
+  for (const d of debris) {
+    if (carDebrisCollide(car, d)) {
+      const pushAngle = Math.atan2(car.y - d.y, car.x - d.x);
+      car.vx += Math.cos(pushAngle) * 1.5; car.vy += Math.sin(pushAngle) * 1.5;
+      const spd2 = Math.hypot(car.vx, car.vy);
+      if (spd2 > 1.5) {
+        const dmgAmt = spd2 * 1.5 / car.armor;
+        car.hp -= dmgAmt;
+        spawnParticles(car.x, car.y, '#cc8800', 4, 2);
+        if (Math.random() < 0.3) sndCrash(spd2 * 5);
+      }
+    }
+  }
+
+  // Smoke when damaged
+  car.smokeTimer++;
+  if (car.hp < car.maxHp * 0.4 && car.smokeTimer % 12 === 0) {
+    spawnSmoke(car.x, car.y);
+  }
+
+  // Death check
+  if (car.hp <= 0 && !car.exploding) {
+    car.hp = 0; car.exploding = true; car.alive = false;
+    car.explodeTimer = 80;
+    sndExplode();
+    spawnParticles(car.x, car.y, '#ff4400', 20, 5, 60);
+    spawnParticles(car.x, car.y, '#ffaa00', 15, 4, 45);
+    spawnParticles(car.x, car.y, '#fff', 8, 6, 25);
+    for (let i = 0; i < 8; i++) spawnDebrisChunk(car.x, car.y, car.color);
+  }
+}
+
+// ─── CAR-CAR COLLISION ──────────────────────────
+function handleCarCollisions() {
+  for (let i = 0; i < cars.length; i++) {
+    const a = cars[i]; if (!a.alive) continue;
+    for (let j = i + 1; j < cars.length; j++) {
+      const b = cars[j]; if (!b.alive) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < CAR_W * 0.85 && dist > 0.1) {
+        // Push apart
+        const nx = dx / dist, ny = dy / dist;
+        const overlap = CAR_W * 0.85 - dist;
+        a.x -= nx * overlap * 0.5; a.y -= ny * overlap * 0.5;
+        b.x += nx * overlap * 0.5; b.y += ny * overlap * 0.5;
+
+        // Velocity exchange
+        const spdA = Math.hypot(a.vx, a.vy), spdB = Math.hypot(b.vx, b.vy);
+        const dot = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+        if (dot > 0) {
+          const impulse = dot * 0.8;
+          a.vx -= impulse * nx; a.vy -= impulse * ny;
+          b.vx += impulse * nx; b.vy += impulse * ny;
+        }
+
+        // Damage calculation
+        const relSpeed = Math.abs(dot);
+        if (relSpeed > 1.0 && a.collisionCD <= 0 && b.collisionCD <= 0) {
+          const resA = attackDamage(a, b);
+          const resB = attackDamage(b, a);
+          if (resA && resA.dmg > 0) {
+            b.hp -= resA.dmg;
+            a.damageDealt += resA.dmg;
+            if (a.isPlayer) { playerDamageDealt += resA.dmg; }
+            spawnParticles(b.x, b.y, b.color, 6, 3);
+            sndCrash(resA.dmg);
+            if (resA.isFrontHit && resA.dmg > 8) spawnDebrisChunk(b.x, b.y, '#aaa');
+          }
+          if (resB && resB.dmg > 0) {
+            a.hp -= resB.dmg;
+            b.damageDealt += resB.dmg;
+            if (b.isPlayer) { playerDamageDealt += resB.dmg; }
+            spawnParticles(a.x, a.y, a.color, 6, 3);
+            if (resB.isFrontHit && resB.dmg > 8) spawnDebrisChunk(a.x, a.y, '#aaa');
+          }
+          a.collisionCD = 8; b.collisionCD = 8;
+        }
+        if (a.collisionCD > 0) a.collisionCD--;
+        if (b.collisionCD > 0) b.collisionCD--;
+      }
+    }
+  }
+}
+
+// ─── ROUND CHECK ────────────────────────────────
+function checkRoundEnd() {
+  const alive = cars.filter(c => c.alive);
+  const playerAlive = cars[0].alive;
+  const kills = cars.filter((c, i) => i > 0 && !c.alive).length;
+  playerKills = kills;
+
+  // Check kills for coins
+  roundCoins = Math.floor(playerDamageDealt / 10) + kills * 25;
+
+  if (alive.length <= 1 || roundTimer <= 0) {
+    roundActive = false;
+    const player = cars[0];
+    if (!playerAlive) {
+      roundResult = 'lose';
+    } else if (alive.length === 1 && playerAlive) {
+      roundResult = 'win'; roundWins++;
+    } else if (roundTimer <= 0) {
+      // Tiebreak by HP
+      const maxHp = Math.max(...alive.map(c => c.hp));
+      roundResult = (player.alive && player.hp >= maxHp * 0.95) ? 'win' : 'lose';
+      if (roundResult === 'win') roundWins++;
+    }
+    playerCoins += roundCoins;
+    setTimeout(() => { state = round < totalRounds && roundResult === 'win' ? 'bumper-shop' : 'game-over'; round++; }, 2000);
+  }
+}
+
+// ─── DRAWING HELPERS ─────────────────────────────
+function drawCar(car) {
+  const cx = car.x, cy = car.y;
+  X.save();
+  X.translate(cx, cy);
+  X.rotate(car.angle);
+
+  // Shadow
+  X.fillStyle = 'rgba(0,0,0,0.3)';
+  X.beginPath(); X.ellipse(2, 3, CAR_W/2 - 2, CAR_H/2 - 1, 0, 0, Math.PI*2); X.fill();
+
+  // Body
+  const hpPct = car.hp / car.maxHp;
+  const bodyColor = hpPct > 0.5 ? car.color : lerpColor(car.color, '#333', 1 - hpPct * 2);
+  X.fillStyle = bodyColor;
+  X.beginPath(); X.roundRect(-CAR_W/2, -CAR_H/2, CAR_W, CAR_H, 4); X.fill();
+  X.fillStyle = car.shadow;
+  X.fillRect(-CAR_W/2, 0, CAR_W, CAR_H/2);
+
+  // Windshield
+  X.fillStyle = 'rgba(150,200,255,0.6)';
+  X.fillRect(2, -CAR_H/2 + 3, 12, CAR_H - 6);
+  X.strokeStyle = 'rgba(255,255,255,0.3)'; X.lineWidth = 0.5;
+  X.strokeRect(2, -CAR_H/2 + 3, 12, CAR_H - 6);
+
+  // Headlights
+  X.fillStyle = '#fff';
+  X.fillRect(CAR_W/2 - 5, -CAR_H/2 + 2, 4, 4);
+  X.fillRect(CAR_W/2 - 5, CAR_H/2 - 6, 4, 4);
+  // Taillights
+  X.fillStyle = '#ff2222';
+  X.fillRect(-CAR_W/2 + 1, -CAR_H/2 + 2, 4, 4);
+  X.fillRect(-CAR_W/2 + 1, CAR_H/2 - 6, 4, 4);
+
+  // Tires
+  X.fillStyle = '#222';
+  X.fillRect(CAR_W/2 - 10, -CAR_H/2 - 3, 7, 5);
+  X.fillRect(CAR_W/2 - 10, CAR_H/2 - 2, 7, 5);
+  X.fillRect(-CAR_W/2 + 3, -CAR_H/2 - 3, 7, 5);
+  X.fillRect(-CAR_W/2 + 3, CAR_H/2 - 2, 7, 5);
+
+  // Bumpers (if player has bumpers)
+  if (car.isPlayer && playerBumpers.length > 0) {
+    const hasSpiked = playerBumpers.includes('spike_bumper');
+    const hasRamBar = playerBumpers.includes('ram_bar');
+    if (hasSpiked) {
+      X.fillStyle = '#cc4444';
+      X.fillRect(CAR_W/2 + 1, -CAR_H/2, 5, CAR_H);
+      for (let i = 0; i < 4; i++) {
+        const sy = -CAR_H/2 + 3 + i * (CAR_H / 4);
+        X.beginPath(); X.moveTo(CAR_W/2 + 6, sy); X.lineTo(CAR_W/2 + 10, sy + 2); X.lineTo(CAR_W/2 + 6, sy + 4); X.fill();
+      }
+    } else if (hasRamBar) {
+      X.fillStyle = '#ffcc00';
+      X.fillRect(CAR_W/2 + 1, -CAR_H/2, 5, CAR_H);
+      X.fillRect(CAR_W/2 + 5, -CAR_H/2, 2, CAR_H);
+    } else if (playerBumpers.includes('std_bumper')) {
+      X.fillStyle = '#aabbcc';
+      X.fillRect(CAR_W/2 + 1, -CAR_H/2, 4, CAR_H);
+    }
+  }
+
+  // Damage cracks (below 50% HP)
+  if (hpPct < 0.5) {
+    X.strokeStyle = `rgba(0,0,0,${0.6 - hpPct})`;
+    X.lineWidth = 1;
+    X.beginPath(); X.moveTo(-8, -5); X.lineTo(4, 3); X.lineTo(-2, 8); X.stroke();
+    X.beginPath(); X.moveTo(5, -7); X.lineTo(12, 0); X.stroke();
+  }
+
+  X.restore();
+
+  // Name tag
+  X.font = 'bold 10px Segoe UI'; X.textAlign = 'center';
+  X.fillStyle = car.isPlayer ? '#fff' : '#ccc';
+  X.fillText(car.name, cx, cy - CAR_H/2 - 10);
+
+  // HP bar
+  const bw = 40, bh = 4;
+  X.fillStyle = 'rgba(0,0,0,0.5)'; X.fillRect(cx - bw/2, cy - CAR_H/2 - 9, bw, bh);
+  X.fillStyle = hpPct > 0.5 ? '#44ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff2222';
+  X.fillRect(cx - bw/2, cy - CAR_H/2 - 9, bw * hpPct, bh);
+}
+
+function drawArena() {
+  // Background
+  X.fillStyle = '#2a2a2a';
+  X.fillRect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H);
+
+  // Dirt texture grid
+  X.strokeStyle = 'rgba(0,0,0,0.15)'; X.lineWidth = 1;
+  for (let x = ARENA_X; x < ARENA_X + ARENA_W; x += 40) {
+    X.beginPath(); X.moveTo(x, ARENA_Y); X.lineTo(x, ARENA_Y + ARENA_H); X.stroke();
+  }
+  for (let y = ARENA_Y; y < ARENA_Y + ARENA_H; y += 40) {
+    X.beginPath(); X.moveTo(ARENA_X, y); X.lineTo(ARENA_X + ARENA_W, y); X.stroke();
+  }
+
+  // Chevron corner markings
+  const cw = 20;
+  X.fillStyle = 'rgba(255,200,0,0.15)';
+  [[ARENA_X, ARENA_Y], [ARENA_X+ARENA_W-cw*3, ARENA_Y], [ARENA_X, ARENA_Y+ARENA_H-cw*3], [ARENA_X+ARENA_W-cw*3, ARENA_Y+ARENA_H-cw*3]].forEach(([x,y]) => {
+    X.fillRect(x, y, cw*3, cw); X.fillRect(x, y+cw*2, cw*3, cw);
+  });
+
+  // Walls
+  X.strokeStyle = '#999'; X.lineWidth = 6;
+  X.strokeRect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H);
+  X.strokeStyle = '#666'; X.lineWidth = 2;
+  X.strokeRect(ARENA_X - 2, ARENA_Y - 2, ARENA_W + 4, ARENA_H + 4);
+
+  // Debris/obstacles
+  for (const d of debris) {
+    if (d.type === 'pillar') {
+      X.fillStyle = '#444';
+      X.beginPath(); X.arc(d.x, d.y, d.r, 0, Math.PI * 2); X.fill();
+      X.strokeStyle = '#777'; X.lineWidth = 2;
+      X.stroke();
+      X.fillStyle = '#555';
+      X.beginPath(); X.arc(d.x, d.y, d.r - 4, 0, Math.PI * 2); X.fill();
+    } else {
+      X.fillStyle = d.color || '#555';
+      X.fillRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2);
+      X.strokeStyle = '#777'; X.lineWidth = 1; X.strokeRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2);
+    }
+  }
+}
+
+function drawHUD() {
+  // Top bar background
+  X.fillStyle = 'rgba(0,0,0,0.7)';
+  X.fillRect(0, 0, W, ARENA_Y - 2);
+  X.fillRect(0, ARENA_Y + ARENA_H + 2, W, H - ARENA_Y - ARENA_H - 2);
+  X.fillRect(0, 0, ARENA_X - 2, H);
+  X.fillRect(ARENA_X + ARENA_W + 2, 0, W - ARENA_X - ARENA_W - 2, H);
+
+  // Timer
+  const mins = Math.floor(roundTimer / 60), secs = roundTimer % 60;
+  const timerStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  X.font = 'bold 28px monospace'; X.textAlign = 'center'; X.fillStyle = roundTimer < 15 ? '#ff4444' : '#fff';
+  X.fillText(timerStr, W/2, 38);
+
+  // Round indicator
+  X.font = '14px Segoe UI'; X.fillStyle = '#aaa';
+  X.fillText(`ROUND ${round} / ${totalRounds}  •  ${cars.filter(c=>c.alive).length} ALIVE`, W/2, 60);
+
+  // Player stats (left)
+  const player = cars[0];
+  X.textAlign = 'left'; X.font = 'bold 13px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText(playerName, 16, 28);
+  X.font = '12px Segoe UI'; X.fillStyle = '#aaa';
+  X.fillText(`HP: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, 16, 46);
+  X.fillText(`DMG: ${Math.floor(playerDamageDealt)}  Kills: ${playerKills}`, 16, 62);
+  X.fillText(`Coins: 🪙${playerCoins}`, 16, 78);
+
+  // Car list (right)
+  X.textAlign = 'right';
+  cars.forEach((c, i) => {
+    const y = 22 + i * 18;
+    X.fillStyle = c.alive ? (c.isPlayer ? '#fff' : '#ccc') : '#555';
+    X.font = c.isPlayer ? 'bold 12px Segoe UI' : '11px Segoe UI';
+    X.fillText(c.alive ? `${c.name}  ❤${Math.ceil(c.hp)}` : `${c.name}  💀`, W - 16, y);
+  });
+
+  // Controls
+  X.textAlign = 'center'; X.font = '10px Segoe UI'; X.fillStyle = '#555';
+  X.fillText('WASD / Arrows = Drive', W/2, H - 8);
+
+  // Round result overlay
+  if (!roundActive && roundResult) {
+    X.fillStyle = 'rgba(0,0,0,0.7)';
+    X.fillRect(W/2 - 200, H/2 - 60, 400, 120);
+    X.strokeStyle = roundResult === 'win' ? '#44ff44' : '#ff4444';
+    X.lineWidth = 2; X.strokeRect(W/2 - 200, H/2 - 60, 400, 120);
+    X.font = 'bold 40px monospace'; X.textAlign = 'center';
+    X.fillStyle = roundResult === 'win' ? '#44ff44' : '#ff4444';
+    X.fillText(roundResult === 'win' ? '🏆 VICTORY!' : '💥 WRECKED!', W/2, H/2 + 5);
+    X.font = '18px Segoe UI'; X.fillStyle = '#ccc';
+    X.fillText(`+${roundCoins} coins earned`, W/2, H/2 + 35);
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / p.maxLife;
+    if (p.isSmoke) {
+      X.globalAlpha = alpha * 0.4;
+      X.fillStyle = p.color;
+      X.beginPath(); X.arc(p.x, p.y, p.size, 0, Math.PI * 2); X.fill();
+      X.globalAlpha = 1;
+    } else if (p.isChunk) {
+      X.globalAlpha = alpha;
+      X.fillStyle = p.color;
+      X.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+      X.globalAlpha = 1;
+    } else {
+      X.globalAlpha = alpha;
+      X.fillStyle = p.color;
+      X.beginPath(); X.arc(p.x, p.y, p.size, 0, Math.PI * 2); X.fill();
+      X.globalAlpha = 1;
+    }
+  }
+}
+
+function drawStatBars(x, y, stats, color) {
+  const labels = Object.keys(stats);
+  labels.forEach((k, i) => {
+    const v = stats[k];
+    X.fillStyle = '#555'; X.fillRect(x, y + i * 18, 80, 8);
+    X.fillStyle = color; X.fillRect(x, y + i * 18, v * 16, 8);
+    X.fillStyle = '#aaa'; X.font = '10px Segoe UI'; X.textAlign = 'left';
+    X.fillText(k, x + 84, y + i * 18 + 8);
+  });
+}
+
+// ─── SCREEN: TITLE ───────────────────────────────
+function drawTitle() {
+  // Background
+  X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
+  // Tire tracks
+  X.strokeStyle = 'rgba(80,80,80,0.3)'; X.lineWidth = 12;
+  for (let i = 0; i < 5; i++) {
+    X.beginPath(); X.moveTo(rnd(0,W), 0); X.lineTo(rnd(0,W), H); X.stroke();
+  }
+
+  // Title text
+  X.textAlign = 'center';
+  X.font = 'bold 72px monospace';
+  X.fillStyle = '#cc0000';
+  X.fillText('DEMOLITION', W/2, H/2 - 60);
+  X.fillStyle = '#ffaa00';
+  X.fillText('DERBY', W/2, H/2 - 60 + 72);
+
+  // Flames
+  for (let i = 0; i < 20; i++) {
+    const fx = 100 + i * 36, fy = H/2 - 130;
+    const fh = 10 + Math.sin(frameCount * 0.15 + i * 0.8) * 8;
+    X.fillStyle = `rgba(255,${80 + Math.floor(Math.sin(frameCount*0.1+i)*40)},0,${0.6 + Math.sin(frameCount*0.2+i)*0.3})`;
+    X.beginPath(); X.ellipse(fx, fy - fh, 6, fh, 0, 0, Math.PI*2); X.fill();
+  }
+
+  // Start button
+  const hover = btnHit(W/2-100, H/2+30, 200, 50);
+  X.fillStyle = hover ? '#ffaa00' : '#cc8800';
+  X.beginPath(); X.roundRect(W/2-100, H/2+30, 200, 50, 8); X.fill();
+  X.font = 'bold 22px Segoe UI'; X.fillStyle = '#000';
+  X.fillText('START GAME', W/2, H/2 + 62);
+
+  if (hover && consumeClick()) { state = 'name'; clickConsumed = false; }
+
+  X.font = '13px Segoe UI'; X.fillStyle = '#555';
+  X.fillText('Designed by Cash • Sala Arcade', W/2, H - 20);
+}
+
+// ─── SCREEN: NAME INPUT ──────────────────────────
+function drawNameInput() {
+  X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
+  X.textAlign = 'center';
+  X.font = 'bold 32px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText('ENTER YOUR NAME', W/2, H/2 - 80);
+
+  X.font = '14px Segoe UI'; X.fillStyle = '#666';
+  X.fillText('Type your name, then press ENTER', W/2, H/2 - 48);
+
+  // Input box
+  X.fillStyle = '#1a1a1a'; X.strokeStyle = '#444'; X.lineWidth = 2;
+  X.beginPath(); X.roundRect(W/2 - 180, H/2 - 30, 360, 60, 8); X.fill(); X.stroke();
+  X.font = 'bold 28px monospace'; X.fillStyle = '#fff';
+  const blink = Math.floor(frameCount / 30) % 2 === 0;
+  X.fillText(nameInput + (blink ? '|' : ' '), W/2, H/2 + 8);
+
+  X.font = '12px Segoe UI'; X.fillStyle = '#555';
+  X.fillText('Press ENTER to continue', W/2, H/2 + 60);
+}
+
+// ─── SCREEN: CAR SELECT ──────────────────────────
+function drawCarSelect() {
+  X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
+  X.textAlign = 'center';
+  X.font = 'bold 28px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText('CHOOSE YOUR CAR', W/2, 44);
+
+  const cardW = 180, cardH = 260, gap = 18;
+  const totalW = CAR_TYPES.length * (cardW + gap) - gap;
+  const startX = (W - totalW) / 2;
+
+  CAR_TYPES.forEach((t, i) => {
+    const cx = startX + i * (cardW + gap);
+    const cy = 70;
+    const selected = playerCar === i;
+    const hovered = btnHit(cx, cy, cardW, cardH);
+
+    X.fillStyle = selected ? '#1a1a40' : hovered ? '#1a1a1a' : '#111';
+    X.strokeStyle = selected ? t.color : hovered ? '#555' : '#333';
+    X.lineWidth = selected ? 3 : 2;
+    X.beginPath(); X.roundRect(cx, cy, cardW, cardH, 10); X.fill(); X.stroke();
+
+    // Car preview (mini canvas drawing)
+    X.save();
+    X.translate(cx + cardW/2, cy + 90);
+    X.scale(2, 2);
+    X.fillStyle = t.color;
+    X.beginPath(); X.roundRect(-CAR_W/2, -CAR_H/2, CAR_W, CAR_H, 4); X.fill();
+    X.fillStyle = t.shadow; X.fillRect(-CAR_W/2, 0, CAR_W, CAR_H/2);
+    X.fillStyle = 'rgba(150,200,255,0.6)'; X.fillRect(2, -CAR_H/2+3, 12, CAR_H-6);
+    X.restore();
+
+    // Name
+    X.font = `bold 15px Segoe UI`; X.textAlign = 'center';
+    X.fillStyle = selected ? t.color : '#fff';
+    X.fillText(t.name, cx + cardW/2, cy + 160);
+
+    // Desc
+    X.font = '11px Segoe UI'; X.fillStyle = '#888';
+    X.fillText(t.desc, cx + cardW/2, cy + 178);
+
+    // Stat bars
+    drawStatBars(cx + 12, cy + 192, t.stats, t.color);
+
+    if (hovered && consumeClick()) { playerCar = i; clickConsumed = false; }
+  });
+
+  // Start button
+  if (playerCar !== null) {
+    const hover = btnHit(W/2 - 120, H - 70, 240, 48);
+    X.fillStyle = hover ? '#ff6600' : '#cc4400';
+    X.beginPath(); X.roundRect(W/2 - 120, H - 70, 240, 48, 8); X.fill();
+    X.font = 'bold 20px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
+    X.fillText(`RACE AS ${CAR_TYPES[playerCar].name.toUpperCase()}`, W/2, H - 38);
+    if (hover && consumeClick()) { initRound(); clickConsumed = false; }
+  } else {
+    X.font = '14px Segoe UI'; X.fillStyle = '#555'; X.textAlign = 'center';
+    X.fillText('Click a car to select', W/2, H - 44);
+  }
+}
+
+// ─── SCREEN: BUMPER SHOP ─────────────────────────
+function drawBumperShop() {
+  X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
+  X.textAlign = 'center';
+
+  X.font = 'bold 10px Segoe UI'; X.fillStyle = '#ffaa00';
+  X.fillText(`ROUND ${round - 1} COMPLETE!`, W/2, 36);
+  X.font = 'bold 28px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText('UPGRADE SHOP', W/2, 70);
+  X.font = '16px Segoe UI'; X.fillStyle = '#ffd700';
+  X.fillText(`🪙 ${playerCoins} coins available`, W/2, 100);
+
+  const cardW = 170, cardH = 130, cols = 4;
+  const totalW = cols * (cardW + 16) - 16;
+  const sx = (W - totalW) / 2;
+  const sy = 120;
+
+  BUMPER_DEFS.forEach((b, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = sx + col * (cardW + 16);
+    const cy = sy + row * (cardH + 12);
+    const owned = playerBumpers.includes(b.id);
+    const canAfford = playerCoins >= b.cost;
+    const hovered = btnHit(cx, cy, cardW, cardH) && !owned && canAfford;
+
+    X.fillStyle = owned ? '#0a2a0a' : hovered ? '#1a1a2a' : '#111';
+    X.strokeStyle = owned ? '#44ff44' : hovered ? '#4488ff' : '#333';
+    X.lineWidth = owned ? 2 : 1;
+    X.beginPath(); X.roundRect(cx, cy, cardW, cardH, 8); X.fill(); X.stroke();
+
+    // Bumper icon (colored bar)
+    X.fillStyle = b.color;
+    X.fillRect(cx + 14, cy + 12, cardW - 28, 18);
+    if (b.id === 'spike_bumper') {
+      for (let s = 0; s < 5; s++) {
+        X.fillStyle = '#ff2222';
+        X.beginPath(); X.moveTo(cx + 14 + s * 29, cy + 30); X.lineTo(cx + 14 + s * 29 + 6, cy + 38); X.lineTo(cx + 14 + s * 29 + 12, cy + 30); X.fill();
+      }
+    }
+
+    X.font = 'bold 13px Segoe UI'; X.textAlign = 'center'; X.fillStyle = owned ? '#44ff44' : canAfford ? '#fff' : '#555';
+    X.fillText(b.name, cx + cardW/2, cy + 62);
+    X.font = '11px Segoe UI'; X.fillStyle = '#aaa';
+    const lines = b.desc.split(',');
+    lines.forEach((l, li) => X.fillText(l.trim(), cx + cardW/2, cy + 78 + li * 14));
+    X.font = 'bold 12px Segoe UI';
+    X.fillStyle = owned ? '#44ff44' : canAfford ? '#ffd700' : '#554422';
+    X.fillText(owned ? '✓ INSTALLED' : `🪙 ${b.cost}`, cx + cardW/2, cy + 115);
+
+    if (hovered && consumeClick()) {
+      playerCoins -= b.cost;
+      playerBumpers.push(b.id);
+      sndBuy();
+      clickConsumed = false;
+    }
+  });
+
+  // Continue button
+  const hover = btnHit(W/2 - 130, H - 70, 260, 48);
+  X.fillStyle = hover ? '#4488ff' : '#226688';
+  X.beginPath(); X.roundRect(W/2 - 130, H - 70, 260, 48, 8); X.fill();
+  X.font = 'bold 20px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
+  X.fillText(`NEXT ROUND →`, W/2, H - 38);
+  if (hover && consumeClick()) { initRound(); clickConsumed = false; }
+}
+
+// ─── SCREEN: GAME OVER ───────────────────────────
+function drawGameOver() {
+  X.fillStyle = 'rgba(0,0,0,0.88)'; X.fillRect(0, 0, W, H);
+  X.textAlign = 'center';
+
+  const won = roundWins >= Math.ceil(totalRounds / 2);
+  X.font = 'bold 56px monospace';
+  X.fillStyle = won ? '#ffd700' : '#ff4444';
+  X.fillText(won ? '🏆 CHAMPION!' : '💀 DEFEATED', W/2, H/2 - 80);
+
+  X.font = '22px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText(`${playerName}  |  Rounds Won: ${roundWins} / ${totalRounds}`, W/2, H/2 - 30);
+  X.font = '16px Segoe UI'; X.fillStyle = '#aaa';
+  X.fillText(`Total Damage: ${Math.floor(playerDamageDealt)}   Kills: ${playerKills}   Coins Spent: ${50 * playerBumpers.length}`, W/2, H/2 + 8);
+
+  // Play again
+  const hover = btnHit(W/2-130, H/2+60, 260, 50);
+  X.fillStyle = hover ? '#ffd700' : '#cc8800';
+  X.beginPath(); X.roundRect(W/2-130, H/2+60, 260, 50, 8); X.fill();
+  X.font = 'bold 22px Segoe UI'; X.fillStyle = '#000'; X.textAlign = 'center';
+  X.fillText('PLAY AGAIN', W/2, H/2 + 92);
+  if (hover && consumeClick()) {
+    // Reset everything
+    playerCoins = 0; playerBumpers = []; round = 1; roundWins = 0;
+    playerCar = null; playerDamageDealt = 0; playerKills = 0;
+    state = 'car-select';
+    clickConsumed = false;
+  }
+
+  // Back to title
+  const hover2 = btnHit(W/2-100, H/2+120, 200, 36);
+  X.fillStyle = hover2 ? '#555' : '#333';
+  X.beginPath(); X.roundRect(W/2-100, H/2+120, 200, 36, 6); X.fill();
+  X.font = '15px Segoe UI'; X.fillStyle = '#aaa'; X.textAlign = 'center';
+  X.fillText('Back to Title', W/2, H/2 + 143);
+  if (hover2 && consumeClick()) {
+    playerCoins = 0; playerBumpers = []; round = 1; roundWins = 0;
+    playerCar = null; playerName = ''; nameInput = '';
+    state = 'title';
+    clickConsumed = false;
+  }
+}
+
+// ─── MAIN LOOP ───────────────────────────────────
+let lastTime = 0;
+let timerAccum = 0;
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  frameCount++;
+  clickConsumed = false;
+
+  // Background
+  X.fillStyle = '#111'; X.fillRect(0, 0, W, H);
+
+  if (state === 'title') {
+    drawTitle();
+  } else if (state === 'name') {
+    drawNameInput();
+  } else if (state === 'car-select') {
+    drawCarSelect();
+  } else if (state === 'bumper-shop') {
+    drawBumperShop();
+  } else if (state === 'game') {
+    // Update
+    if (roundActive) {
+      timerAccum += dt;
+      if (timerAccum >= 1) { roundTimer = Math.max(0, roundTimer - 1); timerAccum = 0; }
+      for (const car of cars) updateCar(car, dt);
+      handleCarCollisions();
+      // Tick collision CD
+      for (const car of cars) if (car.collisionCD > 0) car.collisionCD--;
+      checkRoundEnd();
+    }
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.95; p.vy *= 0.95;
+      p.life--;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Draw
+    drawArena();
+    drawParticles();
+    for (const car of cars) {
+      if (!car.alive && car.explodeTimer <= 0) continue;
+      drawCar(car);
+    }
+    drawHUD();
+  } else if (state === 'game-over') {
+    // Show last game frame frozen underneath
+    drawArena();
+    drawParticles();
+    for (const car of cars) { if (!car.alive && car.explodeTimer <= 0) continue; drawCar(car); }
+    drawHUD();
+    drawGameOver();
+  } else if (state === 'round-over') {
+    drawArena();
+    for (const car of cars) { if (!car.alive && car.explodeTimer <= 0) continue; drawCar(car); }
+    drawHUD();
+  }
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

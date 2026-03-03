@@ -269,8 +269,15 @@ function genWorld(biomeIdx){
       dir:rand(0,6.28),moveT:rand(0,3),atkCd:0,dead:false,respawn:0,
       homeX:ex*T+T/2,homeY:ey*T+T/2});
   }
+  // Merchant (world 0 only): clear a spot 4 tiles east of spawn
+  let merchantPos=null;
+  if(biomeIdx===0){
+    const mx2=sx+4,my2=sy;
+    if(mx2<WS&&my2<WS){obj[my2][mx2]=OBJ.NONE;gnd[my2][mx2]=B.gnd;}
+    merchantPos={x:mx2*T+T/2,y:my2*T+T/2};
+  }
   // Crops tracker
-  return{gnd,obj,enemies,crops:{},portalPos:{x:px,y:py},spawnPos:{x:sx,y:sy},biome:biomeIdx};
+  return{gnd,obj,enemies,crops:{},portalPos:{x:px,y:py},spawnPos:{x:sx,y:sy},biome:biomeIdx,merchant:merchantPos};
 }
 
 function initGame(fresh){
@@ -634,6 +641,84 @@ function drawEnemy(e,sx,sy,t){
   }
 }
 
+// ─── MERCHANT NPC ──────────────────────────────────
+const SHOP=[
+  {id:'carrot_s',n:2,cost:1,desc:'Carrot Seeds x2'},
+  {id:'wheat_s',n:2,cost:1,desc:'Wheat Seeds x2'},
+  {id:'carrot',n:3,cost:1,desc:'Carrot x3'},
+  {id:'potion',n:1,cost:4,desc:'Potion (HP+50)'},
+  {id:'hoe',n:1,cost:3,desc:'Hoe (for farming)'},
+  {id:'torch_b',n:4,cost:1,desc:'Torch x4'},
+  {id:'wood_wall',n:4,cost:2,desc:'Wood Wall x4'},
+  {id:'stone_pick',n:1,cost:5,desc:'Stone Pick'},
+];
+
+function drawMerchant(sx,sy,t){
+  const bob=Math.sin(t*1.8)*2;
+  // Robe
+  X.fillStyle='#5522aa';
+  X.fillRect(sx-9,sy-24+bob,18,22);
+  // Gold trim
+  X.strokeStyle='#ddaa44';X.lineWidth=1;
+  X.strokeRect(sx-9,sy-24+bob,18,22);
+  // Head
+  X.fillStyle='#f4c99a';
+  X.beginPath();X.arc(sx,sy-28+bob,7,0,6.28);X.fill();
+  // Hood
+  X.fillStyle='#7744cc';
+  X.beginPath();X.moveTo(sx-10,sy-26+bob);X.lineTo(sx,sy-38+bob);X.lineTo(sx+10,sy-26+bob);X.closePath();X.fill();
+  // Beard
+  X.fillStyle='#ddd';
+  X.beginPath();X.arc(sx,sy-23+bob,4,0,Math.PI);X.fill();
+  // Eyes
+  X.fillStyle='#333';
+  X.fillRect(sx-4,sy-30+bob,2,2);X.fillRect(sx+2,sy-30+bob,2,2);
+  // Gold star
+  X.fillStyle='#ffdd44';X.font='10px sans-serif';X.textAlign='center';
+  X.fillText('★',sx,sy-42+bob);
+  // Name prompt
+  X.fillStyle='#ffd700';X.font='bold 10px sans-serif';
+  X.fillText('Merchant',sx,sy-50+bob);
+}
+
+function drawShopMenu(){
+  const gold=countItem('gold_bar');
+  const pw=340,ph=320;
+  const px=(W-pw)/2,py=(H-ph)/2-20;
+  X.fillStyle='rgba(10,5,20,.94)';X.fillRect(px,py,pw,ph);
+  X.strokeStyle='#ddaa44';X.lineWidth=2;X.strokeRect(px,py,pw,ph);
+  // Title
+  X.fillStyle='#ffd700';X.font='bold 14px sans-serif';X.textAlign='center';
+  X.fillText('⭐ MERCHANT SHOP ⭐',px+pw/2,py+20);
+  X.fillStyle='#aaa';X.font='10px sans-serif';
+  X.fillText(`Gold Bars: ${gold}`,px+pw/2,py+34);
+  // Items
+  const startY=py+48;
+  for(let i=0;i<SHOP.length;i++){
+    const s=SHOP[i];
+    const row=Math.floor(i/2),col=i%2;
+    const ix=px+12+col*160,iy=startY+row*58;
+    const hov=mouse.x>=ix&&mouse.x<=ix+152&&mouse.y>=iy&&mouse.y<=iy+50;
+    const canAfford=gold>=s.cost;
+    X.fillStyle=hov&&canAfford?'#1a1530':canAfford?'#110e20':'#0d0a18';
+    X.fillRect(ix,iy,152,50);
+    X.strokeStyle=hov&&canAfford?'#ddaa44':'#2a2040';X.lineWidth=1;
+    X.strokeRect(ix,iy,152,50);
+    drawIcon(ix+4,iy+4,24,s.id);
+    X.fillStyle=canAfford?'#ddd':'#666';X.font='11px sans-serif';X.textAlign='left';
+    X.fillText(s.desc,ix+32,iy+18);
+    X.fillStyle=canAfford?'#ffd700':'#886600';X.font='bold 10px sans-serif';
+    X.fillText(`${s.cost} Gold Bar${s.cost>1?'s':''}`,ix+32,iy+32);
+    if(!canAfford){X.fillStyle='#a44';X.font='9px sans-serif';X.fillText('Need more gold',ix+32,iy+44);}
+    if(hov&&canAfford&&mouse.down){
+      if(removeItem('gold_bar',s.cost)){addItem(s.id,s.n);SFX.craft();spawnDmg(player.x,player.y-20,'Bought!','#ffd700');}
+      mouse.down=false;
+    }
+  }
+  X.fillStyle='#888';X.font='11px sans-serif';X.textAlign='center';
+  X.fillText('[C] or [ESC] to close · Gold from smelting gold ore',px+pw/2,py+ph-8);
+}
+
 // ─── ITEM ICON DRAWING ─────────────────────────────
 function drawIcon(x,y,sz,id){
   const it=ITEMS[id];if(!it)return;
@@ -800,6 +885,18 @@ function doLeftClick(){
 
   player.swingT=.3;
   player.swingDir=Math.atan2(my-player.y,mx-player.x);
+
+  // One-click building: if holding a block/seed/food item on an empty tile, place/use it
+  const si0=selItem();
+  if(si0&&ITEMS[si0.id]){
+    const it0=ITEMS[si0.id];
+    if((it0.c==='blk'||it0.c==='seed'||it0.c==='food')&&w.obj[ty]&&w.obj[ty][tx]===OBJ.NONE){
+      // Only redirect if no enemy is within melee range of click
+      let enemyNear=false;
+      for(const e of w.enemies){if(!e.dead&&Math.hypot(mx-e.x,my-e.y)<20){enemyNear=true;break;}}
+      if(!enemyNear){doRightClick();return;}
+    }
+  }
 
   // Check enemies first
   for(const e of w.enemies){
@@ -1014,6 +1111,13 @@ function render(t){
     drawEnemy(e,e.x-cam.x,e.y-cam.y,t);
   }
 
+  // Merchant (world 0)
+  if(w.merchant){
+    const ms=w.merchant;
+    const msx=ms.x-cam.x,msy=ms.y-cam.y;
+    if(msx>-60&&msx<W+60&&msy>-60&&msy<GAME_H+60)drawMerchant(msx,msy,t);
+  }
+
   // Player
   drawPlayer(player.x-cam.x,player.y-cam.y);
 
@@ -1103,11 +1207,12 @@ function render(t){
 
   // Controls hint
   X.fillStyle='#333';X.font='9px sans-serif';X.textAlign='center';
-  X.fillText('WASD Move · Click Mine/Attack · Right-Click Place/Eat · E Craft · TAB Stats · F Portal',W/2,H-2);
+  X.fillText('WASD Move · Click Mine/Attack/Place · E Craft · TAB Stats · F Portal · C Merchant Shop',W/2,H-2);
 
   // ─── MENUS ───────────────────────────
   if(ui.menu==='inv')drawInvMenu(t);
   if(ui.menu==='stats')drawStatsMenu();
+  if(ui.menu==='shop')drawShopMenu();
 
   // Portal prompt
   if(!ui.menu){
@@ -1137,6 +1242,15 @@ function render(t){
       X.fillStyle='rgba(0,0,0,.6)';X.fillRect(W/2-100,8,200,24);
       X.fillStyle='#88aaff';X.font='12px sans-serif';X.textAlign='center';
       X.fillText(`[F] Return to ${BIOMES[curWorld-1].name}`,W/2,24);
+    }
+    // Merchant proximity prompt
+    if(w2.merchant){
+      const md=Math.hypot(player.x-w2.merchant.x,player.y-w2.merchant.y);
+      if(md<56){
+        X.fillStyle='rgba(0,0,0,.7)';X.fillRect(W/2-110,GAME_H-30,220,22);
+        X.fillStyle='#ffd700';X.font='12px sans-serif';X.textAlign='center';
+        X.fillText('[C] Open Merchant Shop (gold_bar currency)',W/2,GAME_H-15);
+      }
     }
   }
 }
@@ -1362,6 +1476,14 @@ document.addEventListener('keydown',e=>{
   }
   if(e.code==='Escape'){ui.menu=null;SFX.click();}
   if(e.code==='KeyF'){tryPortal();}
+  if(e.code==='KeyC'){
+    if(ui.menu==='shop'){ui.menu=null;SFX.click();}
+    else if(!ui.menu){
+      const wc=worlds[curWorld];
+      if(wc.merchant){const md=Math.hypot(player.x-wc.merchant.x,player.y-wc.merchant.y);
+        if(md<56){ui.menu='shop';SFX.click();}}
+    }
+  }
   // Hotbar 1-9,0
   if(e.code>='Digit1'&&e.code<='Digit9')hotSel=parseInt(e.key)-1;
   if(e.code==='Digit0')hotSel=9;

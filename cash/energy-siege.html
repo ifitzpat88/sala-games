@@ -279,11 +279,12 @@
   <div class="controls">
     <span>WASD</span> Move &nbsp;|&nbsp; <span>Mouse</span> Aim &nbsp;|&nbsp; <span>Click</span> Shoot (Semi-Auto)<br>
     <span>SPACE</span> Dash &nbsp;|&nbsp; <span>1</span> Wall (15E) &nbsp;|&nbsp; <span>2</span> Generator (40E)<br>
-    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E) &nbsp;|&nbsp; <span>5</span> Barracks (60E) &nbsp;|&nbsp; <span>6</span> Catapult (75E)<br>
+    <span>3</span> Turret (30E) &nbsp;|&nbsp; <span>4</span> Laser Tower (50E) &nbsp;|&nbsp; <span>5</span> Barracks (60E) &nbsp;|&nbsp; <span>6</span> Catapult (75E) &nbsp;|&nbsp; <span>7</span> Attractor (90E)<br>
     <span>Left Click</span> Place Building &nbsp;|&nbsp; <span>Right Click</span> Upgrade Building &nbsp;|&nbsp; <span>R</span> Repair Building<br>
     <span>Q</span> Airstrike (60E) &nbsp;|&nbsp; <span>ESC</span> Pause / Cancel Build<br>
     Survive <span style="color:#ff4444">10 Waves + Bosses</span> then face the <span style="color:#ff4444">Endless Siege</span><br>
-    Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span>
+    Collect <span style="color:#ffdd00">Energy Orbs</span> &bull; Build defenses &bull; <span style="color:#44ff44">Upgrade between waves</span><br>
+    Press <span style="color:#ffd700">TAB</span> to unlock <span style="color:#ffd700">&#9733; STAR TIER</span> ultra-buildings in Endless mode
   </div>
   <div class="biome-label">MAP THEME</div>
   <div class="biome-selector" id="biome-selector"></div>
@@ -295,6 +296,7 @@
       <button onclick="joinGame()">JOIN</button>
     </div>
   </div>
+  <button onclick="showLeaderboard()" style="margin-top:12px;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.4);color:#ffd700;padding:8px 24px;font-size:14px;border-radius:6px;cursor:pointer;letter-spacing:1px;font-family:inherit;">&#9733; LEADERBOARD</button>
   <div class="credit">Designed by Cash &nbsp;|&nbsp; <span id="version-display"></span></div>
 </div>
 
@@ -363,6 +365,27 @@
     <div class="cost">75 E</div>
     <div class="key">[6]</div>
   </div>
+  <div class="build-btn" data-type="attractor" onclick="selectBuild('attractor')">
+    <div>Attractor</div>
+    <div class="cost">90 E</div>
+    <div class="key">[7]</div>
+  </div>
+  <div id="star-tier-toggle" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);border:2px solid rgba(255,215,0,0.4);border-radius:8px;padding:10px 14px;color:#ffd700;cursor:pointer;font-size:13px;min-width:80px;user-select:none;transition:all 0.15s;" onclick="toggleStarTier()" title="Toggle Star Tier [TAB]">&#9733; STAR<div style="font-size:10px;color:#888">[TAB]</div></div>
+  <div class="build-btn star-item" data-type="mega_barracks" onclick="selectBuild('mega_barracks')" style="display:none;border-color:rgba(255,215,0,0.5);">
+    <div style="color:#ffd700">&#9733; Mega Barracks</div>
+    <div class="cost" style="color:#ffd700">500 E</div>
+    <div class="key">STAR</div>
+  </div>
+  <div class="build-btn star-item" data-type="hyper_laser" onclick="selectBuild('hyper_laser')" style="display:none;border-color:rgba(255,215,0,0.5);">
+    <div style="color:#ffd700">&#9733; Hyper Laser</div>
+    <div class="cost" style="color:#ffd700">400 E</div>
+    <div class="key">STAR</div>
+  </div>
+  <div class="build-btn star-item" data-type="fortress_wall" onclick="selectBuild('fortress_wall')" style="display:none;border-color:rgba(255,215,0,0.5);">
+    <div style="color:#ffd700">&#9733; Fortress Wall</div>
+    <div class="cost" style="color:#ffd700">250 E</div>
+    <div class="key">STAR</div>
+  </div>
 </div>
 
 <div id="dash-indicator">
@@ -400,7 +423,7 @@
 // ============================================================
 // ENERGY SIEGE: OVERLOAD — Designed by Cash
 // ============================================================
-const GAME_VERSION = 'v1.4.0';
+const GAME_VERSION = 'v1.5.0';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -626,11 +649,12 @@ const BIOMES = {
   },
 };
 
-const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75 };
-const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100, catapult: 90 };
+const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75, attractor: 90, mega_barracks: 500, hyper_laser: 400, fortress_wall: 250 };
+const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100, catapult: 90, attractor: 100, mega_barracks: 200, hyper_laser: 150, fortress_wall: 500 };
 const BUILD_MAX_LEVEL = 3;
 const BUILD_UPGRADE_COST = {
-  wall: [10, 20], generator: [25, 45], turret: [20, 35], laser: [30, 50], barracks: [35, 55], catapult: [40, 65]
+  wall: [10, 20], generator: [25, 45], turret: [20, 35], laser: [30, 50], barracks: [35, 55], catapult: [40, 65],
+  attractor: [50, 80], mega_barracks: [200, 400], hyper_laser: [150, 300], fortress_wall: [100, 200]
 };
 const CATAPULT_RANGE = 350;
 const CATAPULT_FIRE_RATE = 180;
@@ -734,6 +758,55 @@ let endlessTimer = 0;
 let endlessLevel = 0;
 let endlessBossTimer = 0;
 let highScore = parseInt(localStorage.getItem('energySiegeHighScore') || '0');
+let starTierVisible = false;
+
+function getLeaderboard() {
+  try { return JSON.parse(localStorage.getItem('energySiegeLeaderboard') || '[]'); } catch(e) { return []; }
+}
+function saveToLeaderboard(time, kills, biome) {
+  const lb = getLeaderboard();
+  lb.push({ time, kills, biome, date: new Date().toLocaleDateString() });
+  lb.sort((a, b) => b.time - a.time);
+  lb.splice(10);
+  localStorage.setItem('energySiegeLeaderboard', JSON.stringify(lb));
+}
+function showLeaderboard() {
+  const lb = getLeaderboard();
+  const modal = document.getElementById('leaderboard-modal');
+  modal.style.display = 'flex';
+  const content = document.getElementById('lb-content');
+  if (lb.length === 0) {
+    content.innerHTML = '<div style="text-align:center;color:#555;padding:20px;">No records yet!<br>Survive the Endless Siege to set a record.</div>';
+  } else {
+    content.innerHTML = lb.map((r, i) => {
+      const m = Math.floor(r.time / 60), s = r.time % 60;
+      const timeStr = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      const medal = i === 0 ? '&#127949;' : i === 1 ? '&#127950;' : i === 2 ? '&#127951;' : `${i+1}.`;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:6px;">
+        <span style="min-width:30px">${medal}</span>
+        <span style="color:#ccc;flex:1">${r.biome}</span>
+        <span style="color:#ffd700;min-width:60px;text-align:center">${timeStr}</span>
+        <span style="color:#aaa;min-width:80px;text-align:center">${r.kills} kills</span>
+        <span style="color:#666;font-size:11px">${r.date}</span>
+      </div>`;
+    }).join('');
+  }
+}
+function closeLeaderboard() {
+  document.getElementById('leaderboard-modal').style.display = 'none';
+}
+function toggleStarTier() {
+  starTierVisible = !starTierVisible;
+  document.querySelectorAll('.star-item').forEach(el => {
+    el.style.display = starTierVisible ? 'flex' : 'none';
+  });
+  const toggle = document.getElementById('star-tier-toggle');
+  if (toggle) {
+    toggle.style.borderColor = starTierVisible ? 'rgba(255,215,0,0.9)' : 'rgba(255,215,0,0.4)';
+    toggle.style.background = starTierVisible ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.8)';
+    toggle.style.boxShadow = starTierVisible ? '0 0 12px rgba(255,215,0,0.3)' : 'none';
+  }
+}
 
 // ---- Multiplayer State ----
 let isCoop = false, isHost = false, isClient = false;
@@ -1210,7 +1283,9 @@ function updateWaveHUD() {
 
 // ---- Particles ----
 function spawnParticles(x, y, color, count, speed) {
-  for (let i = 0; i < count; i++) {
+  if (particles.length >= 600) return; // performance cap
+  const safeCount = Math.min(count, 600 - particles.length);
+  for (let i = 0; i < safeCount; i++) {
     const a = Math.random() * Math.PI * 2;
     const s = Math.random() * speed + 1;
     particles.push({
@@ -1467,6 +1542,20 @@ function update() {
     b.laserTarget = closest;
     if (closest) { b.angle = Math.atan2(closest.y - bcy, closest.x - bcx); closest.hp -= lDps;
       if (frameCount % 6 === 0) spawnParticles(closest.x, closest.y, '#ff44ff', 2, 2); }
+  }
+
+  // -- Hyper Laser Tower --
+  for (const b of buildings) {
+    if (b.type !== 'hyper_laser' || b.hp <= 0) continue;
+    const lv = b.level || 1;
+    const lRange = LASER_RANGE * 2 * (1 + (lv - 1) * 0.15);
+    const lDps = LASER_DPS * 3 * (1 + (lv - 1) * 0.25);
+    const bcx = b.x + BUILD_SIZE / 2, bcy = b.y + BUILD_SIZE / 2;
+    let closest = null, closestD = Infinity;
+    for (const e of enemies) { const d = Math.hypot(e.x - bcx, e.y - bcy); if (d < closestD && d < lRange) { closest = e; closestD = d; } }
+    b.laserTarget = closest;
+    if (closest) { b.angle = Math.atan2(closest.y - bcy, closest.x - bcx); closest.hp -= lDps;
+      if (frameCount % 4 === 0) spawnParticles(closest.x, closest.y, '#ffd700', 3, 3); }
   }
 
   // -- Catapult firing --
@@ -2120,6 +2209,27 @@ function update() {
     }
   }
 
+  // -- Attractor buildings: auto-collect nearby orbs --
+  for (const b of buildings) {
+    if (b.type !== 'attractor' || b.hp <= 0) continue;
+    if (frameCount % 20 !== 0) continue;
+    const lv = b.level || 1;
+    const atRadius = 140 + lv * 40;
+    const acx = b.x + BUILD_SIZE / 2, acy = b.y + BUILD_SIZE / 2;
+    let collected = false;
+    for (let i = orbs.length - 1; i >= 0; i--) {
+      const o = orbs[i];
+      const ddx = o.x - acx, ddy = o.y - acy;
+      if (ddx * ddx + ddy * ddy < atRadius * atRadius) {
+        energy += 5;
+        spawnParticles(o.x, o.y, '#ffd700', 3, 2);
+        orbs.splice(i, 1);
+        collected = true;
+      }
+    }
+    if (collected) { document.getElementById('energy-display').textContent = getLocalEnergy(); updateBuildButtons(); }
+  }
+
   // -- Generators (level-scaled) --
   generatorTimer++;
   if (generatorTimer >= 90) {
@@ -2158,6 +2268,27 @@ function update() {
         size: SPACEMAN_R, barracksRef: b
       });
       spawnParticles(sPos.x, sPos.y, '#44aaff', 5, 3);
+    }
+  }
+
+  // -- Mega Barracks: spawn golden Mega Men (3x normal stats) --
+  for (const b of buildings) {
+    if (b.type !== 'mega_barracks' || b.hp <= 0) continue;
+    const lv = b.level || 1;
+    const maxMegaMen = 3 + lv;
+    const megaSpawnRate = 400;
+    if (!b.spawnTimer) b.spawnTimer = 0;
+    b.spawnTimer++;
+    const myMegaMen = spacemen.filter(s => s.barracksRef === b).length;
+    if (b.spawnTimer >= megaSpawnRate && myMegaMen < maxMegaMen) {
+      b.spawnTimer = 0;
+      const sPos = findValidPosition(b.x + BUILD_SIZE / 2, b.y + BUILD_SIZE + 10, SPACEMAN_R);
+      spacemen.push({
+        x: sPos.x, y: sPos.y, hp: 120, maxHp: 120,
+        speed: SPACEMAN_SPEED * 1.5, damage: 28, attackCD: 0,
+        size: 11, barracksRef: b, isMega: true
+      });
+      spawnParticles(sPos.x, sPos.y, '#ffd700', 8, 4);
     }
   }
 
@@ -2227,7 +2358,7 @@ function update() {
     endlessTimer++;
     // Spawn enemies continuously
     const endlessSpawnRate = isCoop ? Math.floor(getEndlessConfig().spawnRate * COOP_MULT.spawnRate) : getEndlessConfig().spawnRate;
-    spawnTimer--; if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = endlessSpawnRate; }
+    spawnTimer--; if (spawnTimer <= 0) { if (enemies.length < 80) spawnEnemy(); spawnTimer = endlessSpawnRate; }
     // Escalate difficulty every 30 seconds
     if (endlessTimer % 1800 === 0) endlessLevel++;
     // Spawn boss every 2 minutes
@@ -2279,6 +2410,7 @@ function update() {
       title.style.color = '#ff6600'; title.style.textShadow = '0 0 30px rgba(255,100,0,0.6)';
       const isHighScore = secs > highScore;
       if (isHighScore) { highScore = secs; localStorage.setItem('energySiegeHighScore', String(secs)); }
+      saveToLeaderboard(secs, totalKills, currentBiome);
       const hsM = Math.floor(highScore / 60), hsS = highScore % 60;
       const hsStr = `${String(hsM).padStart(2,'0')}:${String(hsS).padStart(2,'0')}`;
       document.getElementById('go-stats').textContent = `Survived: ${timeStr} | Kills: ${totalKills}${isHighScore ? ' | NEW HIGH SCORE!' : ` | Best: ${hsStr}`}`;
@@ -2293,7 +2425,8 @@ function update() {
 function killEnemy(e, index) {
   const isBoss = e.isBoss;
   spawnParticles(e.x, e.y, isBoss ? '#ffaa00' : '#ff6600', isBoss ? 25 : 12, isBoss ? 8 : 5);
-  const orbCount = isBoss ? 15 + Math.floor(Math.random() * 10) : 2 + Math.floor(Math.random() * 2);
+  const rawOrbCount = isBoss ? 15 + Math.floor(Math.random() * 10) : 2 + Math.floor(Math.random() * 2);
+  const orbCount = orbs.length < 200 ? Math.min(rawOrbCount, 200 - orbs.length) : 0;
   for (let k = 0; k < orbCount; k++) {
     orbs.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40, pulse: Math.random()*Math.PI*2 });
   }
@@ -2496,6 +2629,65 @@ function draw() {
       ctx.fillStyle = '#cc6600';
       ctx.beginPath(); ctx.arc(ccx + Math.cos(ca) * 16, ccy + Math.sin(ca) * 16 - 8, 5, 0, Math.PI * 2); ctx.fill();
       // Range indicator on hover handled separately
+    } else if (b.type === 'attractor') {
+      // Attractor: rotating collection field
+      const ac = bx + BUILD_SIZE / 2, ay = by + BUILD_SIZE / 2;
+      ctx.fillStyle = '#221100'; ctx.fillRect(bx + 4, by + 4, BUILD_SIZE - 8, BUILD_SIZE - 8);
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+      ctx.strokeRect(bx + 4, by + 4, BUILD_SIZE - 8, BUILD_SIZE - 8);
+      const ring1 = (frameCount * 0.05) % (Math.PI * 2);
+      const ring2 = (frameCount * 0.03 + Math.PI) % (Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,215,0,${0.5 + Math.sin(frameCount * 0.1) * 0.2})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ac, ay, 15, ring1, ring1 + Math.PI * 1.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ac, ay, 9, ring2, ring2 + Math.PI * 1.1); ctx.stroke();
+      const glow = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
+      ctx.fillStyle = `rgba(255,215,0,${glow})`;
+      ctx.beginPath();
+      ctx.moveTo(ac, ay - 9); ctx.lineTo(ac - 4, ay + 1); ctx.lineTo(ac, ay + 1);
+      ctx.lineTo(ac, ay + 9); ctx.lineTo(ac + 4, ay - 1); ctx.lineTo(ac, ay - 1);
+      ctx.closePath(); ctx.fill();
+      const atLv = b.level || 1;
+      ctx.strokeStyle = 'rgba(255,215,0,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(ac, ay, 140 + atLv * 40, 0, Math.PI * 2); ctx.stroke();
+    } else if (b.type === 'mega_barracks') {
+      ctx.fillStyle = '#1a1500'; ctx.fillRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.strokeStyle = '#ffa000'; ctx.lineWidth = 1; ctx.strokeRect(bx + 6, by + 6, BUILD_SIZE - 12, BUILD_SIZE - 12);
+      const mbcx = bx + BUILD_SIZE / 2, mbcy = by + 13;
+      ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(mbcx, mbcy, 8, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#ffe050'; ctx.fillRect(mbcx - 5, mbcy - 1, 10, 4);
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('\u2605', bx + BUILD_SIZE / 2, by + BUILD_SIZE - 5);
+      const myMegaMen = spacemen.filter(s => s.barracksRef === b).length;
+      ctx.fillStyle = '#ffd700'; ctx.font = '9px monospace';
+      ctx.fillText(`${myMegaMen}/${3 + (b.level||1)}`, bx + BUILD_SIZE / 2, by - 2);
+    } else if (b.type === 'hyper_laser') {
+      ctx.fillStyle = '#1a0022'; ctx.fillRect(bx + 3, by + 3, BUILD_SIZE - 6, BUILD_SIZE - 6);
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(bx + 3, by + 3, BUILD_SIZE - 6, BUILD_SIZE - 6);
+      const hlcx = bx + BUILD_SIZE / 2, hlcy = by + BUILD_SIZE / 2;
+      const cGlow = Math.sin(frameCount * 0.12) * 0.4 + 0.6;
+      ctx.fillStyle = `rgba(255,215,0,${cGlow})`;
+      ctx.beginPath(); ctx.moveTo(hlcx, hlcy - 13); ctx.lineTo(hlcx + 9, hlcy);
+      ctx.lineTo(hlcx, hlcy + 13); ctx.lineTo(hlcx - 9, hlcy); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,180,0,${0.4 + Math.sin(frameCount * 0.15) * 0.2})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(hlcx, hlcy, 17, 0, Math.PI * 2); ctx.stroke();
+      if (b.laserTarget) {
+        const t = b.laserTarget;
+        ctx.strokeStyle = `rgba(255,210,0,${0.25 + Math.sin(frameCount * 0.2) * 0.1})`; ctx.lineWidth = 14;
+        ctx.beginPath(); ctx.moveTo(hlcx, hlcy); ctx.lineTo(t.x, t.y); ctx.stroke();
+        ctx.strokeStyle = `rgba(255,240,100,${0.7 + Math.sin(frameCount * 0.3) * 0.2})`; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(hlcx, hlcy); ctx.lineTo(t.x, t.y); ctx.stroke();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(hlcx, hlcy); ctx.lineTo(t.x, t.y); ctx.stroke();
+      }
+    } else if (b.type === 'fortress_wall') {
+      ctx.fillStyle = '#1e1e14'; ctx.fillRect(bx + 1, by + 1, BUILD_SIZE - 2, BUILD_SIZE - 2);
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3; ctx.strokeRect(bx + 1, by + 1, BUILD_SIZE - 2, BUILD_SIZE - 2);
+      ctx.strokeStyle = '#8b7a00'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(bx + 4, by + 4); ctx.lineTo(bx + BUILD_SIZE - 4, by + BUILD_SIZE - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx + BUILD_SIZE - 4, by + 4); ctx.lineTo(bx + 4, by + BUILD_SIZE - 4); ctx.stroke();
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('\u2605', bx + BUILD_SIZE / 2, by + BUILD_SIZE / 2 + 5);
     }
     if (b.hp < b.maxHp) {
       const hpPct = b.hp / b.maxHp;
@@ -2964,16 +3156,33 @@ function draw() {
   // Spacemen
   for (const s of spacemen) {
     if (s.x < camera.x - 20 || s.x > camera.x + W + 20 || s.y < camera.y - 20 || s.y > camera.y + H + 20) continue;
-    ctx.fillStyle = '#e8e8e8';
-    ctx.beginPath(); ctx.arc(s.x, s.y + 2, s.size - 1, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2266cc';
-    ctx.beginPath(); ctx.arc(s.x, s.y - 3, s.size - 2, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = '#66bbff';
-    ctx.fillRect(s.x - 3, s.y - 5, 6, 3);
-    ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 6;
-    ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.stroke();
-    ctx.shadowBlur = 0;
+    if (s.isMega) {
+      // Gold mega man
+      ctx.fillStyle = '#c8a000';
+      ctx.beginPath(); ctx.arc(s.x, s.y + 2, s.size - 1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(s.x, s.y - 3, s.size - 2, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#ffe566';
+      ctx.fillRect(s.x - 3, s.y - 5, 6, 3);
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Star indicator above head
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('★', s.x, s.y - s.size - 4);
+    } else {
+      ctx.fillStyle = '#e8e8e8';
+      ctx.beginPath(); ctx.arc(s.x, s.y + 2, s.size - 1, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#2266cc';
+      ctx.beginPath(); ctx.arc(s.x, s.y - 3, s.size - 2, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#66bbff';
+      ctx.fillRect(s.x - 3, s.y - 5, 6, 3);
+      ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 6;
+      ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
     if (s.hp < s.maxHp) {
       const hpPct = Math.max(0, s.hp / s.maxHp);
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -3295,6 +3504,8 @@ window.addEventListener('keydown', e => {
   if (e.key === '4') selectBuild('laser');
   if (e.key === '5') selectBuild('barracks');
   if (e.key === '6' && !planeWeaponSelect) selectBuild('catapult');
+  if (e.key === '7' && !planeWeaponSelect) selectBuild('attractor');
+  if (e.key === 'Tab') { e.preventDefault(); toggleStarTier(); }
 
   // Plane airstrike: Q toggles weapon select, 1/2/3 picks weapon while selecting
   if (k === 'q' && gameRunning) {
@@ -3328,6 +3539,7 @@ window.addEventListener('keydown', e => {
     else if (selectedBuild === 'turret') selectBuild('laser');
     else if (selectedBuild === 'laser') selectBuild('barracks');
     else if (selectedBuild === 'barracks') selectBuild('catapult');
+    else if (selectedBuild === 'catapult') selectBuild('attractor');
     else selectBuild('wall');
   }
 
@@ -3887,5 +4099,14 @@ document.getElementById('version-display').textContent = GAME_VERSION;
 
 gameLoop();
 </script>
+
+<div id="leaderboard-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:500;justify-content:center;align-items:center;flex-direction:column;">
+  <div style="background:#0a0a1a;border:1px solid rgba(255,215,0,0.4);border-radius:16px;padding:32px;min-width:420px;max-width:90%;max-height:80vh;overflow-y:auto;">
+    <div style="color:#ffd700;font-size:22px;font-weight:bold;text-align:center;margin-bottom:20px;letter-spacing:2px;">&#9733; ENDLESS SIEGE RECORDS &#9733;</div>
+    <div style="color:#888;font-size:12px;text-align:center;margin-bottom:14px;">Best survival times across all biomes</div>
+    <div id="lb-content" style="color:#ccc;font-size:14px;"></div>
+    <button onclick="closeLeaderboard()" style="margin-top:20px;width:100%;background:rgba(0,255,255,0.1);border:2px solid #0ff;color:#0ff;padding:12px;font-size:16px;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:2px;">CLOSE</button>
+  </div>
+</div>
 </body>
 </html>
