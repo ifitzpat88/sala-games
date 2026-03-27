@@ -20,7 +20,7 @@ canvas { display:block; image-rendering:pixelated; }
 
 const C = document.getElementById('c');
 const X = C.getContext('2d');
-const W = 900, H = 600;
+const W = 1200, H = 700;
 C.width = W; C.height = H;
 
 // ─── AUDIO ───────────────────────────────────────
@@ -50,57 +50,102 @@ function sndExplode() {
 }
 
 // ─── CONSTANTS ──────────────────────────────────
-const ARENA_X = 80, ARENA_Y = 80, ARENA_W = W - 160, ARENA_H = H - 160;
+const ARENA_X = 80, ARENA_Y = 80, ARENA_W = 1040, ARENA_H = 540;
 const CAR_W = 36, CAR_H = 22;
 const FRICTION = 0.92, TURN_FRICTION = 0.88;
 
 // ─── CAR TYPES ──────────────────────────────────
 const CAR_TYPES = [
   {
-    id: 'speed',
-    name: 'Speed Racer',
-    desc: 'Lightning fast, paper thin',
-    color: '#ff4444', shadow: '#aa0000',
-    topSpeed: 5.5, turnRate: 0.06, accel: 0.28, armor: 0.6, ramPower: 0.8,
-    hp: 70, maxHp: 70,
-    stats: { Speed: 5, Armor: 2, Ramming: 3, Handling: 4 }
+    id: 'starter',
+    name: 'Starter Sedan',
+    desc: 'Basic ride — everyone starts here',
+    color: '#888888', shadow: '#555555',
+    topSpeed: 3.5, turnRate: 0.04, accel: 0.12, armor: 0.8, ramPower: 0.6,
+    hp: 120, maxHp: 120, cost: 0,
+    stats: { Speed: 2, Armor: 2, Ramming: 1, Handling: 3 }
   },
   {
-    id: 'tank',
-    name: 'The Tank',
-    desc: 'Slow but unstoppable',
-    color: '#44aa44', shadow: '#226622',
-    topSpeed: 2.8, turnRate: 0.03, accel: 0.15, armor: 2.2, ramPower: 2.0,
-    hp: 180, maxHp: 180,
-    stats: { Speed: 1, Armor: 5, Ramming: 5, Handling: 1 }
+    id: 'camaro',
+    name: 'Camaro SS',
+    desc: 'Fast muscle with great handling',
+    color: '#FFD700', shadow: '#aa8800',
+    topSpeed: 5.2, turnRate: 0.05, accel: 0.18, armor: 1.0, ramPower: 1.0,
+    hp: 160, maxHp: 160, cost: 150,
+    stats: { Speed: 4, Armor: 3, Ramming: 3, Handling: 4 }
   },
   {
-    id: 'muscle',
-    name: 'Muscle Car',
-    desc: 'All-around bruiser',
-    color: '#4488ff', shadow: '#2244aa',
-    topSpeed: 4.0, turnRate: 0.045, accel: 0.22, armor: 1.0, ramPower: 1.2,
-    hp: 110, maxHp: 110,
-    stats: { Speed: 3, Armor: 3, Ramming: 3, Handling: 3 }
+    id: 'charger',
+    name: 'Dodge Charger',
+    desc: 'Heavy hitter with serious armor',
+    color: '#1a1a1a', shadow: '#000000',
+    topSpeed: 4.8, turnRate: 0.045, accel: 0.16, armor: 1.3, ramPower: 1.4,
+    hp: 200, maxHp: 200, cost: 250,
+    stats: { Speed: 3, Armor: 4, Ramming: 4, Handling: 3 }
   },
   {
-    id: 'ram',
-    name: 'Ram Truck',
-    desc: 'Devastating front hits',
-    color: '#ffaa00', shadow: '#aa6600',
-    topSpeed: 3.5, turnRate: 0.04, accel: 0.20, armor: 1.1, ramPower: 1.8,
-    hp: 130, maxHp: 130,
-    stats: { Speed: 2, Armor: 3, Ramming: 5, Handling: 2 }
+    id: 'porsche',
+    name: 'Porsche 911',
+    desc: 'Lightning speed, razor handling',
+    color: '#ff2222', shadow: '#aa0000',
+    topSpeed: 6.0, turnRate: 0.06, accel: 0.22, armor: 0.7, ramPower: 0.9,
+    hp: 130, maxHp: 130, cost: 300,
+    stats: { Speed: 5, Armor: 2, Ramming: 2, Handling: 5 }
+  },
+  {
+    id: 'f150',
+    name: 'Ford F-150',
+    desc: 'Tanky truck that hits like a wall',
+    color: '#2255cc', shadow: '#112266',
+    topSpeed: 3.8, turnRate: 0.035, accel: 0.14, armor: 1.8, ramPower: 1.6,
+    hp: 250, maxHp: 250, cost: 200,
+    stats: { Speed: 2, Armor: 5, Ramming: 5, Handling: 2 }
+  },
+  {
+    id: 'mustang',
+    name: 'Ford Mustang GT',
+    desc: 'Speed + ramming power combo',
+    color: '#00aa44', shadow: '#006622',
+    topSpeed: 5.5, turnRate: 0.055, accel: 0.20, armor: 0.9, ramPower: 1.1,
+    hp: 150, maxHp: 150, cost: 275,
+    stats: { Speed: 5, Armor: 3, Ramming: 3, Handling: 4 }
+  },
+  {
+    id: 'corvette',
+    name: 'Corvette ZR1',
+    desc: 'Fastest car. Glass cannon.',
+    color: '#ff6600', shadow: '#aa3300',
+    topSpeed: 6.5, turnRate: 0.06, accel: 0.24, armor: 0.6, ramPower: 0.8,
+    hp: 140, maxHp: 140, cost: 400,
+    stats: { Speed: 5, Armor: 1, Ramming: 2, Handling: 5 }
+  },
+  {
+    id: 'ram_truck',
+    name: 'RAM 1500 TRX',
+    desc: 'Maximum destruction machine',
+    color: '#660000', shadow: '#330000',
+    topSpeed: 4.0, turnRate: 0.03, accel: 0.15, armor: 2.2, ramPower: 2.0,
+    hp: 280, maxHp: 280, cost: 350,
+    stats: { Speed: 2, Armor: 5, Ramming: 5, Handling: 1 }
   },
 ];
 
-// ─── BUMPERS ────────────────────────────────────
+// ─── UPGRADES (Bumpers, Tires, Engine, Body) ────
 const BUMPER_DEFS = [
-  { id: 'std_bumper',   name: 'Steel Bumper',   desc: '+20% front damage',   cost: 30,  frontMult: 0.2, sideMult: 0.0, speedBonus: 0.0, color: '#aabbcc' },
-  { id: 'spike_bumper', name: 'Spike Bumper',   desc: '+35% front, +15% side', cost: 50, frontMult: 0.35, sideMult: 0.15, speedBonus: 0.0, color: '#cc4444' },
-  { id: 'ram_bar',      name: 'Ram Bar',        desc: '+40% front at speed',  cost: 70,  frontMult: 0.4, sideMult: 0.0, speedBonus: 0.15, color: '#ffcc00' },
-  { id: 'armor_plate',  name: 'Armor Plating',  desc: '+50 HP shield',        cost: 40,  frontMult: 0.0, sideMult: 0.0, speedBonus: 0.0, armorBonus: 50, color: '#88aacc' },
+  { id: 'std_bumper',   name: 'Steel Bumper',   cat: 'Bumper', desc: '+20% front damage',       cost: 30,  frontMult: 0.2,  sideMult: 0.0,  speedBonus: 0.0,  armorBonus: 0,  turnBonus: 0, color: '#aabbcc' },
+  { id: 'spike_bumper', name: 'Spike Bumper',   cat: 'Bumper', desc: '+35% front, +15% side',   cost: 50,  frontMult: 0.35, sideMult: 0.15, speedBonus: 0.0,  armorBonus: 0,  turnBonus: 0, color: '#cc4444' },
+  { id: 'ram_bar',      name: 'Ram Bar',        cat: 'Bumper', desc: '+40% front, +15% speed',  cost: 70,  frontMult: 0.4,  sideMult: 0.0,  speedBonus: 0.15, armorBonus: 0,  turnBonus: 0, color: '#ffcc00' },
+  { id: 'armor_plate',  name: 'Armor Plating',  cat: 'Bumper', desc: '+50 HP shield',           cost: 40,  frontMult: 0.0,  sideMult: 0.0,  speedBonus: 0.0,  armorBonus: 50, turnBonus: 0, color: '#88aacc' },
+  { id: 'sport_tires',  name: 'Sport Tires',    cat: 'Tires',  desc: '+10% speed, better turn', cost: 45,  frontMult: 0.0,  sideMult: 0.0,  speedBonus: 0.1,  armorBonus: 0,  turnBonus: 0.01, color: '#44ccff' },
+  { id: 'offroad_tires',name: 'Off-Road Tires', cat: 'Tires',  desc: '+10% side dmg, +20 HP',  cost: 55,  frontMult: 0.0,  sideMult: 0.1,  speedBonus: 0.0,  armorBonus: 20, turnBonus: 0.005, color: '#886633' },
+  { id: 'slick_tires',  name: 'Slick Tires',    cat: 'Tires',  desc: '+20% speed, max grip',    cost: 65,  frontMult: 0.0,  sideMult: 0.0,  speedBonus: 0.2,  armorBonus: 0,  turnBonus: 0.015, color: '#222' },
+  { id: 'turbo_engine', name: 'Turbo Engine',   cat: 'Engine', desc: '+25% speed, +10% front',  cost: 80,  frontMult: 0.1,  sideMult: 0.0,  speedBonus: 0.25, armorBonus: 0,  turnBonus: 0, color: '#ff4444' },
+  { id: 'v8_swap',      name: 'V8 Engine Swap', cat: 'Engine', desc: '+30% speed, heavy (-10HP)',cost: 120, frontMult: 0.15, sideMult: 0.1,  speedBonus: 0.3,  armorBonus: -10,turnBonus: 0, color: '#cc6600' },
+  { id: 'nitro_kit',    name: 'Nitro Kit',      cat: 'Engine', desc: '+35% speed burst, fragile',cost: 100, frontMult: 0.2,  sideMult: 0.0,  speedBonus: 0.35, armorBonus: -20,turnBonus: 0, color: '#00ccff' },
+  { id: 'roll_cage',    name: 'Roll Cage',      cat: 'Body',   desc: '+80 HP, slight speed loss',cost: 60,  frontMult: 0.0,  sideMult: 0.0,  speedBonus: -0.05,armorBonus: 80, turnBonus: 0, color: '#999' },
+  { id: 'reinforced',   name: 'Reinforced Frame',cat: 'Body',  desc: '+100 HP, +armor, heavy',  cost: 90,  frontMult: 0.1,  sideMult: 0.15, speedBonus: -0.1, armorBonus: 100,turnBonus: 0, color: '#4466aa' },
 ];
+const UPGRADE_CATS = ['Bumper', 'Tires', 'Engine', 'Body'];
 
 // ─── AI NAMES ───────────────────────────────────
 const AI_NAMES = ['Crusher', 'Wrecker', 'Smashley', 'Denty', 'Rambo', 'Ironside', 'Bonecrusher'];
@@ -110,11 +155,56 @@ let state = 'title'; // 'title'|'name'|'car-select'|'bumper-shop'|'game'|'round-
 let playerName = '';
 let playerCar = null;   // index into CAR_TYPES
 let playerCoins = 0;
-let playerBumpers = []; // purchased bumper ids
+let playerBumpers = []; // purchased upgrade ids
+let playerOwnedCars = ['starter']; // car ids owned
+let playerTotalWins = 0;
 let round = 1;
-let totalRounds = 3;
+let totalRounds = 5;
 let roundWins = 0;
 let roundCoins = 0;    // coins earned this round
+let shopCat = 0;       // current upgrade shop category tab
+
+// ─── PERSISTENCE ────────────────────────────────
+function saveProgress() {
+  localStorage.setItem('demolitionDerbySave', JSON.stringify({
+    coins: playerCoins, ownedCars: playerOwnedCars,
+    upgrades: playerBumpers, totalWins: playerTotalWins, name: playerName,
+  }));
+}
+function loadProgress() {
+  try {
+    const d = JSON.parse(localStorage.getItem('demolitionDerbySave'));
+    if (d) {
+      playerCoins = d.coins || 0;
+      playerOwnedCars = d.ownedCars || ['starter'];
+      playerBumpers = d.upgrades || [];
+      playerTotalWins = d.totalWins || 0;
+      playerName = d.name || '';
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ─── HAZARD ZONES ───────────────────────────────
+let hazardZones = [];
+const HAZARD_TYPES = [
+  { name: 'Oil Slick',     color: 'rgba(30,30,30,0.6)',   borderColor: '#444',    radius: 50, dmgMult: 1.5 },
+  { name: 'Fire Pit',      color: 'rgba(200,50,0,0.3)',   borderColor: '#ff4400', radius: 40, dmgMult: 2.0 },
+  { name: 'Spike Strip',   color: 'rgba(150,150,150,0.4)',borderColor: '#aaa',    radius: 35, dmgMult: 1.8 },
+  { name: 'Electric Zone', color: 'rgba(0,100,255,0.25)', borderColor: '#0088ff', radius: 45, dmgMult: 1.6 },
+];
+function generateHazards() {
+  hazardZones = [];
+  for (let i = 0; i < 3 + Math.floor(Math.random() * 2); i++) {
+    const type = HAZARD_TYPES[Math.floor(Math.random() * HAZARD_TYPES.length)];
+    hazardZones.push({
+      ...type,
+      x: ARENA_X + 80 + Math.random() * (ARENA_W - 160),
+      y: ARENA_Y + 80 + Math.random() * (ARENA_H - 160),
+    });
+  }
+}
 
 let cars = [];          // all cars this round (cars[0] = player)
 let particles = [];
@@ -191,24 +281,26 @@ function spawnSmoke(x, y) {
 // ─── CAR CREATION ───────────────────────────────
 function makeCar(typeIdx, x, y, angle, isPlayer, name, aiStyle) {
   const t = CAR_TYPES[typeIdx];
-  const extraHp = playerBumpers.includes('armor_plate') && isPlayer ? 50 : 0;
+  const bumps = isPlayer ? playerBumpers : [];
+  const extraHp = bumps.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.armorBonus || 0 : 0); }, 0);
+  const extraTurn = bumps.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.turnBonus || 0 : 0); }, 0);
   return {
     x, y, angle, vx: 0, vy: 0, angularV: 0,
     typeIdx, isPlayer,
     name: name || t.name,
     color: t.color, shadow: t.shadow,
-    topSpeed: t.topSpeed, turnRate: t.turnRate, accel: t.accel,
+    topSpeed: t.topSpeed, turnRate: t.turnRate + extraTurn, accel: t.accel,
     armor: t.armor, ramPower: t.ramPower,
     hp: t.hp + extraHp, maxHp: t.hp + extraHp,
     alive: true, exploding: false, explodeTimer: 0,
     smokeTimer: 0,
     collisionCD: 0,
-    // Bumper bonuses (player only)
-    bumpFrontMult: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.frontMult : 0); }, 0) : 0,
-    bumpSideMult: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.sideMult : 0); }, 0) : 0,
-    bumpSpeedBonus: isPlayer ? playerBumpers.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.speedBonus || 0 : 0); }, 0) : 0,
+    // Upgrade bonuses (player only)
+    bumpFrontMult: bumps.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.frontMult : 0); }, 0),
+    bumpSideMult: bumps.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.sideMult : 0); }, 0),
+    bumpSpeedBonus: bumps.reduce((s, id) => { const b = BUMPER_DEFS.find(b => b.id === id); return s + (b ? b.speedBonus || 0 : 0); }, 0),
     // AI
-    aiStyle: aiStyle || 'aggressive', // 'aggressive'|'circler'|'coward'
+    aiStyle: aiStyle || 'aggressive',
     aiTarget: null, aiTimer: 0, aiStuck: 0, aiLastX: 0, aiLastY: 0,
     // Stats
     damageDealt: 0, kills: 0,
@@ -218,20 +310,23 @@ function makeCar(typeIdx, x, y, angle, isPlayer, name, aiStyle) {
 // ─── ARENA DEBRIS / OBSTACLES ───────────────────
 function generateDebris() {
   debris = [];
-  // Center pillars
+  const acx = ARENA_X + ARENA_W / 2, acy = ARENA_Y + ARENA_H / 2;
+  // Center pillars (scaled for bigger arena)
   const positions = [
-    { x: W/2 - 80, y: H/2 },
-    { x: W/2 + 80, y: H/2 },
-    { x: W/2, y: H/2 - 70 },
-    { x: W/2, y: H/2 + 70 },
-    { x: W/2 - 160, y: H/2 - 80 },
-    { x: W/2 + 160, y: H/2 + 80 },
+    { x: acx - 120, y: acy },
+    { x: acx + 120, y: acy },
+    { x: acx, y: acy - 100 },
+    { x: acx, y: acy + 100 },
+    { x: acx - 240, y: acy - 100 },
+    { x: acx + 240, y: acy + 100 },
+    { x: acx - 240, y: acy + 100 },
+    { x: acx + 240, y: acy - 100 },
   ];
   positions.forEach(p => {
     if (Math.random() < 0.7) debris.push({ x: p.x, y: p.y, r: 18 + Math.random() * 12, type: 'pillar' });
   });
-  // Scattered junk
-  for (let i = 0; i < 6; i++) {
+  // Scattered junk (more for bigger arena)
+  for (let i = 0; i < 10; i++) {
     let x, y, tries = 0;
     do { x = rnd(ARENA_X + 50, ARENA_X + ARENA_W - 50); y = rnd(ARENA_Y + 50, ARENA_Y + ARENA_H - 50); tries++; }
     while (tries < 30 && debris.some(d => Math.hypot(x - d.x, y - d.y) < 60));
@@ -251,29 +346,33 @@ function initRound() {
   playerKills = 0;
   roundCoins = 0;
   generateDebris();
+  generateHazards();
 
-  // Spawn positions
+  // Spawn positions (6 spots for larger arena)
   const spawnPts = [
     { x: ARENA_X + 80, y: ARENA_Y + 80 },
     { x: ARENA_X + ARENA_W - 80, y: ARENA_Y + 80 },
     { x: ARENA_X + 80, y: ARENA_Y + ARENA_H - 80 },
     { x: ARENA_X + ARENA_W - 80, y: ARENA_Y + ARENA_H - 80 },
+    { x: ARENA_X + ARENA_W / 2, y: ARENA_Y + 80 },
+    { x: ARENA_X + ARENA_W / 2, y: ARENA_Y + ARENA_H - 80 },
   ];
-  const angles = [Math.PI * 0.25, Math.PI * 0.75, -Math.PI * 0.25, -Math.PI * 0.75];
+  const angles = [Math.PI * 0.25, Math.PI * 0.75, -Math.PI * 0.25, -Math.PI * 0.75, 0, Math.PI];
 
   // Player
   cars.push(makeCar(playerCar, spawnPts[0].x, spawnPts[0].y, angles[0], true, playerName || 'YOU'));
 
-  // CPU opponents (3)
-  const numCPU = Math.min(3, CAR_TYPES.length - 1);
-  const aiStyles = ['aggressive', 'circler', 'coward'];
+  // CPU opponents (5)
+  const numCPU = 5;
+  const aiStyles = ['aggressive', 'circler', 'coward', 'aggressive', 'circler'];
   const usedTypes = new Set([playerCar]);
   for (let i = 0; i < numCPU; i++) {
     let typeIdx;
     do { typeIdx = Math.floor(Math.random() * CAR_TYPES.length); } while (usedTypes.has(typeIdx) && usedTypes.size < CAR_TYPES.length);
     usedTypes.add(typeIdx);
     const nm = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)] + (round > 1 ? ' II'.slice(0, round * 3 - 3) : '');
-    cars.push(makeCar(typeIdx, spawnPts[i+1].x, spawnPts[i+1].y, angles[i+1], false, nm, aiStyles[i]));
+    const spIdx = (i + 1) % spawnPts.length;
+    cars.push(makeCar(typeIdx, spawnPts[spIdx].x, spawnPts[spIdx].y, angles[spIdx], false, nm, aiStyles[i]));
   }
 
   state = 'game';
@@ -489,6 +588,14 @@ function updateCar(car, dt) {
     }
   }
 
+  // Hazard zone passive damage (fire pits burn, electric zones shock)
+  for (const hz of hazardZones) {
+    if (Math.hypot(car.x - hz.x, car.y - hz.y) < hz.radius) {
+      car.hp -= 0.15; // slow burn damage
+      if (frameCount % 20 === 0) spawnParticles(car.x, car.y, hz.borderColor, 2, 1.5, 15);
+    }
+  }
+
   // Smoke when damaged
   car.smokeTimer++;
   if (car.hp < car.maxHp * 0.4 && car.smokeTimer % 12 === 0) {
@@ -534,8 +641,16 @@ function handleCarCollisions() {
         // Damage calculation
         const relSpeed = Math.abs(dot);
         if (relSpeed > 1.0 && a.collisionCD <= 0 && b.collisionCD <= 0) {
+          // Hazard zone damage multiplier
+          let hazMult = 1.0;
+          const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+          for (const hz of hazardZones) {
+            if (Math.hypot(cx - hz.x, cy - hz.y) < hz.radius) { hazMult = Math.max(hazMult, hz.dmgMult); break; }
+          }
           const resA = attackDamage(a, b);
           const resB = attackDamage(b, a);
+          if (resA) resA.dmg *= hazMult;
+          if (resB) resB.dmg *= hazMult;
           if (resA && resA.dmg > 0) {
             b.hp -= resA.dmg;
             a.damageDealt += resA.dmg;
@@ -584,6 +699,8 @@ function checkRoundEnd() {
       if (roundResult === 'win') roundWins++;
     }
     playerCoins += roundCoins;
+    if (roundResult === 'win') playerTotalWins++;
+    saveProgress();
     setTimeout(() => { state = round < totalRounds && roundResult === 'win' ? 'bumper-shop' : 'game-over'; round++; }, 2000);
   }
 }
@@ -698,6 +815,17 @@ function drawArena() {
   X.strokeRect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H);
   X.strokeStyle = '#666'; X.lineWidth = 2;
   X.strokeRect(ARENA_X - 2, ARENA_Y - 2, ARENA_W + 4, ARENA_H + 4);
+
+  // Hazard zones
+  for (const hz of hazardZones) {
+    X.beginPath(); X.arc(hz.x, hz.y, hz.radius, 0, Math.PI * 2);
+    X.fillStyle = hz.color; X.fill();
+    X.strokeStyle = hz.borderColor; X.lineWidth = 2;
+    X.setLineDash([6, 4]); X.stroke(); X.setLineDash([]);
+    X.font = '9px Segoe UI'; X.textAlign = 'center'; X.fillStyle = hz.borderColor;
+    X.fillText(hz.name, hz.x, hz.y + hz.radius + 12);
+    X.fillText(`${hz.dmgMult}x DMG`, hz.x, hz.y - 2);
+  }
 
   // Debris/obstacles
   for (const d of debris) {
@@ -836,10 +964,23 @@ function drawTitle() {
   X.font = 'bold 22px Segoe UI'; X.fillStyle = '#000';
   X.fillText('START GAME', W/2, H/2 + 62);
 
-  if (hover && consumeClick()) { state = 'name'; clickConsumed = false; }
+  if (hover && consumeClick()) {
+    loadProgress();
+    state = playerName ? 'car-select' : 'name';
+    clickConsumed = false;
+  }
+
+  // Show saved progress if exists
+  try {
+    const d = JSON.parse(localStorage.getItem('demolitionDerbySave'));
+    if (d && d.name) {
+      X.font = '13px Segoe UI'; X.fillStyle = '#888';
+      X.fillText('Welcome back, ' + d.name + '! (\uD83E\uDE99' + (d.coins||0) + ', ' + (d.ownedCars||['starter']).length + ' cars)', W/2, H/2 + 100);
+    }
+  } catch(e) {}
 
   X.font = '13px Segoe UI'; X.fillStyle = '#555';
-  X.fillText('Designed by Cash • Sala Arcade', W/2, H - 20);
+  X.fillText('Designed by Cash \u2022 Sala Arcade', W/2, H - 20);
 }
 
 // ─── SCREEN: NAME INPUT ──────────────────────────
@@ -868,83 +1009,138 @@ function drawCarSelect() {
   X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
   X.textAlign = 'center';
   X.font = 'bold 28px Segoe UI'; X.fillStyle = '#fff';
-  X.fillText('CHOOSE YOUR CAR', W/2, 44);
+  X.fillText('CHOOSE YOUR CAR', W/2, 36);
+  X.font = '14px Segoe UI'; X.fillStyle = '#ffd700';
+  X.fillText('\uD83E\uDE99 ' + playerCoins + ' coins', W/2, 56);
 
-  const cardW = 180, cardH = 260, gap = 18;
-  const totalW = CAR_TYPES.length * (cardW + gap) - gap;
+  const cardW = 130, cardH = 220, gap = 10;
+  const cols = 4;
+  const rows = 2;
+  const totalW = cols * (cardW + gap) - gap;
   const startX = (W - totalW) / 2;
 
   CAR_TYPES.forEach((t, i) => {
-    const cx = startX + i * (cardW + gap);
-    const cy = 70;
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = startX + col * (cardW + gap);
+    const cy = 68 + row * (cardH + gap);
     const selected = playerCar === i;
+    const owned = playerOwnedCars.includes(t.id);
+    const canBuy = !owned && playerCoins >= t.cost;
+    const locked = !owned && !canBuy;
     const hovered = btnHit(cx, cy, cardW, cardH);
 
-    X.fillStyle = selected ? '#1a1a40' : hovered ? '#1a1a1a' : '#111';
-    X.strokeStyle = selected ? t.color : hovered ? '#555' : '#333';
-    X.lineWidth = selected ? 3 : 2;
-    X.beginPath(); X.roundRect(cx, cy, cardW, cardH, 10); X.fill(); X.stroke();
+    X.fillStyle = locked ? '#0a0a0a' : selected ? '#1a1a40' : hovered ? '#1a1a1a' : '#111';
+    X.strokeStyle = locked ? '#222' : selected ? t.color : hovered ? '#555' : '#333';
+    X.lineWidth = selected ? 3 : 1;
+    X.globalAlpha = locked ? 0.5 : 1;
+    X.beginPath(); X.roundRect(cx, cy, cardW, cardH, 8); X.fill(); X.stroke();
+    X.globalAlpha = 1;
 
-    // Car preview (mini canvas drawing)
+    // Car preview
     X.save();
-    X.translate(cx + cardW/2, cy + 90);
-    X.scale(2, 2);
-    X.fillStyle = t.color;
+    X.translate(cx + cardW/2, cy + 60);
+    X.scale(1.6, 1.6);
+    X.fillStyle = locked ? '#333' : t.color;
     X.beginPath(); X.roundRect(-CAR_W/2, -CAR_H/2, CAR_W, CAR_H, 4); X.fill();
-    X.fillStyle = t.shadow; X.fillRect(-CAR_W/2, 0, CAR_W, CAR_H/2);
-    X.fillStyle = 'rgba(150,200,255,0.6)'; X.fillRect(2, -CAR_H/2+3, 12, CAR_H-6);
+    X.fillStyle = locked ? '#222' : t.shadow; X.fillRect(-CAR_W/2, 0, CAR_W, CAR_H/2);
+    X.fillStyle = 'rgba(150,200,255,0.5)'; X.fillRect(2, -CAR_H/2+3, 12, CAR_H-6);
     X.restore();
 
     // Name
-    X.font = `bold 15px Segoe UI`; X.textAlign = 'center';
-    X.fillStyle = selected ? t.color : '#fff';
-    X.fillText(t.name, cx + cardW/2, cy + 160);
+    X.font = 'bold 12px Segoe UI'; X.textAlign = 'center';
+    X.fillStyle = selected ? t.color : locked ? '#555' : '#fff';
+    X.fillText(t.name, cx + cardW/2, cy + 115);
 
     // Desc
-    X.font = '11px Segoe UI'; X.fillStyle = '#888';
-    X.fillText(t.desc, cx + cardW/2, cy + 178);
+    X.font = '9px Segoe UI'; X.fillStyle = '#777';
+    X.fillText(t.desc, cx + cardW/2, cy + 130);
 
-    // Stat bars
-    drawStatBars(cx + 12, cy + 192, t.stats, t.color);
+    // Stat bars (compact)
+    const labels = Object.keys(t.stats);
+    labels.forEach((k, si) => {
+      X.fillStyle = '#333'; X.fillRect(cx + 10, cy + 140 + si * 14, 60, 6);
+      X.fillStyle = locked ? '#444' : t.color; X.fillRect(cx + 10, cy + 140 + si * 14, t.stats[k] * 12, 6);
+      X.fillStyle = '#888'; X.font = '8px Segoe UI'; X.textAlign = 'left';
+      X.fillText(k, cx + 74, cy + 146 + si * 14);
+    });
 
-    if (hovered && consumeClick()) { playerCar = i; clickConsumed = false; }
+    // Price / owned badge
+    X.textAlign = 'center';
+    if (owned) {
+      X.font = 'bold 10px Segoe UI'; X.fillStyle = '#44ff44';
+      X.fillText('\u2713 OWNED', cx + cardW/2, cy + cardH - 8);
+    } else {
+      X.font = 'bold 10px Segoe UI'; X.fillStyle = canBuy ? '#ffd700' : '#553322';
+      X.fillText('\uD83E\uDE99 ' + t.cost, cx + cardW/2, cy + cardH - 8);
+    }
+
+    if (hovered && consumeClick()) {
+      if (owned) {
+        playerCar = i;
+      } else if (canBuy) {
+        playerCoins -= t.cost;
+        playerOwnedCars.push(t.id);
+        playerCar = i;
+        sndBuy();
+        saveProgress();
+      }
+      clickConsumed = false;
+    }
   });
 
   // Start button
   if (playerCar !== null) {
-    const hover = btnHit(W/2 - 120, H - 70, 240, 48);
+    const hover = btnHit(W/2 - 120, H - 52, 240, 44);
     X.fillStyle = hover ? '#ff6600' : '#cc4400';
-    X.beginPath(); X.roundRect(W/2 - 120, H - 70, 240, 48, 8); X.fill();
-    X.font = 'bold 20px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
-    X.fillText(`RACE AS ${CAR_TYPES[playerCar].name.toUpperCase()}`, W/2, H - 38);
+    X.beginPath(); X.roundRect(W/2 - 120, H - 52, 240, 44, 8); X.fill();
+    X.font = 'bold 18px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
+    X.fillText('RACE AS ' + CAR_TYPES[playerCar].name.toUpperCase(), W/2, H - 24);
     if (hover && consumeClick()) { initRound(); clickConsumed = false; }
   } else {
     X.font = '14px Segoe UI'; X.fillStyle = '#555'; X.textAlign = 'center';
-    X.fillText('Click a car to select', W/2, H - 44);
+    X.fillText('Click a car to select (or buy)', W/2, H - 30);
   }
 }
 
-// ─── SCREEN: BUMPER SHOP ─────────────────────────
+// ─── SCREEN: GARAGE (UPGRADE SHOP) ──────────────
 function drawBumperShop() {
   X.fillStyle = '#0a0a0a'; X.fillRect(0, 0, W, H);
   X.textAlign = 'center';
 
   X.font = 'bold 10px Segoe UI'; X.fillStyle = '#ffaa00';
-  X.fillText(`ROUND ${round - 1} COMPLETE!`, W/2, 36);
-  X.font = 'bold 28px Segoe UI'; X.fillStyle = '#fff';
-  X.fillText('UPGRADE SHOP', W/2, 70);
-  X.font = '16px Segoe UI'; X.fillStyle = '#ffd700';
-  X.fillText(`🪙 ${playerCoins} coins available`, W/2, 100);
+  X.fillText('ROUND ' + (round - 1) + ' COMPLETE!', W/2, 28);
+  X.font = 'bold 26px Segoe UI'; X.fillStyle = '#fff';
+  X.fillText('GARAGE', W/2, 58);
+  X.font = '14px Segoe UI'; X.fillStyle = '#ffd700';
+  X.fillText('\uD83E\uDE99 ' + playerCoins + ' coins available', W/2, 78);
 
-  const cardW = 170, cardH = 130, cols = 4;
-  const totalW = cols * (cardW + 16) - 16;
-  const sx = (W - totalW) / 2;
-  const sy = 120;
+  // Category tabs
+  const tabW = 120, tabH = 30, tabY = 92;
+  const tabTotalW = UPGRADE_CATS.length * (tabW + 8) - 8;
+  const tabStartX = (W - tabTotalW) / 2;
+  UPGRADE_CATS.forEach((cat, ci) => {
+    const tx = tabStartX + ci * (tabW + 8);
+    const active = shopCat === ci;
+    const hovered = btnHit(tx, tabY, tabW, tabH);
+    X.fillStyle = active ? '#224488' : hovered ? '#1a1a2a' : '#111';
+    X.strokeStyle = active ? '#4488ff' : '#333'; X.lineWidth = active ? 2 : 1;
+    X.beginPath(); X.roundRect(tx, tabY, tabW, tabH, 6); X.fill(); X.stroke();
+    X.font = 'bold 12px Segoe UI'; X.fillStyle = active ? '#fff' : '#888';
+    X.fillText(cat, tx + tabW/2, tabY + 20);
+    if (hovered && consumeClick()) { shopCat = ci; clickConsumed = false; }
+  });
 
-  BUMPER_DEFS.forEach((b, i) => {
+  // Items in selected category
+  const catItems = BUMPER_DEFS.filter(b => b.cat === UPGRADE_CATS[shopCat]);
+  const cardW = 180, cardH = 110, cols = Math.min(catItems.length, 4);
+  const totalCW = cols * (cardW + 12) - 12;
+  const sx = (W - totalCW) / 2;
+  const sy = 134;
+
+  catItems.forEach((b, i) => {
     const col = i % cols, row = Math.floor(i / cols);
-    const cx = sx + col * (cardW + 16);
-    const cy = sy + row * (cardH + 12);
+    const cx = sx + col * (cardW + 12);
+    const cy = sy + row * (cardH + 10);
     const owned = playerBumpers.includes(b.id);
     const canAfford = playerCoins >= b.cost;
     const hovered = btnHit(cx, cy, cardW, cardH) && !owned && canAfford;
@@ -954,39 +1150,34 @@ function drawBumperShop() {
     X.lineWidth = owned ? 2 : 1;
     X.beginPath(); X.roundRect(cx, cy, cardW, cardH, 8); X.fill(); X.stroke();
 
-    // Bumper icon (colored bar)
+    // Color bar
     X.fillStyle = b.color;
-    X.fillRect(cx + 14, cy + 12, cardW - 28, 18);
-    if (b.id === 'spike_bumper') {
-      for (let s = 0; s < 5; s++) {
-        X.fillStyle = '#ff2222';
-        X.beginPath(); X.moveTo(cx + 14 + s * 29, cy + 30); X.lineTo(cx + 14 + s * 29 + 6, cy + 38); X.lineTo(cx + 14 + s * 29 + 12, cy + 30); X.fill();
-      }
-    }
+    X.fillRect(cx + 10, cy + 10, cardW - 20, 14);
 
-    X.font = 'bold 13px Segoe UI'; X.textAlign = 'center'; X.fillStyle = owned ? '#44ff44' : canAfford ? '#fff' : '#555';
-    X.fillText(b.name, cx + cardW/2, cy + 62);
-    X.font = '11px Segoe UI'; X.fillStyle = '#aaa';
-    const lines = b.desc.split(',');
-    lines.forEach((l, li) => X.fillText(l.trim(), cx + cardW/2, cy + 78 + li * 14));
-    X.font = 'bold 12px Segoe UI';
+    X.font = 'bold 12px Segoe UI'; X.textAlign = 'center';
+    X.fillStyle = owned ? '#44ff44' : canAfford ? '#fff' : '#555';
+    X.fillText(b.name, cx + cardW/2, cy + 46);
+    X.font = '10px Segoe UI'; X.fillStyle = '#aaa';
+    X.fillText(b.desc, cx + cardW/2, cy + 62);
+    X.font = 'bold 11px Segoe UI';
     X.fillStyle = owned ? '#44ff44' : canAfford ? '#ffd700' : '#554422';
-    X.fillText(owned ? '✓ INSTALLED' : `🪙 ${b.cost}`, cx + cardW/2, cy + 115);
+    X.fillText(owned ? '\u2713 INSTALLED' : '\uD83E\uDE99 ' + b.cost, cx + cardW/2, cy + 96);
 
     if (hovered && consumeClick()) {
       playerCoins -= b.cost;
       playerBumpers.push(b.id);
       sndBuy();
+      saveProgress();
       clickConsumed = false;
     }
   });
 
   // Continue button
-  const hover = btnHit(W/2 - 130, H - 70, 260, 48);
+  const hover = btnHit(W/2 - 130, H - 60, 260, 44);
   X.fillStyle = hover ? '#4488ff' : '#226688';
-  X.beginPath(); X.roundRect(W/2 - 130, H - 70, 260, 48, 8); X.fill();
-  X.font = 'bold 20px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
-  X.fillText(`NEXT ROUND →`, W/2, H - 38);
+  X.beginPath(); X.roundRect(W/2 - 130, H - 60, 260, 44, 8); X.fill();
+  X.font = 'bold 18px Segoe UI'; X.fillStyle = '#fff'; X.textAlign = 'center';
+  X.fillText('NEXT ROUND \u2192', W/2, H - 32);
   if (hover && consumeClick()) { initRound(); clickConsumed = false; }
 }
 
@@ -998,12 +1189,14 @@ function drawGameOver() {
   const won = roundWins >= Math.ceil(totalRounds / 2);
   X.font = 'bold 56px monospace';
   X.fillStyle = won ? '#ffd700' : '#ff4444';
-  X.fillText(won ? '🏆 CHAMPION!' : '💀 DEFEATED', W/2, H/2 - 80);
+  X.fillText(won ? '\uD83C\uDFC6 CHAMPION!' : '\uD83D\uDCA5 WRECKED!', W/2, H/2 - 80);
 
   X.font = '22px Segoe UI'; X.fillStyle = '#fff';
-  X.fillText(`${playerName}  |  Rounds Won: ${roundWins} / ${totalRounds}`, W/2, H/2 - 30);
+  X.fillText(playerName + '  |  Rounds Won: ' + roundWins + ' / ' + totalRounds, W/2, H/2 - 30);
   X.font = '16px Segoe UI'; X.fillStyle = '#aaa';
-  X.fillText(`Total Damage: ${Math.floor(playerDamageDealt)}   Kills: ${playerKills}   Coins Spent: ${50 * playerBumpers.length}`, W/2, H/2 + 8);
+  X.fillText('DMG: ' + Math.floor(playerDamageDealt) + '   Kills: ' + playerKills + '   Total Wins: ' + playerTotalWins, W/2, H/2 + 8);
+  X.fillStyle = '#ffd700';
+  X.fillText('\uD83E\uDE99 ' + playerCoins + ' coins   |   ' + playerOwnedCars.length + ' cars owned', W/2, H/2 + 32);
 
   // Play again
   const hover = btnHit(W/2-130, H/2+60, 260, 50);
@@ -1012,9 +1205,9 @@ function drawGameOver() {
   X.font = 'bold 22px Segoe UI'; X.fillStyle = '#000'; X.textAlign = 'center';
   X.fillText('PLAY AGAIN', W/2, H/2 + 92);
   if (hover && consumeClick()) {
-    // Reset everything
-    playerCoins = 0; playerBumpers = []; round = 1; roundWins = 0;
-    playerCar = null; playerDamageDealt = 0; playerKills = 0;
+    // Keep coins, cars, upgrades — only reset round state
+    round = 1; roundWins = 0;
+    playerDamageDealt = 0; playerKills = 0;
     state = 'car-select';
     clickConsumed = false;
   }
@@ -1026,8 +1219,7 @@ function drawGameOver() {
   X.font = '15px Segoe UI'; X.fillStyle = '#aaa'; X.textAlign = 'center';
   X.fillText('Back to Title', W/2, H/2 + 143);
   if (hover2 && consumeClick()) {
-    playerCoins = 0; playerBumpers = []; round = 1; roundWins = 0;
-    playerCar = null; playerName = ''; nameInput = '';
+    round = 1; roundWins = 0;
     state = 'title';
     clickConsumed = false;
   }
@@ -1098,6 +1290,7 @@ function loop(ts) {
   }
 }
 
+loadProgress();
 requestAnimationFrame(loop);
 </script>
 </body>

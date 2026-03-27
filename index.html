@@ -417,22 +417,29 @@ textarea.modal-input{
       <!-- ===== UPDATES BANNER ===== -->
       <div class="updates-banner">
         <div class="ub-top">
-          <span class="ub-date">Mar 2, 2026</span>
+          <span class="ub-date">Mar 27, 2026</span>
           <span class="ub-summary">
-            <strong>New: Demolition Derby!</strong> + Energy Siege v1.5 — star-tier weapons, leaderboards, auto-collector, lag fixes.
+            <strong>MASSIVE UPDATE:</strong> Energy Siege 2.0 (20 waves, biome progression, animals, army types) + Demolition Derby overhaul (real cars, garage, persistence)
           </span>
           <button class="ub-toggle" onclick="this.textContent=this.textContent.includes('more')?'Show less':'Read more';document.getElementById('ub-changelog').classList.toggle('open')">Read more</button>
         </div>
         <div class="updates-changelog" id="ub-changelog">
           <ul>
-            <li><strong>NEW GAME:</strong> Demolition Derby — 4 cars, 3 CPU rivals, bumper shop, damage hotspots</li>
-            <li><strong>Energy Siege:</strong> Leaderboard per biome for endless mode (stored in localStorage)</li>
-            <li><strong>Energy Siege:</strong> Star Tier panel (Tab key) — Mega Barracks, Hyper Laser, Fortress Wall</li>
-            <li><strong>Energy Siege:</strong> Attractor building [7] — auto-collects nearby energy orbs</li>
-            <li><strong>Energy Siege:</strong> Mega Men spawn from Mega Barracks — gold units with 3× stats</li>
-            <li><strong>Energy Siege:</strong> Hyper Laser — 2× range, 3× DPS, gold beam effects</li>
-            <li><strong>Energy Siege:</strong> Endless lag fix — capped particles (600), orbs (200), enemies (80)</li>
-            <li><strong>Portal Knights:</strong> One-click build mode + Merchant NPC shop in World 0</li>
+            <li><strong>Energy Siege 2.0:</strong> 20 waves (was 10) — new waves 11-20 with brutal escalation through APOCALYPSE</li>
+            <li><strong>Energy Siege:</strong> Biome progression — beat all waves to unlock the next world! Progress saved permanently</li>
+            <li><strong>Energy Siege:</strong> All enemies now guaranteed to drop energy (3-5 orbs per kill)</li>
+            <li><strong>Energy Siege:</strong> Mega Energy Generator (Star tier, 300E) — produces 3x energy with gold lightning visuals</li>
+            <li><strong>Energy Siege:</strong> Mega Barracks now spawn 2-5 units per wave, max capacity increased</li>
+            <li><strong>Energy Siege:</strong> 3 army types from barracks — Swordsman (melee), Archer (ranged), Shield Bearer (tank)</li>
+            <li><strong>Energy Siege:</strong> Wildlife system — deer, rabbits, and wolves roam in herds. Click to harvest for energy!</li>
+            <li><strong>Energy Siege:</strong> Tab-switch pause fix — game auto-pauses when switching tabs</li>
+            <li><strong>Energy Siege:</strong> Left-click upgrades buildings (no more right-click only)</li>
+            <li><strong>Demolition Derby 2.0:</strong> 8 real cars — Camaro SS, Dodge Charger, Porsche 911, Ford F-150, Mustang GT, Corvette ZR1, RAM TRX</li>
+            <li><strong>Demolition Derby:</strong> Car purchase system — start with Starter Sedan, earn coins to buy better cars</li>
+            <li><strong>Demolition Derby:</strong> Full Garage — 12 upgrades across Bumpers, Tires, Engine, and Body categories</li>
+            <li><strong>Demolition Derby:</strong> Hazard zones — Oil Slicks, Fire Pits, Spike Strips, Electric Zones with damage multipliers</li>
+            <li><strong>Demolition Derby:</strong> Bigger arena (1200x700), 6 opponents per round, 5 rounds per tournament</li>
+            <li><strong>Demolition Derby:</strong> Persistent progress — coins, cars, and upgrades save between sessions</li>
           </ul>
         </div>
       </div>
@@ -588,8 +595,8 @@ const GAMES = [
     tagClass: 'tag-adventure',
   },
   {
-    title: 'Energy Siege: Overload',
-    desc: 'Defend the core across alien biomes! Place turrets, lasers, barracks & star-tier mega-weapons. Auto-collector, endless mode leaderboards, and co-op PeerJS multiplayer.',
+    title: 'Energy Siege: Overload v2.0',
+    desc: '20 waves across 7 unlockable biomes! 3 army types, wildlife herds, mega generators, and co-op multiplayer. Beat all waves to unlock new worlds!',
     emoji: '⚡',
     banner: 'linear-gradient(135deg, #2a2a0a, #4a4a1a)',
     url: 'cash/energy-siege.html',
@@ -599,8 +606,8 @@ const GAMES = [
     tagClass: 'tag-action',
   },
   {
-    title: 'Demolition Derby',
-    desc: 'Pick your car, smash your opponents, and be the last one running! Buy bumpers between rounds, earn coins from damage, and battle 3 CPU rivals with different AI styles.',
+    title: 'Demolition Derby v2.0',
+    desc: '8 real cars (Camaro, Charger, Porsche, Corvette & more), full garage with tires/engine/body upgrades, hazard zones, and persistent progress. Earn coins to build your collection!',
     emoji: '🚗',
     banner: 'linear-gradient(135deg, #3a1500, #6a2a00)',
     url: 'cash/demolition-derby.html',

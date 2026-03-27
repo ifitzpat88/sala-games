@@ -386,6 +386,11 @@
     <div class="cost" style="color:#ffd700">250 E</div>
     <div class="key">STAR</div>
   </div>
+  <div class="build-btn star-item" data-type="mega_generator" onclick="selectBuild('mega_generator')" style="display:none;border-color:rgba(255,215,0,0.5);">
+    <div style="color:#ffd700">&#9733; Mega Gen</div>
+    <div class="cost" style="color:#ffd700">300 E</div>
+    <div class="key">STAR</div>
+  </div>
 </div>
 
 <div id="dash-indicator">
@@ -458,7 +463,7 @@ const DASH_SPEED = 12;
 const DASH_DURATION = 8;
 const DASH_COOLDOWN = 150;
 
-const MAX_WAVES = 10;
+const MAX_WAVES = 20;
 const BETWEEN_WAVE_SECONDS = 10;
 const BETWEEN_WAVE_FAST = 4;
 const FRENZY_TIME = 600; // frames before enemies go frenzy (10s)
@@ -649,12 +654,12 @@ const BIOMES = {
   },
 };
 
-const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75, attractor: 90, mega_barracks: 500, hyper_laser: 400, fortress_wall: 250 };
-const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100, catapult: 90, attractor: 100, mega_barracks: 200, hyper_laser: 150, fortress_wall: 500 };
+const COSTS = { wall: 15, generator: 40, turret: 30, laser: 50, barracks: 60, catapult: 75, attractor: 90, mega_barracks: 500, hyper_laser: 400, fortress_wall: 250, mega_generator: 300 };
+const BUILD_HP = { wall: 120, generator: 80, turret: 100, laser: 90, barracks: 100, catapult: 90, attractor: 100, mega_barracks: 200, hyper_laser: 150, fortress_wall: 500, mega_generator: 150 };
 const BUILD_MAX_LEVEL = 3;
 const BUILD_UPGRADE_COST = {
   wall: [10, 20], generator: [25, 45], turret: [20, 35], laser: [30, 50], barracks: [35, 55], catapult: [40, 65],
-  attractor: [50, 80], mega_barracks: [200, 400], hyper_laser: [150, 300], fortress_wall: [100, 200]
+  attractor: [50, 80], mega_barracks: [200, 400], hyper_laser: [150, 300], fortress_wall: [100, 200], mega_generator: [120, 240]
 };
 const CATAPULT_RANGE = 350;
 const CATAPULT_FIRE_RATE = 180;
@@ -702,6 +707,27 @@ const WAVE_CONFIG = [
     name: 'Annihilation', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
   { count: 94, hpMult: 7.5, speedMult: 1.85, dmgMult: 4.0, spawnRate: 5, sizeMin: 18, sizeMax: 28,
     name: 'O V E R L O A D', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'core' },
+  // --- World 2 waves (11-20) ---
+  { count: 50, hpMult: 8.0, speedMult: 1.9, dmgMult: 4.2, spawnRate: 12, sizeMin: 14, sizeMax: 22,
+    name: 'Vanguard', types: ['normal','laser','charger'], boss: 'sentinel' },
+  { count: 60, hpMult: 9.0, speedMult: 1.95, dmgMult: 4.6, spawnRate: 10, sizeMin: 15, sizeMax: 23,
+    name: 'Storm Riders', types: ['normal','laser','miner','charger'], boss: null },
+  { count: 70, hpMult: 10.5, speedMult: 2.0, dmgMult: 5.0, spawnRate: 9, sizeMin: 15, sizeMax: 24,
+    name: 'Iron Tide', types: ['normal','laser','miner','charger','heat'], boss: 'warden' },
+  { count: 80, hpMult: 12.0, speedMult: 2.1, dmgMult: 5.5, spawnRate: 8, sizeMin: 16, sizeMax: 25,
+    name: 'Havoc Swarm', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
+  { count: 90, hpMult: 14.0, speedMult: 2.2, dmgMult: 6.2, spawnRate: 7, sizeMin: 16, sizeMax: 26,
+    name: 'Inferno Wave', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'overlord' },
+  { count: 100, hpMult: 16.5, speedMult: 2.3, dmgMult: 7.0, spawnRate: 6, sizeMin: 17, sizeMax: 27,
+    name: 'Eclipse Force', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
+  { count: 110, hpMult: 19.0, speedMult: 2.4, dmgMult: 8.0, spawnRate: 5, sizeMin: 17, sizeMax: 28,
+    name: 'Omega Battalion', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
+  { count: 120, hpMult: 22.0, speedMult: 2.5, dmgMult: 9.0, spawnRate: 5, sizeMin: 18, sizeMax: 29,
+    name: 'Cataclysm', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'overlord' },
+  { count: 140, hpMult: 26.0, speedMult: 2.6, dmgMult: 10.5, spawnRate: 4, sizeMin: 18, sizeMax: 30,
+    name: 'Extinction', types: ['normal','laser','miner','charger','splitter','heat'], boss: null },
+  { count: 170, hpMult: 32.0, speedMult: 2.8, dmgMult: 13.0, spawnRate: 3, sizeMin: 20, sizeMax: 32,
+    name: 'A P O C A L Y P S E', types: ['normal','laser','miner','charger','splitter','heat'], boss: 'core' },
 ];
 
 // ---- State ----
@@ -759,6 +785,14 @@ let endlessLevel = 0;
 let endlessBossTimer = 0;
 let highScore = parseInt(localStorage.getItem('energySiegeHighScore') || '0');
 let starTierVisible = false;
+let unlockedBiomes = JSON.parse(localStorage.getItem('energySiegeUnlockedBiomes') || '["moon"]');
+const BIOME_ORDER = ['moon', 'safari', 'sky', 'plains', 'beach', 'dystopia', 'forest'];
+let animals = [];
+const ANIMAL_TYPES = [
+  { name: 'deer', color: '#8B6914', size: 8, speed: 1.0, herdSize: [3, 6], resource: 'energy', amount: 3 },
+  { name: 'rabbit', color: '#C0C0C0', size: 5, speed: 1.8, herdSize: [2, 5], resource: 'energy', amount: 1 },
+  { name: 'wolf', color: '#555555', size: 9, speed: 1.4, herdSize: [2, 4], resource: 'energy', amount: 5 },
+];
 
 function getLeaderboard() {
   try { return JSON.parse(localStorage.getItem('energySiegeLeaderboard') || '[]'); } catch(e) { return []; }
@@ -1062,6 +1096,8 @@ function initGame() {
   document.getElementById('boss-bar').classList.remove('show');
   document.getElementById('endless-timer').classList.remove('show');
   for (let i = 0; i < 30; i++) spawnOrb();
+  animals = [];
+  spawnAnimalHerds();
   updateBuildButtons();
   updateWaveHUD();
   recomputeFlowFields();
@@ -1080,6 +1116,31 @@ function spawnOrb() {
       return;
     }
     tries++;
+  }
+}
+
+// ---- Animals ----
+function spawnAnimalHerds() {
+  for (let h = 0; h < 4; h++) {
+    const type = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
+    const herdX = 100 + Math.random() * (WORLD_W - 200);
+    const herdY = 100 + Math.random() * (WORLD_H - 200);
+    const count = type.herdSize[0] + Math.floor(Math.random() * (type.herdSize[1] - type.herdSize[0] + 1));
+    for (let i = 0; i < count; i++) {
+      const ax = herdX + (Math.random() - 0.5) * 80;
+      const ay = herdY + (Math.random() - 0.5) * 80;
+      if (!isObstacle(ax, ay)) {
+        animals.push({
+          x: ax, y: ay, type: type.name, color: type.color, size: type.size,
+          speed: type.speed * (0.8 + Math.random() * 0.4),
+          resource: type.resource, amount: type.amount,
+          wanderAngle: Math.random() * Math.PI * 2,
+          wanderTimer: Math.floor(Math.random() * 120),
+          fleeing: false, fleeTimer: 0,
+          herdX, herdY,
+        });
+      }
+    }
   }
 }
 
@@ -2241,6 +2302,14 @@ function update() {
         if (isCoop) p2Energy += 1 + lv;
         spawnParticles(b.x + BUILD_SIZE/2, b.y + BUILD_SIZE/2, '#ffdd00', 2 + lv, 2);
       }
+      // Mega generators produce 3x energy
+      if (b.type === 'mega_generator' && b.hp > 0) {
+        const lv = b.level || 1;
+        const megaOutput = (1 + lv) * 3; // 6, 9, 12 per tick
+        energy += megaOutput;
+        if (isCoop) p2Energy += megaOutput;
+        spawnParticles(b.x + BUILD_SIZE/2, b.y + BUILD_SIZE/2, '#ff8800', 3 + lv, 3);
+      }
     }
     document.getElementById('energy-display').textContent = getLocalEnergy(); updateBuildButtons();
   }
@@ -2262,50 +2331,75 @@ function update() {
       const sPos = findValidPosition(sx, sy, SPACEMAN_R);
       const bonusDmg = squadLevel * 3;
       const bonusHp = squadLevel * 10;
+      // Random army type
+      const unitTypes = ['swordsman', 'archer', 'shield'];
+      const unitType = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+      let unitHp = SPACEMAN_HP + bonusHp;
+      let unitDmg = SPACEMAN_DMG + bonusDmg;
+      let unitSpeed = SPACEMAN_SPEED;
+      let unitSize = SPACEMAN_R;
+      let unitColor = '#44aaff';
+      if (unitType === 'archer') { unitHp *= 0.7; unitDmg *= 0.6; unitSpeed *= 1.2; unitColor = '#44ff88'; }
+      else if (unitType === 'shield') { unitHp *= 2.0; unitDmg *= 0.5; unitSpeed *= 0.7; unitSize = 9; unitColor = '#ff8844'; }
       spacemen.push({
-        x: sPos.x, y: sPos.y, hp: SPACEMAN_HP + bonusHp, maxHp: SPACEMAN_HP + bonusHp,
-        speed: SPACEMAN_SPEED, damage: SPACEMAN_DMG + bonusDmg, attackCD: 0,
-        size: SPACEMAN_R, barracksRef: b
+        x: sPos.x, y: sPos.y, hp: Math.floor(unitHp), maxHp: Math.floor(unitHp),
+        speed: unitSpeed, damage: Math.floor(unitDmg), attackCD: 0,
+        size: unitSize, barracksRef: b, unitType, unitColor
       });
-      spawnParticles(sPos.x, sPos.y, '#44aaff', 5, 3);
+      spawnParticles(sPos.x, sPos.y, unitColor, 5, 3);
     }
   }
 
-  // -- Mega Barracks: spawn golden Mega Men (3x normal stats) --
+  // -- Mega Barracks: spawn golden Mega Men squads (2-5 per spawn) --
   for (const b of buildings) {
     if (b.type !== 'mega_barracks' || b.hp <= 0) continue;
     const lv = b.level || 1;
-    const maxMegaMen = 3 + lv;
+    const maxMegaMen = 5 + lv * 2;
     const megaSpawnRate = 400;
     if (!b.spawnTimer) b.spawnTimer = 0;
     b.spawnTimer++;
     const myMegaMen = spacemen.filter(s => s.barracksRef === b).length;
     if (b.spawnTimer >= megaSpawnRate && myMegaMen < maxMegaMen) {
       b.spawnTimer = 0;
-      const sPos = findValidPosition(b.x + BUILD_SIZE / 2, b.y + BUILD_SIZE + 10, SPACEMAN_R);
-      spacemen.push({
-        x: sPos.x, y: sPos.y, hp: 120, maxHp: 120,
-        speed: SPACEMAN_SPEED * 1.5, damage: 28, attackCD: 0,
-        size: 11, barracksRef: b, isMega: true
-      });
-      spawnParticles(sPos.x, sPos.y, '#ffd700', 8, 4);
+      const spawnCount = Math.min(2 + Math.floor(Math.random() * 4), maxMegaMen - myMegaMen);
+      for (let si = 0; si < spawnCount; si++) {
+        const sPos = findValidPosition(b.x + BUILD_SIZE / 2 + (Math.random()-0.5)*40, b.y + BUILD_SIZE + 10 + (Math.random()-0.5)*20, SPACEMAN_R);
+        spacemen.push({
+          x: sPos.x, y: sPos.y, hp: 120, maxHp: 120,
+          speed: SPACEMAN_SPEED * 1.5, damage: 28, attackCD: 0,
+          size: 11, barracksRef: b, isMega: true, unitColor: '#ffd700'
+        });
+        spawnParticles(sPos.x, sPos.y, '#ffd700', 8, 4);
+      }
     }
   }
 
   // -- Spacemen AI --
   for (let i = spacemen.length - 1; i >= 0; i--) {
     const s = spacemen[i];
-    if (s.hp <= 0) { spawnParticles(s.x, s.y, '#4488ff', 8, 3); spacemen.splice(i, 1); continue; }
+    if (s.hp <= 0) { spawnParticles(s.x, s.y, s.unitColor || '#4488ff', 8, 3); spacemen.splice(i, 1); continue; }
     let closest = null, closestD = Infinity;
     for (const e of enemies) { const d = dist(s, e); if (d < closestD) { closest = e; closestD = d; } }
+    const isArcher = s.unitType === 'archer';
+    const attackRange = isArcher ? 80 : (closest ? closest.size + s.size + 8 : 20);
+    const stopRange = isArcher ? 70 : (closest ? closest.size + s.size + 4 : 20);
     if (closest) {
       const a = Math.atan2(closest.y - s.y, closest.x - s.x);
-      if (closestD > closest.size + s.size + 4) {
+      if (closestD > stopRange) {
         moveWithCollision(s, Math.cos(a) * s.speed, Math.sin(a) * s.speed, s.size);
+      } else if (isArcher && closestD < 40) {
+        // Archers retreat if too close
+        moveWithCollision(s, -Math.cos(a) * s.speed * 0.6, -Math.sin(a) * s.speed * 0.6, s.size);
       }
-      if (closestD < closest.size + s.size + 8 && s.attackCD <= 0) {
-        closest.hp -= s.damage; s.attackCD = SPACEMAN_ATTACK_CD;
-        spawnParticles(closest.x, closest.y, '#44aaff', 3, 2);
+      if (closestD < attackRange && s.attackCD <= 0) {
+        closest.hp -= s.damage; s.attackCD = isArcher ? SPACEMAN_ATTACK_CD * 0.7 : SPACEMAN_ATTACK_CD;
+        if (isArcher) {
+          // Arrow projectile visual
+          spawnParticles(closest.x, closest.y, '#44ff88', 2, 2);
+          bullets.push({ x: s.x, y: s.y, vx: Math.cos(a)*6, vy: Math.sin(a)*6, damage: 0, life: 8, isArrow: true });
+        } else {
+          spawnParticles(closest.x, closest.y, s.unitColor || '#44aaff', 3, 2);
+        }
         if (closest.hp <= 0) { const idx = enemies.indexOf(closest); if (idx >= 0) killEnemy(closest, idx); }
       }
     } else if (s.barracksRef && s.barracksRef.hp > 0) {
@@ -2323,6 +2417,36 @@ function update() {
     const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.life--;
     if (p.life <= 0) particles.splice(i, 1);
   }
+
+  // -- Animals: wander in herds, flee from players/enemies, click to harvest --
+  for (let i = animals.length - 1; i >= 0; i--) {
+    const a = animals[i];
+    const pDist = dist(a, player);
+    let fleeFrom = null;
+    if (pDist < 100) fleeFrom = player;
+    for (const e of enemies) { if (dist(a, e) < 80) { fleeFrom = e; break; } }
+    if (fleeFrom) {
+      a.fleeing = true; a.fleeTimer = 60;
+      const fa = Math.atan2(a.y - fleeFrom.y, a.x - fleeFrom.x);
+      moveWithCollision(a, Math.cos(fa) * a.speed * 2, Math.sin(fa) * a.speed * 2, a.size);
+    } else if (a.fleeTimer > 0) {
+      a.fleeTimer--;
+      moveWithCollision(a, Math.cos(a.wanderAngle) * a.speed * 1.5, Math.sin(a.wanderAngle) * a.speed * 1.5, a.size);
+      if (a.fleeTimer <= 0) a.fleeing = false;
+    } else {
+      a.wanderTimer--;
+      if (a.wanderTimer <= 0) {
+        const toHerd = Math.atan2(a.herdY - a.y, a.herdX - a.x);
+        a.wanderAngle = toHerd + (Math.random() - 0.5) * 1.5;
+        a.wanderTimer = 60 + Math.floor(Math.random() * 120);
+      }
+      moveWithCollision(a, Math.cos(a.wanderAngle) * a.speed * 0.3, Math.sin(a.wanderAngle) * a.speed * 0.3, a.size);
+    }
+    a.x = Math.max(a.size, Math.min(WORLD_W - a.size, a.x));
+    a.y = Math.max(a.size, Math.min(WORLD_H - a.size, a.y));
+  }
+  // Respawn herds if too few animals remain
+  if (animals.length < 5 && frameCount % 600 === 0) spawnAnimalHerds();
 
   // ========================================
   // WAVE STATE MACHINE
@@ -2425,7 +2549,7 @@ function update() {
 function killEnemy(e, index) {
   const isBoss = e.isBoss;
   spawnParticles(e.x, e.y, isBoss ? '#ffaa00' : '#ff6600', isBoss ? 25 : 12, isBoss ? 8 : 5);
-  const rawOrbCount = isBoss ? 15 + Math.floor(Math.random() * 10) : 2 + Math.floor(Math.random() * 2);
+  const rawOrbCount = isBoss ? 15 + Math.floor(Math.random() * 10) : 3 + Math.floor(Math.random() * 3);
   const orbCount = orbs.length < 200 ? Math.min(rawOrbCount, 200 - orbs.length) : 0;
   for (let k = 0; k < orbCount; k++) {
     orbs.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40, pulse: Math.random()*Math.PI*2 });
@@ -2456,11 +2580,21 @@ function killEnemy(e, index) {
 function showVictory() {
   victoryShown = true;
   updateWaveHUD();
+  // Unlock next biome
+  const currentIdx = BIOME_ORDER.indexOf(currentBiome);
+  const nextBiome = currentIdx >= 0 && currentIdx < BIOME_ORDER.length - 1 ? BIOME_ORDER[currentIdx + 1] : null;
+  let unlockMsg = '';
+  if (nextBiome && !unlockedBiomes.includes(nextBiome)) {
+    unlockedBiomes.push(nextBiome);
+    localStorage.setItem('energySiegeUnlockedBiomes', JSON.stringify(unlockedBiomes));
+    unlockMsg = '<br><br><span style="color:#ffd700;font-size:22px">&#9733; NEW WORLD UNLOCKED: ' + BIOMES[nextBiome].name.toUpperCase() + ' &#9733;</span>';
+    updateBiomeCards();
+  }
   // Show story screen with lore
   document.getElementById('story-text').innerHTML =
     'The energy grid held. Against impossible odds, the siege was broken &mdash; wave after wave of overloaded drones, heat emitters, and colossal bosses repelled by one operator\'s resolve.' +
     '<br><br>But the readings are spiking again. The energy signatures beyond the perimeter are growing stronger, more chaotic. This wasn\'t the invasion &mdash; it was the scouting party.' +
-    '<br><br>The Endless Siege has begun. There is no wave 11. There is only survival.';
+    '<br><br>The Endless Siege has begun. There is no wave 21. There is only survival.' + unlockMsg;
   document.getElementById('story-stats').textContent = `${MAX_WAVES} waves cleared | ${totalKills} kills | ${upgradePoints} upgrade points earned`;
   document.getElementById('story-screen').classList.add('show');
 }
@@ -2561,6 +2695,25 @@ function draw() {
       ctx.moveTo(bx + 22, by + 6); ctx.lineTo(bx + 14, by + 20); ctx.lineTo(bx + 20, by + 20);
       ctx.lineTo(bx + 18, by + 34); ctx.lineTo(bx + 26, by + 18); ctx.lineTo(bx + 20, by + 18);
       ctx.closePath(); ctx.fill();
+    } else if (b.type === 'mega_generator') {
+      ctx.fillStyle = '#442200';
+      ctx.fillRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
+      ctx.strokeRect(bx + 2, by + 2, BUILD_SIZE - 4, BUILD_SIZE - 4);
+      const mgGlow = Math.sin(frameCount * 0.1) * 0.3 + 0.7;
+      ctx.fillStyle = `rgba(255,170,0,${mgGlow})`;
+      // Double lightning bolt
+      ctx.beginPath();
+      ctx.moveTo(bx + 18, by + 4); ctx.lineTo(bx + 10, by + 18); ctx.lineTo(bx + 16, by + 18);
+      ctx.lineTo(bx + 14, by + 36); ctx.lineTo(bx + 22, by + 16); ctx.lineTo(bx + 16, by + 16);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(bx + 28, by + 4); ctx.lineTo(bx + 20, by + 18); ctx.lineTo(bx + 26, by + 18);
+      ctx.lineTo(bx + 24, by + 36); ctx.lineTo(bx + 32, by + 16); ctx.lineTo(bx + 26, by + 16);
+      ctx.closePath(); ctx.fill();
+      // Star marker
+      ctx.fillStyle = '#ffd700'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('\u2605', bx + BUILD_SIZE/2, by - 2);
     } else if (b.type === 'turret') {
       ctx.fillStyle = '#443322';
       ctx.fillRect(bx + 4, by + 4, BUILD_SIZE - 8, BUILD_SIZE - 8);
@@ -2818,6 +2971,25 @@ function draw() {
     ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(o.x, o.y, r * 0.4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Animals
+  for (const a of animals) {
+    if (a.x - a.size > camera.x + W || a.x + a.size < camera.x || a.y - a.size > camera.y + H || a.y + a.size < camera.y) continue;
+    ctx.fillStyle = a.color;
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.size, 0, Math.PI * 2); ctx.fill();
+    if (a.type === 'deer' || a.type === 'wolf') {
+      ctx.fillRect(a.x - 3, a.y - a.size - 3, 2, 4);
+      ctx.fillRect(a.x + 1, a.y - a.size - 3, 2, 4);
+    }
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(a.x + 2, a.y - 1, 1.5, 0, Math.PI * 2); ctx.fill();
+    // Resource indicator on hover proximity
+    const aDist = Math.sqrt((worldMouseX - a.x) ** 2 + (worldMouseY - a.y) ** 2);
+    if (aDist < a.size + 15) {
+      ctx.fillStyle = 'rgba(255,221,0,0.8)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('+' + a.amount + ' E', a.x, a.y - a.size - 6);
+    }
   }
 
   // Bullets
@@ -3172,16 +3344,25 @@ function draw() {
       ctx.fillStyle = '#ffd700'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('★', s.x, s.y - s.size - 4);
     } else {
+      const uc = s.unitColor || '#44aaff';
       ctx.fillStyle = '#e8e8e8';
       ctx.beginPath(); ctx.arc(s.x, s.y + 2, s.size - 1, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#2266cc';
+      ctx.fillStyle = uc;
       ctx.beginPath(); ctx.arc(s.x, s.y - 3, s.size - 2, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = '#66bbff';
+      ctx.fillStyle = uc;
       ctx.fillRect(s.x - 3, s.y - 5, 6, 3);
-      ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 6;
-      ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 1;
+      ctx.shadowColor = uc; ctx.shadowBlur = 6;
+      ctx.strokeStyle = uc; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.stroke();
       ctx.shadowBlur = 0;
+      // Unit type indicator
+      if (s.unitType === 'archer') {
+        ctx.strokeStyle = '#44ff88'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(s.x - 4, s.y - s.size - 2); ctx.lineTo(s.x, s.y - s.size - 6); ctx.lineTo(s.x + 4, s.y - s.size - 2); ctx.stroke();
+      } else if (s.unitType === 'shield') {
+        ctx.fillStyle = '#ff8844';
+        ctx.fillRect(s.x - 5, s.y - 2, 3, 8);
+      }
     }
     if (s.hp < s.maxHp) {
       const hpPct = Math.max(0, s.hp / s.maxHp);
@@ -3388,7 +3569,7 @@ function drawMinimap() {
     if (o.type === 'lake') ctx.fillRect(mmX + o.x * scaleX, mmY + o.y * scaleY, Math.max(1, TILE * scaleX), Math.max(1, TILE * scaleY));
   }
   for (const b of buildings) {
-    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'laser' ? '#bb44ff' : b.type === 'barracks' ? '#4488ff' : b.type === 'catapult' ? '#cc6600' : '#ff6600';
+    ctx.fillStyle = b.type === 'wall' ? '#7799aa' : b.type === 'generator' ? '#66aa00' : b.type === 'mega_generator' ? '#ff8800' : b.type === 'laser' ? '#bb44ff' : b.type === 'barracks' ? '#4488ff' : b.type === 'catapult' ? '#cc6600' : '#ff6600';
     ctx.fillRect(mmX + b.x * scaleX, mmY + b.y * scaleY, 3, 3);
   }
   ctx.fillStyle = '#88ccff';
@@ -3423,13 +3604,15 @@ function updateBuildButtons() {
 
 function placeBuild() {
   if (!selectedBuild) return;
-  if (energy < COSTS[selectedBuild]) return;
   const wmx = mouse.x + camera.x;
   const wmy = mouse.y + camera.y;
   const tx = Math.floor(wmx / TILE) * TILE;
   const ty = Math.floor(wmy / TILE) * TILE;
+  // Left-click on existing building = upgrade it
+  const existingB = getBuildingAt(wmx, wmy);
+  if (existingB) { upgradeBuilding(existingB); return; }
+  if (energy < COSTS[selectedBuild]) return;
   if (isObstacle(tx + TILE / 2, ty + TILE / 2)) return;
-  if (isBuildingAt(tx + TILE / 2, ty + TILE / 2)) return;
   if (circleRect(player.x, player.y, PLAYER_R, tx, ty, BUILD_SIZE, BUILD_SIZE)) return;
   energy -= COSTS[selectedBuild];
   buildings.push({
@@ -3469,6 +3652,13 @@ function upgradeBuilding(b, forP2) {
   updateBuildButtons();
   return true;
 }
+
+// ---- Tab-switch auto-pause ----
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && gameRunning && !gamePaused && !showingUpgrades && !victoryShown && !gameOverShown) {
+    gamePaused = true;
+  }
+});
 
 // ---- Input ----
 window.addEventListener('keydown', e => {
@@ -3652,7 +3842,23 @@ canvas.addEventListener('mousedown', e => {
         placeBuild();
       }
     }
-    else { mouse.clicked = true; }
+    else {
+      // Try to harvest an animal
+      let harvested = false;
+      for (let ai = animals.length - 1; ai >= 0; ai--) {
+        const a = animals[ai];
+        if (Math.sqrt((worldMouseX - a.x) ** 2 + (worldMouseY - a.y) ** 2) < a.size + 10) {
+          energy += a.amount;
+          spawnParticles(a.x, a.y, '#ffdd00', 6, 3);
+          animals.splice(ai, 1);
+          document.getElementById('energy-display').textContent = getLocalEnergy();
+          updateBuildButtons();
+          harvested = true;
+          break;
+        }
+      }
+      if (!harvested) mouse.clicked = true;
+    }
   }
   if (e.button === 2) {
     if (selectedBuild) {
@@ -4089,13 +4295,39 @@ document.getElementById('version-display').textContent = GAME_VERSION;
       <div class="biome-name">${b.name}</div>
       <div class="biome-desc">${b.desc}</div>`;
     card.onclick = () => {
+      if (!unlockedBiomes.includes(key)) return; // locked
       container.querySelectorAll('.biome-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       currentBiome = key;
     };
     container.appendChild(card);
   });
+  updateBiomeCards();
 })();
+
+function updateBiomeCards() {
+  document.querySelectorAll('.biome-card').forEach(card => {
+    const biome = card.dataset.biome;
+    const locked = !unlockedBiomes.includes(biome);
+    if (locked) {
+      card.style.opacity = '0.35';
+      card.style.pointerEvents = 'none';
+      if (!card.querySelector('.lock-overlay')) {
+        const lock = document.createElement('div');
+        lock.className = 'lock-overlay';
+        lock.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;z-index:2;';
+        lock.textContent = '\u{1F512}';
+        card.style.position = 'relative';
+        card.appendChild(lock);
+      }
+    } else {
+      card.style.opacity = '1';
+      card.style.pointerEvents = 'auto';
+      const lock = card.querySelector('.lock-overlay');
+      if (lock) lock.remove();
+    }
+  });
+}
 
 gameLoop();
 </script>
